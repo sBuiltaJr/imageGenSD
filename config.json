@@ -1,0 +1,9 @@
+{
+	"log_dir"       : "logs",
+	"log_encoding"  : "utf-8",
+	"log_level"	    : "WARNING",
+	"log_mode"      : "w",
+	"comments" : 
+	{
+	}
+}

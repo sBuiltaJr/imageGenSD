@@ -102,5 +102,6 @@ async def startup():
     IGSD_client.run(creds['bot_token'])
 
 
-#if __name__ == '__main__':
-asyncio.run(startup())
+if __name__ == '__main__':
+startup()
+#asyncio.run(startup())

@@ -21,7 +21,7 @@ order. [The discord.py github](https://github.com/Rapptz/discord.py/tree/master/
 - Implement better logging configuration/customization by using the logging config files.
 - Multitasking (including separate logging tasks).
 - zipping logs to reduce increase logged information.
-- 
+- Help menu via messaging the bot.
 
 ## Unplanned
 - weeb shit

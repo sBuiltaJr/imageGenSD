@@ -1,9 +1,18 @@
 {
+	"date_fmt"      : "%Y-%m-%d %H:%M:%S",
+	"guild_id"      : "0",
 	"log_dir"       : "logs",
 	"log_encoding"  : "utf-8",
-	"log_level"	    : "WARNING",
+    "log_file_cnt"  : "5"
+	"log_lvl"       : "WARNING",
 	"log_mode"      : "w",
+	"max_bytes"     : "32 * 1024 * 1024",
+	"test_guild_id" : "0",
 	"comments" : 
 	{
+		"guild_id"      : "Default ID for your guild (discord server). 0 is an invalid ID.",
+		"log_file_cnt"  : "Number of logfiles to cycle through.  e.g. you could have 5 files each 32 MB.",
+		"max_bytes"     : "Maximum size of a logfile, measured in Bytes.",
+		"test_guild_id" : "Default ID for your test/sandbox guild (discord server). 0 is an invalid ID."
 	}
 }

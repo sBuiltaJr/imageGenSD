@@ -11,6 +11,7 @@ from discord import app_commands as dac
 import gzip
 import logging as log
 import logging.handlers as lh
+import json
 import os
 import shutil as sh
 
@@ -35,11 +36,11 @@ class IGSDClient(dis.Client):
 
     async def setup_hook(self):
         # This copies the global commands over to your guild.
-        self.tree.copy_global_to(guild=int(params['guild_id']))
-        await self.tree.sync(guild=int(params['guild_id']))
+        self.tree.copy_global_to(guild=dis.Object(creds['guild_id']))
+        await self.tree.sync(guild=dis.Object(creds['guild_id']))
 
 intents = dis.Intents.default()
-IGSD_client = MyClient(intents=intents)
+IGSD_client = IGSDClient(intents=intents)
 
 #####  Package Functions  #####
 
@@ -50,25 +51,26 @@ async def on_ready():
     
 @IGSD_client.tree.command()
 async def hello(interaction: dis.Interaction):
-"""A teste echo command to verify basic discord functionality.
+    """A test echo command to verify basic discord functionality.
 
        Input : None.
 
        Output : None.
-"""
+    """
     await interaction.response.send_message(f'Hi, {interaction.user.mention}')
     
 #####  main  #####
 
-async def startup():
-"""Updates the global dictionary with the supplied configuration, if it
+def startup():
+    """Updates the global dictionary with the supplied configuration, if it
        exists, and starts the program.
 
        Input : None (yet).
 
        Output : None.
-"""
+    """
     global params
+    global creds
     
     #This will be modified in the future to accept super-supplied paths.
     #This file must be loaded prior to the logger to allow for user-provided
@@ -80,20 +82,20 @@ async def startup():
     disLog = log.getLogger('discord')
     disLog.setLevel(params['log_lvl'])
 
-    handler = lh.RotatingFileHandler(
+    logHandler = lh.RotatingFileHandler(
         filename=params['log_name'],
         encoding=params['log_encoding'],
         maxBytes=int(params['max_bytes']),
         backupCount=int(params['log_file_cnt']),
     )
     
-    formatter = logging.Formatter(
+    formatter = log.Formatter(
         '[{asctime}] [{levelname:<8}] {name}: {message}', 
-        params['date_fmt
+        params['date_fmt'],
         style='{'
     )
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    logHandler.setFormatter(formatter)
+    disLog.addHandler(logHandler)
     
     #This will be modified in the future to accept super-supplied paths.
     with open(default_params['cred']) as json_file:
@@ -103,5 +105,5 @@ async def startup():
 
 
 if __name__ == '__main__':
-startup()
+    startup()
 #asyncio.run(startup())

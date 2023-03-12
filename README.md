@@ -15,9 +15,9 @@ engine to return NSFW content if you're not careful.  There effectively nothing
 the bot can do to prevent this as it's a byproduct of the AI training set. 
 
 # Dependencies
-- Python 3.10 or later
-- Stable Diffusion UI 1.4 or later
-- discord.py 2.2.2 or later
+- [Python](https://www.python.org/) 3.10 or later
+- [Stable Diffusion UI](https://github.com/AUTOMATIC1111/stable-diffusion-webui) 1.4 or later
+- [Discord.py](https://discordpy.readthedocs.io/en/stable/index.html) 2.2.2 or later
 
 Many of these dependencies are inherited from the Stable-Diffusion project.
 

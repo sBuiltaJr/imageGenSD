@@ -12,10 +12,16 @@ order. [The discord.py github](https://github.com/Rapptz/discord.py/tree/master/
 - Determine how to properly background the task (discord.py has some examples, may not work as needed?)
 
 ## Planned
-- Allow a bot to manage multiple guilds
-- Allow a bot to shard
-- Crash recovery
-- Guild info command (for setting parameters)
+- Allow a bot to manage multiple guilds.
+- Allow a bot to shard.
+- Crash recovery.
+- Guild info command (for setting parameters).
+- Argument sanitization/limiting (discord knows as transformers).
+- Add user-supplied paths for config/credential files.
+- Implement better logging configuration/customization by using the logging config files.
+- Multitasking (including separate logging tasks).
+- zipping logs to reduce increase logged information.
+- 
 
 ## Unplanned
 - weeb shit

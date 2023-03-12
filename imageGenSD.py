@@ -3,23 +3,104 @@
 #Specific types of images, like NSFW, from being generated.
 
 
-#####  imports  #####
+#####  Imports  #####
+
+import asyncio
 import discord as dis
+from discord import app_commands as dac
+import gzip
 import logging as log
+import logging.handlers as lh
 import os
+import shutil as sh
 
-#The great thing about dictionaries defined at the package level is their global
-#(public-like) capability, avoiding constant passing down to 'lower' defs. 
+#####  Package Variables  #####
+
+#The great thing about package-level dictionaries is their global (public-like)
+#capability, avoiding constant passing down to 'lower' defs. 
 #Static data only, no file objects or similar (or else!).
-params = {'cfg'       : 'config.json',
-          'bot_token' : ''}
+creds = {}
+default_params = {'cfg'       : 'config.json',
+                  'cred'      : 'credentials.json',
+                  'bot_token' : ''}
 IGSD_version = '0.0.1'
+params = {}
+
+#####  Package Classes  #####
+
+class IGSDClient(dis.Client):
+    def __init__(self, *, intents: dis.Intents):
+        super().__init__(intents=intents)
+        self.tree = dac.CommandTree(self)
+
+    async def setup_hook(self):
+        # This copies the global commands over to your guild.
+        self.tree.copy_global_to(guild=int(params['guild_id']))
+        await self.tree.sync(guild=int(params['guild_id']))
+
+intents = dis.Intents.default()
+IGSD_client = MyClient(intents=intents)
+
+#####  Package Functions  #####
+
+@IGSD_client.event
+async def on_ready():
+    print(f'Logged in as {IGSD_client.user} (ID: {IGSD_client.user.id})')
+    print('------')
+    
+@IGSD_client.tree.command()
+async def hello(interaction: dis.Interaction):
+"""A teste echo command to verify basic discord functionality.
+
+       Input : None.
+
+       Output : None.
+"""
+    await interaction.response.send_message(f'Hi, {interaction.user.mention}')
+    
+#####  main  #####
+
+async def startup():
+"""Updates the global dictionary with the supplied configuration, if it
+       exists, and starts the program.
+
+       Input : None (yet).
+
+       Output : None.
+"""
+    global params
+    
+    #This will be modified in the future to accept super-supplied paths.
+    #This file must be loaded prior to the logger to allow for user-provided
+    #options to be passed to the Logger.  Thus it must have special error
+    #handling outside of the logger class.
+    with open(default_params['cfg']) as json_file:
+        params = json.load(json_file)
+        
+    disLog = log.getLogger('discord')
+    disLog.setLevel(params['log_lvl'])
+
+    handler = lh.RotatingFileHandler(
+        filename=params['log_name'],
+        encoding=params['log_encoding'],
+        maxBytes=int(params['max_bytes']),
+        backupCount=int(params['log_file_cnt']),
+    )
+    
+    formatter = logging.Formatter(
+        '[{asctime}] [{levelname:<8}] {name}: {message}', 
+        params['date_fmt
+        style='{'
+    )
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    
+    #This will be modified in the future to accept super-supplied paths.
+    with open(default_params['cred']) as json_file:
+        creds = json.load(json_file)
+
+    IGSD_client.run(creds['bot_token'])
 
 
-
-
-
-
-
-if __name__ == '__main__':
-    asyncio.run(main())
+#if __name__ == '__main__':
+asyncio.run(startup())

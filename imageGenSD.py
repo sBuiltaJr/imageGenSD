@@ -72,7 +72,7 @@ def startup():
     global params
     global creds
     
-    #This will be modified in the future to accept super-supplied paths.
+    #This will be modified in the future to accept user-supplied paths.
     #This file must be loaded prior to the logger to allow for user-provided
     #options to be passed to the Logger.  Thus it must have special error
     #handling outside of the logger class.
@@ -97,7 +97,7 @@ def startup():
     logHandler.setFormatter(formatter)
     disLog.addHandler(logHandler)
     
-    #This will be modified in the future to accept super-supplied paths.
+    #This will be modified in the future to accept user-supplied paths.
     with open(default_params['cred']) as json_file:
         creds = json.load(json_file)
 

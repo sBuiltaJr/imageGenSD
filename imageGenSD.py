@@ -14,6 +14,8 @@ import logging.handlers as lh
 import json
 import os
 import shutil as sh
+import urllib as url
+import urllib.request as urlreq
 
 #####  Package Variables  #####
 
@@ -59,6 +61,20 @@ async def hello(interaction: dis.Interaction):
     """
     await interaction.response.send_message(f'Hi, {interaction.user.mention}')
     
+        
+@IGSD_client.tree.command()
+async def testapiread(interaction: dis.Interaction):
+    """A test echo command to verify basic discord functionality.
+
+       Input : None.
+
+       Output : None.
+    """
+    
+    with urlreq.urlopen() as file:
+        out = file.read(100).decode('utf-8')
+    await interaction.response.send_message(f'Get got back: {out}')
+    
 #####  main  #####
 
 def startup():
@@ -98,9 +114,14 @@ def startup():
     disLog.addHandler(logHandler)
     
     #This will be modified in the future to accept user-supplied paths.
-    with open(default_params['cred']) as json_file:
-        creds = json.load(json_file)
+    try:
+        with open(default_params['cred']) as json_file:
+            creds = json.load(json_file)
 
+    except OSError as err:
+        disLog.critical(f"Can\'t load file from path {default_params['cred']}")
+
+    disLog.debug(f'Starting Bot client')
     IGSD_client.run(creds['bot_token'])
 
 

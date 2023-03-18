@@ -71,7 +71,7 @@ async def testapiread(interaction: dis.Interaction):
        Output : None.
     """
     
-    with urlreq.urlopen() as file:
+    with urlreq.urlopen(params['webui_URL']) as file:
         out = file.read(100).decode('utf-8')
     await interaction.response.send_message(f'Get got back: {out}')
     

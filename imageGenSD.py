@@ -12,10 +12,10 @@ import gzip
 import logging as log
 import logging.handlers as lh
 import json
+import requests as req
 import os
 import shutil as sh
-import urllib as url
-import urllib.request as urlreq
+from urllib.parse import urljoin
 
 #####  Package Variables  #####
 
@@ -26,7 +26,7 @@ creds = {}
 default_params = {'cfg'       : 'config.json',
                   'cred'      : 'credentials.json',
                   'bot_token' : ''}
-IGSD_version = '0.0.1'
+IGSD_version = '0.0.2'
 params = {}
 
 #####  Package Classes  #####
@@ -63,17 +63,51 @@ async def hello(interaction: dis.Interaction):
     
         
 @IGSD_client.tree.command()
-async def testapiread(interaction: dis.Interaction):
-    """A test echo command to verify basic discord functionality.
+async def testapiget(interaction: dis.Interaction):
+    """A test HTTP GET command to verify basic connection to the webui page.
 
        Input : None.
 
        Output : None.
     """
     
-    with urlreq.urlopen(params['webui_URL']) as file:
-        out = file.read(100).decode('utf-8')
-    await interaction.response.send_message(f'Get got back: {out}')
+    try:
+        response = req.get(url=params['webui_URL'], timeout=5)
+    except Exception as err:
+        await interaction.response.send_message(f'Error sending GET request, got {err}!')
+        return
+    await interaction.response.send_message(f'GET got back: {response.status_code}, {response.reason}')
+    
+@IGSD_client.tree.command()
+async def testapiput(interaction: dis.Interaction):
+    """A test HTTP PUT command to verify basic connection to the webui page.
+
+       Input : None.
+
+       Output : None.
+    """
+    test_params = {
+        'prompt'         : params['options']['prompts'],
+        'negative_prompt': params['options']['negatives'],
+        'steps'          : int(params['options']['steps']),
+        'width'          : int(params['options']['width']),
+        'height'         : int(params['options']['height']),
+        'seed'           : int(params['options']['seed']),
+        'cfg_scale'      : float(params['options']['cfg']),
+        'sampler_index'  : params['samplers']['16'],
+        'enable_hr'      : bool(params['options']['HDR'])
+    }
+    url = urljoin(params['webui_URL'], '/sdapi/v1/txt2img')
+    disLog.info(f'URL is: {url}')
+    disLog.debug(f'test parameters are: {test_params}')
+    
+    try:
+        response = req.post(url=url, json=test_params)
+    except Exception as err:
+        await interaction.response.send_message(f'Error sending PUT request, got {err}!')
+        return
+    
+    await interaction.response.send_message(f'PUT got: {response.status_code}, {response.reason}')
     
 #####  main  #####
 

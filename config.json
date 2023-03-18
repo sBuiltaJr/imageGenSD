@@ -9,13 +9,16 @@
 	"max_bytes"     : "33554432",
 	"options"       :
 	{
-		"filters"   : "detailed background, masterpiece, best quality, 1girl, laser, bullets, bullet hell, funny hat,",
+		"cfg"       : "18",
+		"HDR"       : "FALSE",
 		"height"    : "512",
 		"max_height": "768",
 		"max_width" : "768",
 		"max_steps" : "150",
 		"negatives" : "(low quality, worst quality:1.4), (bad anatomy), extra digit, fewer digits, (extra arms:1.2), bad hands, by (bad-artist:0.6), bad-image-v2-39000, NSFW, nipples, loli, child, children, shota, boy, male, men, man,",
+		"prompts"   : "detailed background, masterpiece, best quality, 1girl, laser, bullets, bullet hell, funny hat,",
 		"sampler"   : "DPM++ 2M Karras",
+		"seed"      : "-1",
 		"steps"     : "50",
 		"width"     : "512"
 		

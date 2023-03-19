@@ -48,7 +48,8 @@ IGSD_client = IGSDClient(intents=intents)
 
 @IGSD_client.event
 async def on_ready():
-    print(f'Logged in as {IGSD_client.user} (ID: {IGSD_client.user.id})')
+    disLog = log.getLogger('discord')
+    disLog.info(f'Logged in as {IGSD_client.user} (ID: {IGSD_client.user.id})')
     print('------')
     
 @IGSD_client.tree.command()
@@ -86,6 +87,7 @@ async def testapiput(interaction: dis.Interaction):
 
        Output : None.
     """
+    disLog = log.getLogger('discord')
     test_params = {
         'prompt'         : params['options']['prompts'],
         'negative_prompt': params['options']['negatives'],
@@ -94,7 +96,7 @@ async def testapiput(interaction: dis.Interaction):
         'height'         : int(params['options']['height']),
         'seed'           : int(params['options']['seed']),
         'cfg_scale'      : float(params['options']['cfg']),
-        'sampler_index'  : params['samplers']['16'],
+        'sampler_index'  : "euler",
         'enable_hr'      : bool(params['options']['HDR'])
     }
     url = urljoin(params['webui_URL'], '/sdapi/v1/txt2img')

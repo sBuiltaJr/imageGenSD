@@ -89,16 +89,49 @@ async def testapiput(interaction: dis.Interaction):
     """
     disLog = log.getLogger('discord')
     test_params = {
-        'prompt'         : params['options']['prompts'],
-        'negative_prompt': params['options']['negatives'],
-        'steps'          : int(params['options']['steps']),
-        'width'          : int(params['options']['width']),
-        'height'         : int(params['options']['height']),
-        'seed'           : int(params['options']['seed']),
-        'cfg_scale'      : float(params['options']['cfg']),
-        'sampler_index'  : "euler",
-        'enable_hr'      : bool(params['options']['HDR'])
+        'enable_hr'           : False,#bool(params['options']['HDR']),
+        'denoising_strength'  : 0,
+        'firstphase_width'    : 0,
+        'firstphase_height'   : 0,
+        'hr_scale'            : 2,
+        'hr_upscaler'         : "string",
+        'hr_second_pass_steps': 0,
+        'hr_resize_x'         : 0,
+        'hr_resize_y'         : 0,
+        'prompt'              : params['options']['prompts'],
+        'styles'              : ["string"],
+        'seed'                : int(params['options']['seed']),
+        'subseed'             : -1,
+        'subseed_strength'    : 0,
+        'seed_resize_from_h'  : -1,
+        'seed_resize_from_w'  : -1,
+        'sampler_name'        : "",
+        'batch_size'          : 1,
+        'n_iter'              : 1,
+        'steps'               : int(params['options']['steps']),
+        'cfg_scale'           : float(params['options']['cfg']),
+        'width'               : int(params['options']['width']),
+        'height'              : int(params['options']['height']),
+        'restore_faces'       : False,
+        'tiling'              : False,
+        'do_not_save_samples' : False,
+        'do_not_save_grid'    : False,
+        'negative_prompt'     : params['options']['negatives'],
+        'eta'                 : 0,
+        's_churn'             : 0,
+        's_tmax'              : 0,
+        's_tmin'              : 0,
+        's_noise'             : 1,
+        'override_settings'   : {},
+        'override_settings_restore_afterwards': True,
+        'script_args'         : [],
+        'sampler_index'       : "Euler",
+        'script_name'         : "",
+        'send_images'         : True,
+        'save_images'         : True,
+        'alwayson_scripts'    : {}
     }
+
     url = urljoin(params['webui_URL'], '/sdapi/v1/txt2img')
     disLog.info(f'URL is: {url}')
     disLog.debug(f'test parameters are: {test_params}')

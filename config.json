@@ -43,7 +43,7 @@
         "17" : "DDIM",
         "18" : "PLMS"
     },
-    "webui_URL"     : "http://127.0.0.1:7860/",
+    "webui_URL"     : "http://127.0.0.1:7861/",
     "comments"      : 
     {
         "guild_id"      : "Default ID for your guild (discord server). 0 is an invalid ID.",

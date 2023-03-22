@@ -9,12 +9,14 @@ import asyncio
 import discord as dis
 from discord import app_commands as dac
 import gzip
+from PIL import Image as img
 import logging as log
 import logging.handlers as lh
 import json
 import requests as req
 import os
 import shutil as sh
+import time
 from urllib.parse import urljoin
 
 #####  Package Variables  #####
@@ -86,6 +88,8 @@ async def testapiput(interaction: dis.Interaction):
        Input : None.
 
        Output : None.
+       
+       Note: All slash commands *MUST* respond in 3 seconds or be terminated.
     """
     disLog = log.getLogger('discord')
     test_params = {
@@ -137,12 +141,17 @@ async def testapiput(interaction: dis.Interaction):
     disLog.debug(f'test parameters are: {test_params}')
     
     try:
-        response = req.post(url=url, json=test_params)
+        time.sleep(1)
+        #response = req.post(url=url, json=test_params)
+        #resp_img = response.json()
+        
     except Exception as err:
-        await interaction.response.send_message(f'Error sending PUT request, got {err}!')
+        await interaction.response.send_message(f'Error sending PUT request, got {err}, {resp_img}!')
         return
     
-    await interaction.response.send_message(f'PUT got: {response.status_code}, {response.reason}')
+    #Discord slash commands have a hard 3-second timeout.  Thus this must be
+    #routed to a queue maanger.
+    await interaction.response.send_message(f'Woo')#PUT got: {response.status_code}, {response.reason}')
     
 #####  main  #####
 
@@ -197,3 +206,22 @@ def startup():
 if __name__ == '__main__':
     startup()
 #asyncio.run(startup())
+
+#Supported commands:
+#/flush:   clear queue and kill active jobs (if possible).  Needs Owern/Admin to run.
+#/Restart: Flush + recreates the queue objects.  Effectively restarts teh script.  Also requries Owner.
+#/Cancel:  Kills most recent request from the poster, if possible. 
+#Have the slash command inherently check rate limit against user ID.
+# Raete limiting:
+    # 1) Limit per guild (X requests in X seconds and Y total requests).
+        #Check limits before accepting job to queue.
+        #respond error if full
+        #Adds req. to guild dict (including making) and timestamp.
+            #Only need 'last added' tiemstamp, limiting input not output. (jobs only produce one file)
+        #Support X number of guidls in config.
+    # 2) Allow configruable options later (Owner/inviter config commands, also in JSON)
+    # 3) Check Guild limits against dict size storing data (unique dicts per guild)
+    # 4) Queue msut be deep enough to handle guild sizes (multi-queue probably too painful)
+    # 5) No limit on specific user spam (yet).  May not be neede dwit Guild limit.
+    # 6) Worker pool(of 1 for now, ac nfarm with expansion) pops form queue and reports guild ID when complete.
+    # 7) Handler deletes entries from guild dict.

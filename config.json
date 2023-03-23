@@ -10,7 +10,7 @@
     "options"       :
     {
         "cfg"       : "18",
-        "HDR"       : "FALSE",
+        "HDR"       : "False",
         "height"    : "512",
         "max_height": "768",
         "max_width" : "768",
@@ -18,10 +18,19 @@
         "negatives" : "(low quality, worst quality:1.4), (bad anatomy), extra digit, fewer digits, (extra arms:1.2), bad hands, by (bad-artist:0.6), bad-image-v2-39000, NSFW, nipples, loli, child, children, shota, boy, male, men, man,",
 		"prompts"   : "detailed background, masterpiece, best quality, 1girl, laser, bullets, bullet hell, funny hat,",
         "sampler"   : "DPM++ 2M Karras",
+		"save_imgs" : "False",
         "seed"      : "-1",
         "steps"     : "50",
         "width"     : "512"
     },
+	"queue_opts"    :
+	{
+		"depth"          : "100",
+		"job_cooldown"   : "0.25",
+		"max_guilds"     : "10",
+		"max_guild_reqs" : "10",
+		"post_cooldown"  : "1.0"
+	},
     "samplers"      :
     {
         "1"  : "Euler a",
@@ -49,6 +58,16 @@
         "guild_id"      : "Default ID for your guild (discord server). 0 is an invalid ID.",
         "log_file_cnt"  : "Number of logfiles to cycle through.  e.g. you could have 5 files each 32 MB.",
         "max_bytes"     : "Maximum size of a logfile, measured in Bytes.",
+		"options"       : "All the configurable parameters for requests to the Stable Diffusion engine.",
+		"queue_opts"    : 
+		{
+			"depth"          : "How many jobs can be in the queue.",
+			"job_cooldown"   : "How many seconds to delay before starting another job (in case your computer cates fire).",
+			"max_guilds"     : "Max guilds to serve at a time, if you want to limit that.",
+			"max_guild_reqs" : "How many requests can be submitted by a single guild.  Stops a single guild from spamming the bot.",
+			"post_cooldown"  : "How many seconds to delay before accepting a new job request form a guild.  Also limits guild spam."
+			
+		},
         "test_guild_id" : "Default ID for your test/sandbox guild (discord server). 0 is an invalid ID."
     }
 }

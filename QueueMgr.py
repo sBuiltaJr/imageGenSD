@@ -5,8 +5,12 @@
 #Hard 3-second timeout.  Even modern HW is not yet able to meet this demand.
 
 
+#####  Imports  #####
+
+import concurrent.futures as cf
 
 #####  Queue Object Class  #####
+
 #The queue object is included since it's fairly small and probably won't change
 #independently of the manager.  No reason to add a new file, yet.
 class QueueObject:
@@ -79,6 +83,7 @@ class QueueObject:
     }
     
 #####  Manager Class  #####
+
 class Manager:
 
     """Manages job request queueing and tracks relevant discord context, such
@@ -90,10 +95,11 @@ class Manager:
               opts - A dictionary of options, like cooldowns.
               
        Output: None - Throws exceptions on error.
-
     """
-    def __init__(self, manager_id: int, opts: dict):
+    def __init__(self, pipe, manager_id: int, opts: dict):
         self.id = manager_id
+        #This is a Uniplex pipe since there's no status to return.
+        self.pipe = pipe
         #It's possible all opts are provided directly from config.json,
         #requriing them to be cast appropriately for the manager.  This also
         #allows the caller to never have to worry about casting the types
@@ -104,18 +110,27 @@ class Manager:
 		self.max_guild_reqs = int(opts['max_guild_reqs'])
 		self.post_cooldown  = int(opts['post_cooldown'])
         
-    def add(self, opts : dict) -> bool:
-    
+    def add(self, opts : dict):
+        
+    """Passes queued jobs to the worker tasks.  Is effectively the 'main' of
+       the class.  Workers return the image prompt and queue object id when
+       compelte.  The Maanger posts the result to the main thread via an event
+       to allow simultaneous handling of commands and responses.
+
+       Input: self - Pointer to the current object instance.
+              
+       Output: None - Results are posted to an event.
+    """
     def run(self):
     
         #This may, someday, need to be a proepr multiprocessing queue.
         jobs = [QueueObject(x) for x in range(self.depth)]
-        
-#Manager spawned as a separate task that does the managing.
-    #Manager has a pipe to get jobs from main task (allowing 'await' to work)
-    #Manager pends on pipe in add and adds to queue
-        #Need to verify taht pipe and job processes don't lock eachother
-#Jobs submitted as a separate process Manager awaits.
-    #Concurrent futures to allow for multiple jobs.
-    #Needs to not block add feature.
     
+    
+#Can use asyncip create_task to post message to server. Done in the suisha load manager:
+#queue_obj.event_loop.create_task(queue_obj.ctx.channel.send(
+#                        content=f'<@{queue_obj.ctx.author.id}>',
+#                        file=discord.File(fp=image, filename='image.png'),
+#                        embed=embed))
+#Probably have manager reply, though it'd be structurally correct to have the main thread do it.
+#Sys commands as a specific obj to the maanger via pipe that triggers kill.

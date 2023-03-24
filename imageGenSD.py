@@ -8,13 +8,14 @@
 import asyncio
 import discord as dis
 from discord import app_commands as dac
-import gzip
+#import gzip
 from PIL import Image as img
 import logging as log
 import logging.handlers as lh
 import json
-import requests as req
+import multiprocessing as mp
 import os
+import requests as req
 import shutil as sh
 import time
 from urllib.parse import urljoin
@@ -30,6 +31,8 @@ default_params = {'cfg'       : 'config.json',
                   'bot_token' : ''}
 IGSD_version = '0.0.2'
 params = {}
+#This should be expanded to allow multiple pipes (and thsu managers) eventually.
+pipes = ()
 
 #####  Package Classes  #####
 
@@ -58,7 +61,7 @@ async def on_ready():
 async def hello(interaction: dis.Interaction):
     """A test echo command to verify basic discord functionality.
 
-       Input : None.
+       Input  : None.
 
        Output : None.
     """
@@ -69,7 +72,7 @@ async def hello(interaction: dis.Interaction):
 async def testapiget(interaction: dis.Interaction):
     """A test HTTP GET command to verify basic connection to the webui page.
 
-       Input : None.
+       Input  : None.
 
        Output : None.
     """
@@ -85,7 +88,7 @@ async def testapiget(interaction: dis.Interaction):
 async def testapiput(interaction: dis.Interaction):
     """A test HTTP PUT command to verify basic connection to the webui page.
 
-       Input : None.
+       Input  : None.
 
        Output : None.
        
@@ -199,6 +202,13 @@ def startup():
     except OSError as err:
         disLog.critical(f"Can\'t load file from path {default_params['cred']}")
 
+
+    dislog.debug(f'Starting IPC (pipe)')
+    #Currently there's no need to have a duplex pipe; put will throw an exception
+    #on full and there's no otehr useful status to return.  This will need to
+    #change if the assumption ever changes.
+    pipes = mp.Pipe(False)
+    
     disLog.debug(f'Starting Bot client')
     IGSD_client.run(creds['bot_token'])
 

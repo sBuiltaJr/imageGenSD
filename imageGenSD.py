@@ -9,12 +9,13 @@ import asyncio as asy
 import discord as dis
 from discord import app_commands as dac
 #import gzip
-from PIL import Image as img
 import logging as log
 import logging.handlers as lh
 import json
 import multiprocessing as mp
 import os
+from PIL import Image as img
+import QueueMgr as qm
 import requests as req
 import shutil as sh
 import time
@@ -31,7 +32,7 @@ default_params = {'cfg'       : 'config.json',
                   'bot_token' : ''}
 IGSD_version = '0.0.2'
 params = {}
-#This should be expanded to allow multiple pipes (and thsu managers) eventually.
+#This should be expanded to allow multiple pipes (and thus managers) eventually.
 pipes = ()
 
 #####  Package Classes  #####
@@ -46,17 +47,17 @@ class IGSDClient(dis.Client):
             Output : None
         """
         self.disLog = log.getLogger('discord')
-        self.disLog.debug(f'Intents are: {intents}')
+        self.disLog.debug(f"Intents are: {intents}")
         
         super().__init__(intents=intents)
         self.tree = dac.CommandTree(self)
         
         #This pipe must be made here so it can be passed to the response task
-        #as it's generaetd.  This init is calle dbefore IGSD's main and thus
+        #as it's generaetd.  This init is called before IGSD's main and thus
         #can't be passed into the function at runtime.
-        self.disLog.info(f'Creating the posting pipes.')
+        self.disLog.info(f"Creating the posting pipes.")
         self.post_pipes = mp.Pipe(False)
-        self.disLog.debug(f'Created request pipes {self.post_pipes}.')
+        self.disLog.debug(f"Created request pipes {self.post_pipes}.")
 
     async def setup_hook(self):
         """Copies the global command set to a given Guild instance.
@@ -69,10 +70,10 @@ class IGSDClient(dis.Client):
         #Replies are managed in a separate task to allow the main UI to always
         #be responsive, and allow the backend to process work independent of
         #message posting.  It's more efficent and better separated.
-        self.disLog.info(f'Starting response task.')
+        self.disLog.info(f'"Starting response task.")
         #Pipe 1 is always the recieve pipe.
         self.poster = asy.create_task(self.Post(self.post_pipes[0]), name='Poster')
-        self.disLog.debug(f'Created poster task {self.poster}.')
+        self.disLog.debug(f"Created poster task {self.poster}.")
         
         self.tree.copy_global_to(guild=dis.Object(creds['guild_id']))
         
@@ -92,8 +93,8 @@ class IGSDClient(dis.Client):
         keep_posting = True
         
         while keep_posting:
-            msg = rx_pipe.get()
-            disLog.debug(f'got the message {msg}')
+            msg = rx_pipe.recv()
+            disLog.debug(f"got the message {msg}")
             #Evaluate the message and identify any quit requests.
             await interaction.response.send_message(f'lol')
         return
@@ -165,14 +166,16 @@ async def testapiget(interaction: dis.Interaction):
     """
     
     try:
-        response = req.get(url=params['webui_URL'], timeout=5)
+        #This should proabbly be moved to a manager since there may eventually
+        #be multiple IP addresses.
+        response = req.get(url=params['queue_opts']['webui_URL'], timeout=5)
     except Exception as err:
-        await interaction.response.send_message(f'Error sending GET request, got {err}!')
+        await interaction.response.send_message(f"Error sending GET request, got {err}!")
         return
-    await interaction.response.send_message(f'GET got back: {response.status_code}, {response.reason}')
+    await interaction.response.send_message(f"GET got back: {response.status_code}, {response.reason}")
     
 @IGSD_client.tree.command()
-async def testapiput(interaction: dis.Interaction):
+async def testpost(interaction: dis.Interaction):
     """A test HTTP PUT command to verify basic connection to the webui page.
 
        Input  : None.
@@ -226,17 +229,18 @@ async def testapiput(interaction: dis.Interaction):
         'alwayson_scripts'    : {}
     }
 
-    url = urljoin(params['webui_URL'], '/sdapi/v1/txt2img')
-    disLog.info(f'URL is: {url}')
-    disLog.debug(f'test parameters are: {test_params}')
+    #url = urljoin(params['webui_URL'], '/sdapi/v1/txt2img')
+    #disLog.info(f'URL is: {url}')
+    #disLog.debug(f'test parameters are: {test_params}')
     
     try:
-        time.sleep(1)
+        #time.sleep(1)
         #response = req.post(url=url, json=test_params)
         #resp_img = response.json()
         
     except Exception as err:
-        await interaction.response.send_message(f'Error sending PUT request, got {err}, {resp_img}!')
+        disLog.error(f"Exception posting mesasge to poster task: {err}")
+        await interaction.response.send_message(f"Error sending message to poster task!")
         return
     
     #Discord slash commands have a hard 3-second timeout.  Thus this must be
@@ -288,17 +292,19 @@ def Startup():
 
     except OSError as err:
         disLog.critical(f"Can\'t load file from path {default_params['cred']}")
+        exit(1)
 
 
-    disLog.debug(f'Starting IPC (pipe)')
+    disLog.debug(f"Starting IPC (pipe)")
     #Currently there's no need to have a duplex pipe; put will throw an exception
-    #on full and there's no otehr useful status to return.  This will need to
+    #on full and there's no other useful status to return.  This will need to
     #change if the assumption ever changes.
-    pipes     = mp.Pipe(False)
+    pipes = mp.Pipe(False)
     
-    
-    disLog.debug(f'Starting Bot client')
+    #Start manager tasks
+    disLog.debug(f"Starting Bot client")
     IGSD_client.run(creds['bot_token'])
+    print(f"After client start")
 
 
 if __name__ == '__main__':

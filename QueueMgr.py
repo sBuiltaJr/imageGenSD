@@ -85,7 +85,6 @@ class QueueObject:
 #####  Manager Class  #####
 
 class Manager:
-
     """Manages job request queueing and tracks relevant discord context, such
        as poster, guild, channel, etc.  The manager gets this from the caller
        so different managers could have different settings.
@@ -112,16 +111,15 @@ class Manager:
         
         
     def add(self, opts : dict):
-        
-    """Passes queued jobs to the worker tasks.  Is effectively the 'main' of
-       the class.  Workers return the image prompt and queue object id when
-       compelte.  The Maanger posts the result to the main thread via an event
-       to allow simultaneous handling of commands and responses.
+        """Passes queued jobs to the worker tasks.  Is effectively the 'main'
+           of the class.  Workers return the image prompt and queue object id
+           when compelte.  The Maanger posts the result to the main thread via
+           a pipe to allow simultaneous handling of commands and responses.
 
-       Input: self - Pointer to the current object instance.
+           Input: self - Pointer to the current object instance.
               
-       Output: None - Results are posted to an event.
-    """
+           Output: None - Results are posted to a pipe.
+        """
     return
     
     def run(self):

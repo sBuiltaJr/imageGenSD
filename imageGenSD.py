@@ -38,13 +38,13 @@ pipes = ()
 
 class IGSDClient(dis.Client):
     def __init__(self, *, intents: dis.Intents):
-    """This command copies the global command set to a given Guild instance.
+        """This command copies the global command set to a given Guild instance.
 
-       Input  : self - a reference to the current object.
-                intents - what Discord intents are required to run the bot.
+            Input  : self - a reference to the current object.
+                     intents - what Discord intents are required to run the bot.
 
-       Output : None
-    """
+            Output : None
+        """
         self.disLog = log.getLogger('discord')
         self.disLog.debug(f'Intents are: {intents}')
         
@@ -57,68 +57,70 @@ class IGSDClient(dis.Client):
         self.disLog.info(f'Creating the posting pipes.')
         self.post_pipes = mp.Pipe(False)
         self.disLog.debug(f'Created request pipes {self.post_pipes}.')
+
+    async def setup_hook(self):
+        """Copies the global command set to a given Guild instance.
+
+            Input  : self - a reference to the current object.
+
+            Output : None
+        """
         
         #Replies are managed in a separate task to allow the main UI to always
         #be responsive, and allow the backend to process work independent of
         #message posting.  It's more efficent and better separated.
         self.disLog.info(f'Starting response task.')
         #Pipe 1 is always the recieve pipe.
-        self.poster = asy.create_task(Post(self.post_pipes[0]), name='Poster')
+        self.poster = asy.create_task(self.Post(self.post_pipes[0]), name='Poster')
         self.disLog.debug(f'Created poster task {self.poster}.')
-
-    async def setup_hook(self):
-    """Copies the global command set to a given Guild instance.
-
-       Input  : self - a reference to the current object.
-
-       Output : None
-    """
+        
         self.tree.copy_global_to(guild=dis.Object(creds['guild_id']))
         
         await self.tree.sync(guild=dis.Object(creds['guild_id']))
         
     async def Post(self, rx_pipe):
-    """Posts the provided message to the specified discord channel.  Runs as a
-       asyncio subtask unber the main class to prevent hanging.
+        """Posts the provided message to the specified discord channel.  Runs as
+            a asyncio subtask unber the main class to prevent hanging.
 
-       Input  : self - a reference to the current object.
-                msg - what to post, where, and whom to notify.
+            Input  : self - a reference to the current object.
+                     msg - what to post, where, and whom to notify.
 
-       Output : None.
-    """
+            Output : None.
+        """
         #Post is run as a separate task, requiring its own logger reference.
         disLog = log.getLogger('discord')
         keep_posting = True
         
         while keep_posting:
             msg = rx_pipe.get()
-            dislog.debug(f'got the message {msg}')
+            disLog.debug(f'got the message {msg}')
             #Evaluate the message and identify any quit requests.
+            await interaction.response.send_message(f'lol')
         return
     
-    def GetPipe(self) -> mp.connection.Connection:
-    """Returns the message posting pipe for this object.  Each object must own
-       its posting pipe due to inheritance issues. This should only need to be
-       fetched once per object.
+    def GetPipe(self):
+        """Returns the message posting pipe for this object.  Each object must
+           own its posting pipe due to inheritance issues. This should only need
+           to be fetched once per object.
 
-       Input  : self - a reference to the current object.
+            Input  : self - a reference to the current object.
 
-       Output : connection - the input pipe for passing messages to the task.
-    """
+            Output : connection - the input pipe for passing messages to the task.
+        """
         #Pipes are returned as a tuple with the first element as the input.
         return self.response_pipes[1]
         
     def __exit__(self, exec_type, exec_value, traceback):
-    """Runs as one of the final calls befoer an object is destroyed. Explicitly
-       implemented to ensure the Post task and pipes are properly disposed.
+        """Runs as one of the final calls befoer an object is destroyed. Explicitly
+           implemented to ensure the Post task and pipes are properly disposed.
 
-       Input  : self - a reference to the current object.
-                exec_type - the type of exception that caused this call.
-                exec_value - the value of the exception that caused this call.
-                traceback - the stack involved in the exception call.
+            Input  : self - a reference to the current object.
+                     exec_type - the type of exception that caused this call.
+                     exec_value - the value of the exception that caused this call.
+                     traceback - the stack involved in the exception call.
 
-       Output : connection - the input pipe for passing messages to the task.
-    """
+            Output : connection - the input pipe for passing messages to the task.
+        """
         #Empty the pipe, if not already empty.  This is to flush any items left
         #and avoid the deadlock mentioned in the multiprocessing.Pipe docs
         for pipe in self.post_pipes:
@@ -288,7 +290,7 @@ def Startup():
         disLog.critical(f"Can\'t load file from path {default_params['cred']}")
 
 
-    dislog.debug(f'Starting IPC (pipe)')
+    disLog.debug(f'Starting IPC (pipe)')
     #Currently there's no need to have a duplex pipe; put will throw an exception
     #on full and there's no otehr useful status to return.  This will need to
     #change if the assumption ever changes.

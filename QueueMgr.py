@@ -110,6 +110,7 @@ class Manager:
 		self.max_guild_reqs = int(opts['max_guild_reqs'])
 		self.post_cooldown  = int(opts['post_cooldown'])
         
+        
     def add(self, opts : dict):
         
     """Passes queued jobs to the worker tasks.  Is effectively the 'main' of
@@ -121,6 +122,8 @@ class Manager:
               
        Output: None - Results are posted to an event.
     """
+    return
+    
     def run(self):
     
         #This may, someday, need to be a proepr multiprocessing queue.

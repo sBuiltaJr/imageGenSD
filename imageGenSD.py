@@ -5,7 +5,7 @@
 
 #####  Imports  #####
 
-import asyncio
+import asyncio as asy
 import discord as dis
 from discord import app_commands as dac
 #import gzip
@@ -38,13 +38,98 @@ pipes = ()
 
 class IGSDClient(dis.Client):
     def __init__(self, *, intents: dis.Intents):
+    """This command copies the global command set to a given Guild instance.
+
+       Input  : self - a reference to the current object.
+                intents - what Discord intents are required to run the bot.
+
+       Output : None
+    """
+        self.disLog = log.getLogger('discord')
+        self.disLog.debug(f'Intents are: {intents}')
+        
         super().__init__(intents=intents)
         self.tree = dac.CommandTree(self)
+        
+        #This pipe must be made here so it can be passed to the response task
+        #as it's generaetd.  This init is calle dbefore IGSD's main and thus
+        #can't be passed into the function at runtime.
+        self.disLog.info(f'Creating the posting pipes.')
+        self.post_pipes = mp.Pipe(False)
+        self.disLog.debug(f'Created request pipes {self.post_pipes}.')
+        
+        #Replies are managed in a separate task to allow the main UI to always
+        #be responsive, and allow the backend to process work independent of
+        #message posting.  It's more efficent and better separated.
+        self.disLog.info(f'Starting response task.')
+        #Pipe 1 is always the recieve pipe.
+        self.poster = asy.create_task(Post(self.post_pipes[0]), name='Poster')
+        self.disLog.debug(f'Created poster task {self.poster}.')
 
     async def setup_hook(self):
-        # This copies the global commands over to your guild.
+    """Copies the global command set to a given Guild instance.
+
+       Input  : self - a reference to the current object.
+
+       Output : None
+    """
         self.tree.copy_global_to(guild=dis.Object(creds['guild_id']))
+        
         await self.tree.sync(guild=dis.Object(creds['guild_id']))
+        
+    async def Post(self, rx_pipe):
+    """Posts the provided message to the specified discord channel.  Runs as a
+       asyncio subtask unber the main class to prevent hanging.
+
+       Input  : self - a reference to the current object.
+                msg - what to post, where, and whom to notify.
+
+       Output : None.
+    """
+        #Post is run as a separate task, requiring its own logger reference.
+        disLog = log.getLogger('discord')
+        keep_posting = True
+        
+        while keep_posting:
+            msg = rx_pipe.get()
+            dislog.debug(f'got the message {msg}')
+            #Evaluate the message and identify any quit requests.
+        return
+    
+    def GetPipe(self) -> mp.connection.Connection:
+    """Returns the message posting pipe for this object.  Each object must own
+       its posting pipe due to inheritance issues. This should only need to be
+       fetched once per object.
+
+       Input  : self - a reference to the current object.
+
+       Output : connection - the input pipe for passing messages to the task.
+    """
+        #Pipes are returned as a tuple with the first element as the input.
+        return self.response_pipes[1]
+        
+    def __exit__(self, exec_type, exec_value, traceback):
+    """Runs as one of the final calls befoer an object is destroyed. Explicitly
+       implemented to ensure the Post task and pipes are properly disposed.
+
+       Input  : self - a reference to the current object.
+                exec_type - the type of exception that caused this call.
+                exec_value - the value of the exception that caused this call.
+                traceback - the stack involved in the exception call.
+
+       Output : connection - the input pipe for passing messages to the task.
+    """
+        #Empty the pipe, if not already empty.  This is to flush any items left
+        #and avoid the deadlock mentioned in the multiprocessing.Pipe docs
+        for pipe in self.post_pipes:
+        
+            while pipe.poll(0):
+            
+                trash = pipe.recv()
+            pipe.close()
+        
+        #Ensure the post task is properly deleted.
+        self.poster.cancel()
 
 intents = dis.Intents.default()
 IGSD_client = IGSDClient(intents=intents)
@@ -155,10 +240,10 @@ async def testapiput(interaction: dis.Interaction):
     #Discord slash commands have a hard 3-second timeout.  Thus this must be
     #routed to a queue maanger.
     await interaction.response.send_message(f'Woo')#PUT got: {response.status_code}, {response.reason}')
-    
+
 #####  main  #####
 
-def startup():
+def Startup():
     """Updates the global dictionary with the supplied configuration, if it
        exists, and starts the program.
 
@@ -207,15 +292,16 @@ def startup():
     #Currently there's no need to have a duplex pipe; put will throw an exception
     #on full and there's no otehr useful status to return.  This will need to
     #change if the assumption ever changes.
-    pipes = mp.Pipe(False)
+    pipes     = mp.Pipe(False)
+    
     
     disLog.debug(f'Starting Bot client')
     IGSD_client.run(creds['bot_token'])
 
 
 if __name__ == '__main__':
-    startup()
-#asyncio.run(startup())
+    Startup()
+#asy.run(startup())
 
 #Supported commands:
 #/flush:   clear queue and kill active jobs (if possible).  Needs Owern/Admin to run.

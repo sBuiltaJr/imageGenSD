@@ -31,7 +31,8 @@
 		"job_count"      : "1",
 		"max_guilds"     : "10",
 		"max_guild_reqs" : "10",
-		"post_cooldown"  : "1.0"
+		"post_cooldown"  : "1.0",
+		"webui_URL"      : "http://127.0.0.1:7861/"
 	},
     "samplers"      :
     {
@@ -54,7 +55,6 @@
         "17" : "DDIM",
         "18" : "PLMS"
     },
-    "webui_URL"     : "http://127.0.0.1:7861/",
     "comments"      : 
     {
         "guild_id"      : "Default ID for your guild (discord server). 0 is an invalid ID.",

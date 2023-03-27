@@ -7,52 +7,21 @@
 
 #####  Imports  #####
 
+import asyncio as asy
 import logging as log
 import multiprocessing as mp
 
+jobs       = {}
 #####  Package Functions  #####
 
-def PutRequest(pipe) :
-    """Instantiated as an independent proecss for putting and getting data from
-       the SD werver.  Results are provided back to the main IGSD thread via
-       the supplied pipe.  Has no knowledge of Guilds or how to post the
-       provided image to the requestor.
-
-        Input: pipe - where to return the SD image gen result.
-              
-        Output: None - Throws exceptions on error.
-    """
-    return
-
-#####  Queue Object Class  #####
-
-#The queue object is included since it's fairly small and probably won't change
-#independently of the manager.  No reason to add a new file, yet.
-class QueueObject:
-
-    def __init__(self, object_id: int):
-        """Queue Objects contain the prompt data passed by a slash command.
-           Their contents are passed to the Stable Diffusion engine when ready.
-
-           Input: self - Pointer to the current object instance.
-                  id - A unique ID assigned by the manager for tracking.
-
-           Output: None - Throws exceptions on error.
-        """
-        self.disLog   = log.getLogger('discord')
-        self.id       = object_id
-        self.job_data = {}
-        
-# d|= args with args initially set to default Job Data
-        
-    def getDefaultJobData() -> dict:
-        """Returns the default job settings that can be provided to an empty
+"""    def getDefaultJobData() -> dict:
+        Returns the default job settings that can be provided to an empty
            query (or to reinitialize an object).
 
            Input: None.
 
            Output: opts - a dictionary of the default queue arguments.
-        """
+        
         return {
         'enable_hr'           : params['options']['HDR'],
         'denoising_strength'  : 0,
@@ -96,17 +65,18 @@ class QueueObject:
         'save_images'         : params['options']['save_imgs'],
         'alwayson_scripts'    : {}
         }
-    
+"""    
 #####  Manager Class  #####
 
 class Manager:
 
-    def __init__(self, pipe, manager_id: int, opts: dict):
+    def __init__(self, loop, manager_id: int, opts: dict):
         """Manages job request queueing and tracks relevant discord context,
            such as poster, Guild, channel, etc.  The Manager gets this from the
            caller so different Managers could have different settings.
 
            Input: self - Pointer to the current object instance.
+                  loop - The asyncio event loop this manager posts to.
                   manager_id - The current Manager's ID, assigned by the caller.
                   opts - A dictionary of options, like cooldowns.
               
@@ -115,17 +85,16 @@ class Manager:
         self.disLog     = log.getLogger('discord')
         self.id         = manager_id
         self.keep_going = True
-        #This is a Uniplex pipe since there's no status to return.
-        self.pipe       = pipe
+        self.post_loop  = loop
         #It's possible all opts are provided directly from config.json,
         #requiring them to be cast appropriately for the manager.  This also
         #allows the caller to never have to worry about casting the types
         #correctly for a config file and definition it doesn't own.
         self.depth          = int(opts['depth'])
-        self.job_cooldown   = float(['job_cooldown'])
-		self.max_guilds     = int(opts['max_guilds'])
-		self.max_guild_reqs = int(opts['max_guild_reqs'])
-		self.post_cooldown  = int(opts['post_cooldown'])
+        self.job_cooldown   = float(opts['job_cooldown'])
+        self.max_guilds     = int(opts['max_guilds'])
+        self.max_guild_reqs = int(opts['max_guild_reqs'])
+        self.post_cooldown  = float(opts['post_cooldown'])
         self.web_url        = opts['webui_URL']
         
         #This may eventually be implemented as a concurrent futures ProcessPool
@@ -136,21 +105,50 @@ class Manager:
     def add(self, request : dict):
         """Passes queued jobs to the worker tasks.  Is effectively the 'main'
            of the class.  Workers return the image prompt and queue object id
-           when compelte.  The Manager posts the result to the main thread via
-           a pipe to allow simultaneous handling of commands and responses.
+           when compelte.  The Manager should post the result to the main thread
+           via a pipe to allow simultaneous handling of commands and responses.
 
            Input: self - Pointer to the current object instance.
+                  request - sanitized data to potentially add to the queue.
               
            Output: None - Results are posted to a pipe.
         """
-        while self.keep_going:
-            msg = self.pipe.recv()
-            self.disLog.debug(f"got the request {msg}")
-            #Convert the pased object into a QueueObject and add it to the Queue.
-        return
+        global jobs
+        
+        if request['data']['id'] not in jobs:
+            jobs[request['data']['id']] = request
+            self.disLog.debug(f"Added new request to id {request['data']['id']}.")
+        else :
+            self.disLog.debug(f"Request id {request['data']['id']} alraedy exists!")
+            return
+        
+            #Else rate limit
+        self.queue.put(request['data'])
     
+    def PutRequest(self) :
+        """Should be instantiated as an independent proecss for putting and
+           getting data from the SD werver.  Results are provided back to the
+           main IGSD thread viathe supplied event loop.  Has no knowledge of
+           Guilds or how to post the provided image to the requestor.
+
+            Input: pipe - where to return the SD image gen result.
+                  
+            Output: None - Throws exceptions on error.
+        """
+        global jobs
+        
+        while self.keep_going:
+            self.disLog.info(f"Starting put to SD server at {self.web_url}.")
+            result = self.queue.get()
+            #actually put the job.
+            job     = jobs.pop(result['id'])
+            result |= job['metadata']
+            job['metadata']['loop'].create_task(job['metadata']['ctx'].channel.send(result['reply']), name="reply")
+            #job['metadata']['loop'].call_soon_threadsafe(job['metadata']['poster'], result, context=None)#Put response here instread
+        return
+        
     def run(self):
-        """Actually spawns the process that puts job requests to the SD server.
+        """SHould spawn the process that puts job requests to the SD server.
            The job task uses the provided pipe to post results, the manager 
            only needs to wait for completion before starting another job.  Is
            the freamework for multiple concurrent jobs, but will need to be
@@ -160,19 +158,7 @@ class Manager:
               
            Output: None - Results are posted to a pipe.
         """
-        self.disLog.info(f"Starting Queue Manager {self.id}")
+        self.disLog.info(f"Queue Manager {self.id} starting workers.")
         #This may, someday, need to be a proper multiprocessing queue.
         #jobs = [QueueObject(x) for x in range(self.depth)], in a loop
-        while self.keep_going:
-        
-            job    = self.queue.get()
-            self.disLog.debug(f"Starting job {job}")
-            worker = mp.Process(target=PutRequest, args=(self.pip, self.web_url))
-            worker.start()
-            worker.join()
-    
-#Can use asyncip create_task to post message to server. Done in the suisha load manager:
-#queue_obj.event_loop.create_task(queue_obj.ctx.channel.send(
-#                        content=f'<@{queue_obj.ctx.author.id}>',
-#                        file=discord.File(fp=image, filename='image.png'),
-#                        embed=embed))
+

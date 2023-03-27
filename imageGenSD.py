@@ -17,7 +17,7 @@ import os
 from PIL import Image as img
 import QueueMgr as qm
 import requests as req
-import shutil as sh
+import threading as th
 import time
 from urllib.parse import urljoin
 
@@ -32,8 +32,8 @@ default_params = {'cfg'       : 'config.json',
                   'bot_token' : ''}
 IGSD_version = '0.0.2'
 params = {}
-#This should be expanded to allow multiple pipes (and thus managers) eventually.
-pipes = ()
+job_queue = ()
+worker = ()
 
 #####  Package Classes  #####
 
@@ -51,13 +51,6 @@ class IGSDClient(dis.Client):
         
         super().__init__(intents=intents)
         self.tree = dac.CommandTree(self)
-        
-        #This pipe must be made here so it can be passed to the response task
-        #as it's generaetd.  This init is called before IGSD's main and thus
-        #can't be passed into the function at runtime.
-        self.disLog.info(f"Creating the posting pipes.")
-        self.post_pipes = mp.Pipe(False)
-        self.disLog.debug(f"Created request pipes {self.post_pipes}.")
 
     async def setup_hook(self):
         """Copies the global command set to a given Guild instance.
@@ -67,72 +60,40 @@ class IGSDClient(dis.Client):
             Output : None
         """
         
-        #Replies are managed in a separate task to allow the main UI to always
-        #be responsive, and allow the backend to process work independent of
-        #message posting.  It's more efficent and better separated.
-        self.disLog.info(f'"Starting response task.")
-        #Pipe 1 is always the recieve pipe.
-        self.poster = asy.create_task(self.Post(self.post_pipes[0]), name='Poster')
-        self.disLog.debug(f"Created poster task {self.poster}.")
+        #Replies should be managed in a separate task to allow the main UI to
+        #always be responsive, and allow the backend to process work independent
+        #of message posting.  It's more efficent and better separated.
+        self.loop = asy.get_running_loop()
         
         self.tree.copy_global_to(guild=dis.Object(creds['guild_id']))
+        self.disLog.debug(f"Syncing Guild Tree to {creds['guild_id']}.")
         
         await self.tree.sync(guild=dis.Object(creds['guild_id']))
         
-    async def Post(self, rx_pipe):
-        """Posts the provided message to the specified discord channel.  Runs as
-            a asyncio subtask unber the main class to prevent hanging.
+    def GetLoop(self):
+        """Returns a reference to this client's asyncio event loop.
+
+            Input  : self - a reference to the current object.
+
+            Output : loop - the client's event loop.
+        """
+        return self.loop;
+        
+    def Post(self, msg : dict):
+        """Posts the provided message to the specified discord channel. Invoked
+           by the Queue Manager since all these asyncio tasks fall under a
+           single event loop that will hang if waiting for a pipe, thus hanging
+           all active tasks (and the thread).
 
             Input  : self - a reference to the current object.
                      msg - what to post, where, and whom to notify.
 
             Output : None.
         """
-        #Post is run as a separate task, requiring its own logger reference.
-        disLog = log.getLogger('discord')
-        keep_posting = True
-        
-        while keep_posting:
-            msg = rx_pipe.recv()
-            disLog.debug(f"got the message {msg}")
-            #Evaluate the message and identify any quit requests.
-            await interaction.response.send_message(f'lol')
-        return
-    
-    def GetPipe(self):
-        """Returns the message posting pipe for this object.  Each object must
-           own its posting pipe due to inheritance issues. This should only need
-           to be fetched once per object.
-
-            Input  : self - a reference to the current object.
-
-            Output : connection - the input pipe for passing messages to the task.
-        """
-        #Pipes are returned as a tuple with the first element as the input.
-        return self.response_pipes[1]
-        
-    def __exit__(self, exec_type, exec_value, traceback):
-        """Runs as one of the final calls befoer an object is destroyed. Explicitly
-           implemented to ensure the Post task and pipes are properly disposed.
-
-            Input  : self - a reference to the current object.
-                     exec_type - the type of exception that caused this call.
-                     exec_value - the value of the exception that caused this call.
-                     traceback - the stack involved in the exception call.
-
-            Output : connection - the input pipe for passing messages to the task.
-        """
-        #Empty the pipe, if not already empty.  This is to flush any items left
-        #and avoid the deadlock mentioned in the multiprocessing.Pipe docs
-        for pipe in self.post_pipes:
-        
-            while pipe.poll(0):
-            
-                trash = pipe.recv()
-            pipe.close()
-        
-        #Ensure the post task is properly deleted.
-        self.poster.cancel()
+        self.disLog.debug(f"Posting the message {msg}")
+        #Evaluate the message and identify any quit requests.
+        #await msg['ctx'].channel.send(msg['reply'])
+        self.loop.create_task(msg['ctx'].channel.send(msg['reply']), name="reply")
 
 intents = dis.Intents.default()
 IGSD_client = IGSDClient(intents=intents)
@@ -141,8 +102,17 @@ IGSD_client = IGSDClient(intents=intents)
 
 @IGSD_client.event
 async def on_ready():
+    global job_queue
+    global worker
+    
     disLog = log.getLogger('discord')
     disLog.info(f'Logged in as {IGSD_client.user} (ID: {IGSD_client.user.id})')
+    
+    disLog.debug(f"Creating Queue Manager)")
+    job_queue = qm.Manager(IGSD_client.GetLoop(), 1, params['queue_opts'])
+    worker    = th.Thread(target=job_queue.PutRequest, name="worker")
+    worker.start()
+    
     print('------')
     
 @IGSD_client.tree.command()
@@ -175,6 +145,38 @@ async def testapiget(interaction: dis.Interaction):
     await interaction.response.send_message(f"GET got back: {response.status_code}, {response.reason}")
     
 @IGSD_client.tree.command()
+async def testinternalloop(interaction: dis.Interaction):
+    """Pushes a test message through internal pipes only, no PUT to the SD server.
+
+       Input  : None.
+
+       Output : None.
+       
+       Note: All slash commands *MUST* respond in 3 seconds or be terminated.
+    """
+    disLog = log.getLogger('discord')
+
+    #url = urljoin(params['webui_URL'], '/sdapi/v1/txt2img')
+    #disLog.info(f'URL is: {url}')
+    #disLog.debug(f'test parameters are: {test_params}')
+    msg = { 'metadata' : {
+            'ctx' : interaction,
+            'loop' : IGSD_client.GetLoop(),
+            'poster' : IGSD_client.Post
+            },
+        'data' : {
+            'id' : 'testpostid',
+            'reply' : "test msg"
+            }
+        }
+    disLog.debug(f"Posting job {msg} to the queue") 
+    job_queue.add(msg)
+    
+    #Discord slash commands have a hard 3-second timeout.  Thus this must be
+    #routed to a queue maanger.
+    await interaction.response.send_message(f'Posted Test Message to work queue.')
+
+@IGSD_client.tree.command()
 async def testpost(interaction: dis.Interaction):
     """A test HTTP PUT command to verify basic connection to the webui page.
 
@@ -184,69 +186,8 @@ async def testpost(interaction: dis.Interaction):
        
        Note: All slash commands *MUST* respond in 3 seconds or be terminated.
     """
-    disLog = log.getLogger('discord')
-    test_params = {
-        'enable_hr'           : False,#bool(params['options']['HDR']),
-        'denoising_strength'  : 0,
-        'firstphase_width'    : 0,
-        'firstphase_height'   : 0,
-        'hr_scale'            : 2,
-        'hr_upscaler'         : "string",
-        'hr_second_pass_steps': 0,
-        'hr_resize_x'         : 0,
-        'hr_resize_y'         : 0,
-        'prompt'              : params['options']['prompts'],
-        'styles'              : ["string"],
-        'seed'                : int(params['options']['seed']),
-        'subseed'             : -1,
-        'subseed_strength'    : 0,
-        'seed_resize_from_h'  : -1,
-        'seed_resize_from_w'  : -1,
-        'sampler_name'        : "",
-        'batch_size'          : 1,
-        'n_iter'              : 1,
-        'steps'               : int(params['options']['steps']),
-        'cfg_scale'           : float(params['options']['cfg']),
-        'width'               : int(params['options']['width']),
-        'height'              : int(params['options']['height']),
-        'restore_faces'       : False,
-        'tiling'              : False,
-        'do_not_save_samples' : False,
-        'do_not_save_grid'    : False,
-        'negative_prompt'     : params['options']['negatives'],
-        'eta'                 : 0,
-        's_churn'             : 0,
-        's_tmax'              : 0,
-        's_tmin'              : 0,
-        's_noise'             : 1,
-        'override_settings'   : {},
-        'override_settings_restore_afterwards': True,
-        'script_args'         : [],
-        'sampler_index'       : "Euler",
-        'script_name'         : "",
-        'send_images'         : True,
-        'save_images'         : True,
-        'alwayson_scripts'    : {}
-    }
-
-    #url = urljoin(params['webui_URL'], '/sdapi/v1/txt2img')
-    #disLog.info(f'URL is: {url}')
-    #disLog.debug(f'test parameters are: {test_params}')
-    
-    try:
-        #time.sleep(1)
-        #response = req.post(url=url, json=test_params)
-        #resp_img = response.json()
-        
-    except Exception as err:
-        disLog.error(f"Exception posting mesasge to poster task: {err}")
-        await interaction.response.send_message(f"Error sending message to poster task!")
-        return
-    
-    #Discord slash commands have a hard 3-second timeout.  Thus this must be
-    #routed to a queue maanger.
-    await interaction.response.send_message(f'Woo')#PUT got: {response.status_code}, {response.reason}')
-
+    await interaction.response.send_message(f'Posted Test Message to work queue.')
+       
 #####  main  #####
 
 def Startup():
@@ -259,6 +200,7 @@ def Startup():
     """
     global params
     global creds
+    global job_queue
     
     #This will be modified in the future to accept user-supplied paths.
     #This file must be loaded prior to the logger to allow for user-provided
@@ -293,23 +235,14 @@ def Startup():
     except OSError as err:
         disLog.critical(f"Can\'t load file from path {default_params['cred']}")
         exit(1)
-
-
-    disLog.debug(f"Starting IPC (pipe)")
-    #Currently there's no need to have a duplex pipe; put will throw an exception
-    #on full and there's no other useful status to return.  This will need to
-    #change if the assumption ever changes.
-    pipes = mp.Pipe(False)
     
     #Start manager tasks
     disLog.debug(f"Starting Bot client")
     IGSD_client.run(creds['bot_token'])
-    print(f"After client start")
 
 
 if __name__ == '__main__':
     Startup()
-#asy.run(startup())
 
 #Supported commands:
 #/flush:   clear queue and kill active jobs (if possible).  Needs Owern/Admin to run.

@@ -19,7 +19,6 @@ import QueueMgr as qm
 import requests as req
 import threading as th
 import time
-from urllib.parse import urljoin
 
 #####  Package Variables  #####
 
@@ -141,13 +140,6 @@ async def testget(interaction: dis.Interaction):
     disLog.debug(f"Posting test GET job {msg} to the queue") 
     job_queue.Add(msg)
     
-    try:
-        #This should proabbly be moved to a manager since there may eventually
-        #be multiple IP addresses.
-        response = req.get(url=params['queue_opts']['webui_URL'], timeout=5)
-    except Exception as err:
-        await interaction.response.send_message(f"Error sending GET request, got {err}!")
-        return
     await interaction.response.send_message(f"Starting GET test.")
 
 @IGSD_client.tree.command()
@@ -175,6 +167,7 @@ async def testpost(interaction: dis.Interaction):
             }
     disLog.debug(f"Posting test PUT job {msg} to the queue") 
     job_queue.Add(msg)
+    
     await interaction.response.send_message(f'Posted Test Message to work queue.')
        
 async def Post(msg):
@@ -198,7 +191,7 @@ async def Post(msg):
         
     elif msg['id'] == 'testgetid':
         #Maybe a futuer version will have a generic image to return and eliminate this clause.
-        embed = dis.Embed(title='Test GET successful: ',
+        embed = dis.Embed(title='Test GET successful:',
                           description=f"Status code: {msg['status_code']} Reason: {msg['reason']}",
                           color=0x008000)
 

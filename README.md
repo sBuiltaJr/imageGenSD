@@ -29,10 +29,15 @@ projects for their respective licenses.
 
 ## To run
 `python iamgeGenSD.py`
+
 The bot will run in the terminal until killed with a `Ctrl+C` or similar.
 
 ## Supported commands
-- Test GET
+- Hello
+
+`/hello`
+
+Confirms the bot has the bare minimum capability for interacting in the Guild.
 
 `/testget`
 

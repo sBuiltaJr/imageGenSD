@@ -65,7 +65,7 @@ class Manager:
         global jobs
         
         if request['metadata']['id'] not in jobs:
-            jobs[request['metadata']['id']] = request
+            jobs[request['metadata']['id']] = request['metadata']
             self.disLog.debug(f"Added new request to id {request['metadata']['id']}.")
         else :
             self.disLog.debug(f"Request id {request['metadata']['id']} alraedy exists!")
@@ -157,10 +157,10 @@ class Manager:
             jres['status_code'] = result.status_code
             jres['reason']      = result.reason
             #Pop last to ensure a new request from the same ID can be added
-            #only after thier first request is completed.
+            #only after their first request is completed.
             job     = jobs.pop(request['id'])
-            jres   |= job['metadata']
-            job['metadata']['loop'].create_task(job['metadata']['poster'](msg=jres), name="reply")
+            jres   |= job
+            job['loop'].create_task(job['poster'](msg=jres), name="reply")
         return
         
     def Run(self):

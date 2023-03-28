@@ -190,7 +190,7 @@ async def Post(msg):
                                       embed=embed)
         
     elif msg['id'] == 'testgetid':
-        #Maybe a futuer version will have a generic image to return and eliminate this clause.
+        #Maybe a future version will have a generic image to return and eliminate this clause.
         embed = dis.Embed(title='Test GET successful:',
                           description=f"Status code: {msg['status_code']} Reason: {msg['reason']}",
                           color=0x008000)

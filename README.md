@@ -39,6 +39,8 @@ The bot will run in the terminal until killed with a `Ctrl+C` or similar.
 
 Confirms the bot has the bare minimum capability for interacting in the Guild.
 
+- Test GET
+
 `/testget`
 
 Makes a basic HTTP get to the webui back-end to verify it's there and works.
@@ -54,7 +56,7 @@ server's ability to actually supply data.
 
 
 ## Limitations/Known Issues
-Also see the [changelog](CHANGELOG.md).
+Also see the [changelog](ROADMAP.md).
 
 - No automated way to switch dataset types.
 - Sharding not yet implemented.

@@ -9,14 +9,12 @@ import asyncio as asy
 import base64 as b64
 import discord as dis
 from discord import app_commands as dac
-#import gzip
 import io
 import logging as log
 import logging.handlers as lh
 import json
 import multiprocessing as mp
 import os
-from PIL import Image as img
 import QueueMgr as qm
 import requests as req
 import threading as th
@@ -95,8 +93,12 @@ async def on_ready():
     disLog.info(f'Logged in as {IGSD_client.user} (ID: {IGSD_client.user.id})')
     
     disLog.debug(f"Creating Queue Manager)")
-    job_queue = qm.Manager(IGSD_client.GetLoop(), 1, params['queue_opts'])
-    worker    = th.Thread(target=job_queue.PutRequest, name="Queue mgr", daemon=True)
+    job_queue = qm.Manager(loop=IGSD_client.GetLoop(),
+                           manager_id=1,
+                           opts=params['queue_opts'])
+    worker    = th.Thread(target=job_queue.PutRequest,
+                          name="Queue mgr",
+                          daemon=True)
     worker.start()
     
     print('------')
@@ -113,13 +115,31 @@ async def hello(interaction: dis.Interaction):
     
         
 @IGSD_client.tree.command()
-async def testapiget(interaction: dis.Interaction):
+async def testget(interaction: dis.Interaction):
     """A test HTTP GET command to verify basic connection to the webui page.
+       Also tests the internal data path.
 
        Input  : None.
 
        Output : None.
     """
+    disLog = log.getLogger('discord')
+
+    msg = { 'metadata' : {
+                'ctx'    : interaction,
+                'loop'   : IGSD_client.GetLoop(),
+                'poster' : Post,
+                'id'    : "testgetid"
+           },
+           'data' : {
+                #The repeat is due to unpickelable data in the metadata dict.
+                'id'    : "testgetid",
+                'post'  : {'empty'},
+                'reply' : "test msg"
+            }
+        }
+    disLog.debug(f"Posting test GET job {msg} to the queue") 
+    job_queue.Add(msg)
     
     try:
         #This should proabbly be moved to a manager since there may eventually
@@ -128,37 +148,7 @@ async def testapiget(interaction: dis.Interaction):
     except Exception as err:
         await interaction.response.send_message(f"Error sending GET request, got {err}!")
         return
-    await interaction.response.send_message(f"GET got back: {response.status_code}, {response.reason}")
-    
-@IGSD_client.tree.command()
-async def testinternalloop(interaction: dis.Interaction):
-    """Pushes a test message through internal pipes only, no PUT to the SD server.
-
-       Input  : None.
-
-       Output : None.
-       
-       Note: All slash commands *MUST* respond in 3 seconds or be terminated.
-    """
-    disLog = log.getLogger('discord')
-
-    msg = { 'metadata' : {
-                'ctx'    : interaction,
-                'loop'   : IGSD_client.GetLoop(),
-                'poster' : Post
-           },
-           'data' : {
-                'id'    : 'testinternalloopid',
-                'post'  : {'empty'},
-                'reply' : "test msg"
-            }
-        }
-    disLog.debug(f"Posting job {msg} to the queue") 
-    job_queue.Add(msg)
-    
-    #Discord slash commands have a hard 3-second timeout.  Thus this must be
-    #routed to a queue maanger.
-    await interaction.response.send_message(f'Posted Test Message to work queue.')
+    await interaction.response.send_message(f"Starting GET test.")
 
 @IGSD_client.tree.command()
 async def testpost(interaction: dis.Interaction):
@@ -174,23 +164,22 @@ async def testpost(interaction: dis.Interaction):
     msg = { 'metadata' : {
                 'ctx'    : interaction,
                 'loop'   : IGSD_client.GetLoop(),
-                'poster' : Post
+                'poster' : Post,
+                'id'    : "testpostid"
            },
            'data' : {
-                'id'    : 'testpostid',
+                #The repeat is due to unpickelable data in the metadata dict.
+                'id'    : "testpostid",
                 'post'  : job_queue.GetDefaultJobData()},
                 'reply' : ""
             }
-    #url = urljoin(params['webui_URL'], '/sdapi/v1/txt2img')
-    #disLog.info(f'URL is: {url}')
-    #disLog.debug(f'test parameters are: {test_params}')
-    disLog.debug(f"Posting job {msg} to the queue") 
+    disLog.debug(f"Posting test PUT job {msg} to the queue") 
     job_queue.Add(msg)
     await interaction.response.send_message(f'Posted Test Message to work queue.')
        
 async def Post(msg):
     """Posts the query's result to Discord.  Runs in the main asyncio loop so
-       the manager can start teh next job concurrently.
+       the manager can start the next job concurrently.
 
         Input  : msg - a reference to the completed job.
 
@@ -200,10 +189,23 @@ async def Post(msg):
     image = None
     
     if msg['status_code'] != 200:
-        embed = dis.Embed(title='Image Generation Error: ',
-                          description=f"Status code: {msg['status_code']}",
-                          color=0xff0000)
-    else :
+        embed = dis.Embed(title='Job Error:',
+                          description=f"Status code: {msg['status_code']} Reason: {msg['reason']}",
+                          color=0xec1802)
+                          
+        await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
+                                      embed=embed)
+        
+    elif msg['id'] == 'testgetid':
+        #Maybe a futuer version will have a generic image to return and eliminate this clause.
+        embed = dis.Embed(title='Test GET successful: ',
+                          description=f"Status code: {msg['status_code']} Reason: {msg['reason']}",
+                          color=0x008000)
+
+        await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
+                                      embed=embed)
+        
+    else:
         embed = dis.Embed()
         embed.add_field(name='Prompt', value=msg['parameters']['prompt'])
         embed.add_field(name='Negative Prompt', value=msg['parameters']['negative_prompt'])
@@ -215,10 +217,12 @@ async def Post(msg):
         embed.add_field(name='CFG Scale', value=msg['parameters']['cfg_scale'])
         embed.add_field(name='Highres Fix', value=msg['parameters']['enable_hr'])
 
-    for i in msg['images']:
-        image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
+        for i in msg['images']:
+            image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
         
-    await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",  file=dis.File(fp=image, filename='image.png') ,embed=embed)
+        await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
+                                      file=dis.File(fp=image,
+                                      filename='image.png') ,embed=embed)
 
 #####  main  #####
 

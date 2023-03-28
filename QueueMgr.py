@@ -7,10 +7,6 @@
 
 #####  Imports  #####
 
-#import asyncio as asy
-#import base64 as b64
-#import discord as dis
-#import io
 import logging as log
 import multiprocessing as mp
 import requests as req
@@ -48,7 +44,7 @@ class Manager:
         self.max_guilds     = int(opts['max_guilds'])
         self.max_guild_reqs = int(opts['max_guild_reqs'])
         self.post_cooldown  = float(opts['post_cooldown'])
-        self.web_url        = urljoin(opts['webui_URL'], '/sdapi/v1/txt2img')
+        self.web_url        = opts['webui_URL']
         
         #This may eventually be implemented as a concurrent futures ProcessPool
         #to allow future versions to invoke workers across computers (e.g.
@@ -68,14 +64,15 @@ class Manager:
         """
         global jobs
         
-        if request['data']['id'] not in jobs:
-            jobs[request['data']['id']] = request
-            self.disLog.debug(f"Added new request to id {request['data']['id']}.")
+        if request['metadata']['id'] not in jobs:
+            jobs[request['metadata']['id']] = request
+            self.disLog.debug(f"Added new request to id {request['metadata']['id']}.")
         else :
-            self.disLog.debug(f"Request id {request['data']['id']} alraedy exists!")
+            self.disLog.debug(f"Request id {request['metadata']['id']} alraedy exists!")
             return
         
             #Else rate limit
+        #The Metadata can't be pickeled, meaning we can only send data through the queue.
         self.queue.put(request['data'])
     
     def GetDefaultJobData(self) -> dict:
@@ -144,11 +141,23 @@ class Manager:
         
         while self.keep_going:
             request = self.queue.get()
-            #actually put the job.
-            self.disLog.info(f"Starting put to SD server at {self.web_url}.")
-            result  = req.post(url=self.web_url, json=request['post'])
-            jres    = result.json()
+            jres = {}
+            
+            #Have a special check for the GET test, which doesn't expect to get
+            #any data from an actual job.
+            if request['id'] == "testgetid":
+                self.disLog.debug(f"Performing GET test of URL: {self.web_url}.")
+                result = req.get(url=urljoin(self.web_url, '/sdapi/v1/memory'), timeout=5)
+            
+            else:
+                self.disLog.info(f"Starting put to SD server at {self.web_url}.")
+                result  = req.post(url=urljoin(self.web_url, '/sdapi/v1/txt2img'), json=request['post'])
+                jres    = result.json()
+
             jres['status_code'] = result.status_code
+            jres['reason']      = result.reason
+            #Pop last to ensure a new request from the same ID can be added
+            #only after thier first request is completed.
             job     = jobs.pop(request['id'])
             jres   |= job['metadata']
             job['metadata']['loop'].create_task(job['metadata']['poster'](msg=jres), name="reply")

@@ -27,6 +27,22 @@ projects for their respective licenses.
 
 # Usage
 
+## To run
+`python iamgeGenSD.py`
+The bot will run in the terminal until killed with a `Ctrl+C` or similar.
+
+## Supported commands
+- Test GET
+`/testget`
+Makes a basic HTTP get to the webui back-end to verify it's tehre and works.
+Also verifies the internal data path works (i.e. postina a job to the queue)
+
+- Test POST
+`/testpost`
+Runs a pre-defined job through the webui interface, verifying that the SD
+server is able to provide data to a known request.  Meant for verifying the
+server's ability to actually supply data.
+
 
 ## Limitations/Known Issues
 Also see the [changelog](CHANGELOG.md).

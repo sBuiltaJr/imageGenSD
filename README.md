@@ -10,9 +10,9 @@ This project does not contain Stable-Diffusion.  Be sure you've downloaded the
 walkthrough for the newcomer.
 
 Note that various Stable Diffusion training sets can generate a variety of
-images, heavily influsenced by the weigth source.  Be prepared for the AI
-engine to return NSFW content if you're not careful.  There effectively nothing
-the bot can do to prevent this as it's a byproduct of the AI training set. 
+images, heavily influenced by the weight source.  Be prepared for the AI engine
+to return NSFW content if you're not careful.  There effectively nothing the
+bot can do to prevent this as it's a byproduct of the ML training set.  
 
 # Dependencies
 - [Python](https://www.python.org/) 3.10 or later
@@ -22,7 +22,7 @@ the bot can do to prevent this as it's a byproduct of the AI training set.
 Many of these dependencies are inherited from the Stable-Diffusion project.
 
 ## License
-All files in this repo fall under the [GPLv3](LICENSE.md).  See the individual
+All files in this repo fall under the [GPLv3](LICENSE).  See the individual
 projects for their respective licenses.
 
 # Usage
@@ -37,7 +37,7 @@ The bot will run in the terminal until killed with a `Ctrl+C` or similar.
 `/testget`
 
 Makes a basic HTTP get to the webui back-end to verify it's there and works.
-Also verifies the internal data path works (i.e. postina a job to the queue)
+Also verifies the internal data path works (i.e. posting a job to the queue).
 
 - Test POST
 

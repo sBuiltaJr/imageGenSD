@@ -22,6 +22,7 @@ order. [The discord.py github](https://github.com/Rapptz/discord.py/tree/master/
 - Multitasking (including separate logging tasks).
 - zipping logs to reduce increase logged information.
 - Help menu via messaging the bot.
+- Command-line inputs for a local user to generate images.
 
 ## Unplanned
 - weeb shit

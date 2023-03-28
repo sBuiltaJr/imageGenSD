@@ -1,17 +1,77 @@
 {
-	"date_fmt"      : "%Y-%m-%d %H:%M:%S",
-	"log_dir"       : "logs",
-	"log_encoding"  : "utf-8",
+    "date_fmt"      : "%Y-%m-%d %H:%M:%S",
+    "log_dir"       : "logs",
+    "log_encoding"  : "utf-8",
     "log_file_cnt"  : "5",
-	"log_lvl"       : "WARNING",
-	"log_name"      : "IGSD_Main.log",
-	"log_mode"      : "w",
-	"max_bytes"     : "33554432",
-	"comments" : 
+    "log_lvl"       : "DEBUG",
+    "log_name"      : "IGSD_Main.log",
+    "log_mode"      : "w",
+    "managers"     : "1",
+    "max_bytes"     : "33554432",
+    "options"       :
+    {
+        "cfg"       : "18",
+        "HDR"       : "False",
+        "height"    : "512",
+        "max_height": "768",
+        "max_width" : "768",
+        "max_steps" : "150",
+        "negatives" : "(low quality, worst quality:1.4), (bad anatomy), extra digit, fewer digits, (extra arms:1.2), bad hands, by (bad-artist:0.6), bad-image-v2-39000, NSFW, nipples, loli, child, children, shota, boy, male, men, man,",
+		"prompts"   : "detailed background, masterpiece, best quality, 1girl, laser, bullets, bullet hell, funny hat,",
+        "sampler"   : "DPM++ 2M Karras",
+		"save_imgs" : "False",
+        "seed"      : "-1",
+        "steps"     : "50",
+        "width"     : "512"
+    },
+	"queue_opts"    :
 	{
-		"guild_id"      : "Default ID for your guild (discord server). 0 is an invalid ID.",
-		"log_file_cnt"  : "Number of logfiles to cycle through.  e.g. you could have 5 files each 32 MB.",
-		"max_bytes"     : "Maximum size of a logfile, measured in Bytes.",
-		"test_guild_id" : "Default ID for your test/sandbox guild (discord server). 0 is an invalid ID."
-	}
+		"depth"          : "100",
+		"job_cooldown"   : "0.25",
+		"job_count"      : "1",
+		"max_guilds"     : "10",
+		"max_guild_reqs" : "10",
+		"post_cooldown"  : "1.0",
+		"webui_URL"      : "http://127.0.0.1:7861/"
+	},
+    "samplers"      :
+    {
+        "1"  : "Euler a",
+        "2"  : "Euler",
+        "3"  : "LMS",
+        "4"  : "Heun",
+        "5"  : "DPM2",
+        "6"  : "DM2 a",
+        "7"  : "DPM++ 2S a",
+        "8"  : "DPM++ 2M",
+        "9"  : "DPM++ SDE",
+        "10" : "DPM fast",
+        "11" : "DPM adaptive",
+        "12" : "LMS Karras",
+        "13" : "DPM2 Karras",
+        "14" : "DPM2 a Karras",
+        "15" : "DPM++ 2M Karras",
+        "16" : "DPM++ SDE Karras",
+        "17" : "DDIM",
+        "18" : "PLMS"
+    },
+    "comments"      : 
+    {
+        "guild_id"      : "Default ID for your guild (discord server). 0 is an invalid ID.",
+        "log_file_cnt"  : "Number of logfiles to cycle through.  e.g. you could have 5 files each 32 MB.",
+		"managers"      : "How many job mangers to spawn.  Each manager oversees an independent job queue.",
+        "max_bytes"     : "Maximum size of a logfile, measured in Bytes.",
+		"options"       : "All the configurable parameters for requests to the Stable Diffusion engine.",
+		"queue_opts"    : 
+		{
+			"depth"          : "How many jobs can be in the queue.",
+			"job_cooldown"   : "How many seconds to delay before starting another job (in case your computer cates fire).",
+			"job_count"      : "How many job tasks to spawn.  Each job gets a signle queue object to send to the SD engine.",
+			"max_guilds"     : "Max guilds to serve at a time, if you want to limit that.",
+			"max_guild_reqs" : "How many requests can be submitted by a single guild.  Stops a single guild from spamming the bot.",
+			"post_cooldown"  : "How many seconds to delay before accepting a new job request form a guild.  Also limits guild spam."
+			
+		},
+        "test_guild_id" : "Default ID for your test/sandbox guild (discord server). 0 is an invalid ID."
+    }
 }

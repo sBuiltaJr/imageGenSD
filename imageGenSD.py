@@ -6,9 +6,11 @@
 #####  Imports  #####
 
 import asyncio as asy
+import base64 as b64
 import discord as dis
 from discord import app_commands as dac
 #import gzip
+import io
 import logging as log
 import logging.handlers as lh
 import json
@@ -30,7 +32,7 @@ creds = {}
 default_params = {'cfg'       : 'config.json',
                   'cred'      : 'credentials.json',
                   'bot_token' : ''}
-IGSD_version = '0.0.2'
+IGSD_version = '0.0.3'
 params = {}
 job_queue = ()
 worker = ()
@@ -78,22 +80,6 @@ class IGSDClient(dis.Client):
             Output : loop - the client's event loop.
         """
         return self.loop;
-        
-    def Post(self, msg : dict):
-        """Posts the provided message to the specified discord channel. Invoked
-           by the Queue Manager since all these asyncio tasks fall under a
-           single event loop that will hang if waiting for a pipe, thus hanging
-           all active tasks (and the thread).
-
-            Input  : self - a reference to the current object.
-                     msg - what to post, where, and whom to notify.
-
-            Output : None.
-        """
-        self.disLog.debug(f"Posting the message {msg}")
-        #Evaluate the message and identify any quit requests.
-        #await msg['ctx'].channel.send(msg['reply'])
-        self.loop.create_task(msg['ctx'].channel.send(msg['reply']), name="reply")
 
 intents = dis.Intents.default()
 IGSD_client = IGSDClient(intents=intents)
@@ -110,7 +96,7 @@ async def on_ready():
     
     disLog.debug(f"Creating Queue Manager)")
     job_queue = qm.Manager(IGSD_client.GetLoop(), 1, params['queue_opts'])
-    worker    = th.Thread(target=job_queue.PutRequest, name="worker")
+    worker    = th.Thread(target=job_queue.PutRequest, name="Queue mgr", daemon=True)
     worker.start()
     
     print('------')
@@ -156,21 +142,19 @@ async def testinternalloop(interaction: dis.Interaction):
     """
     disLog = log.getLogger('discord')
 
-    #url = urljoin(params['webui_URL'], '/sdapi/v1/txt2img')
-    #disLog.info(f'URL is: {url}')
-    #disLog.debug(f'test parameters are: {test_params}')
     msg = { 'metadata' : {
-            'ctx' : interaction,
-            'loop' : IGSD_client.GetLoop(),
-            'poster' : IGSD_client.Post
-            },
-        'data' : {
-            'id' : 'testpostid',
-            'reply' : "test msg"
+                'ctx'    : interaction,
+                'loop'   : IGSD_client.GetLoop(),
+                'poster' : Post
+           },
+           'data' : {
+                'id'    : 'testinternalloopid',
+                'post'  : {'empty'},
+                'reply' : "test msg"
             }
         }
     disLog.debug(f"Posting job {msg} to the queue") 
-    job_queue.add(msg)
+    job_queue.Add(msg)
     
     #Discord slash commands have a hard 3-second timeout.  Thus this must be
     #routed to a queue maanger.
@@ -186,8 +170,56 @@ async def testpost(interaction: dis.Interaction):
        
        Note: All slash commands *MUST* respond in 3 seconds or be terminated.
     """
+    disLog = log.getLogger('discord')
+    msg = { 'metadata' : {
+                'ctx'    : interaction,
+                'loop'   : IGSD_client.GetLoop(),
+                'poster' : Post
+           },
+           'data' : {
+                'id'    : 'testpostid',
+                'post'  : job_queue.GetDefaultJobData()},
+                'reply' : ""
+            }
+    #url = urljoin(params['webui_URL'], '/sdapi/v1/txt2img')
+    #disLog.info(f'URL is: {url}')
+    #disLog.debug(f'test parameters are: {test_params}')
+    disLog.debug(f"Posting job {msg} to the queue") 
+    job_queue.Add(msg)
     await interaction.response.send_message(f'Posted Test Message to work queue.')
        
+async def Post(msg):
+    """Posts the query's result to Discord.  Runs in the main asyncio loop so
+       the manager can start teh next job concurrently.
+
+        Input  : msg - a reference to the completed job.
+
+        Output : N/A.
+    """
+    embed = None
+    image = None
+    
+    if msg['status_code'] != 200:
+        embed = dis.Embed(title='Image Generation Error: ',
+                          description=f"Status code: {msg['status_code']}",
+                          color=0xff0000)
+    else :
+        embed = dis.Embed()
+        embed.add_field(name='Prompt', value=msg['parameters']['prompt'])
+        embed.add_field(name='Negative Prompt', value=msg['parameters']['negative_prompt'])
+        embed.add_field(name='Steps', value=msg['parameters']['steps'])
+        embed.add_field(name='Height', value=msg['parameters']['height'])
+        embed.add_field(name='Width', value=msg['parameters']['width'])
+        embed.add_field(name='Sampler', value=msg['parameters']['sampler_index'])
+        embed.add_field(name='Seed', value=msg['parameters']['seed'])
+        embed.add_field(name='CFG Scale', value=msg['parameters']['cfg_scale'])
+        embed.add_field(name='Highres Fix', value=msg['parameters']['enable_hr'])
+
+    for i in msg['images']:
+        image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
+        
+    await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",  file=dis.File(fp=image, filename='image.png') ,embed=embed)
+
 #####  main  #####
 
 def Startup():

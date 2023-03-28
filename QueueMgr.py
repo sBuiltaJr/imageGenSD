@@ -7,65 +7,18 @@
 
 #####  Imports  #####
 
-import asyncio as asy
+#import asyncio as asy
+#import base64 as b64
+#import discord as dis
+#import io
 import logging as log
 import multiprocessing as mp
+import requests as req
+from urllib.parse import urljoin
 
-jobs       = {}
+jobs = {}
 #####  Package Functions  #####
-
-"""    def getDefaultJobData() -> dict:
-        Returns the default job settings that can be provided to an empty
-           query (or to reinitialize an object).
-
-           Input: None.
-
-           Output: opts - a dictionary of the default queue arguments.
-        
-        return {
-        'enable_hr'           : params['options']['HDR'],
-        'denoising_strength'  : 0,
-        'firstphase_width'    : 0,
-        'firstphase_height'   : 0,
-        'hr_scale'            : 2,
-        'hr_upscaler'         : "string",
-        'hr_second_pass_steps': 0,
-        'hr_resize_x'         : 0,
-        'hr_resize_y'         : 0,
-        'prompt'              : params['options']['prompts'],
-        'styles'              : ["string"],
-        'seed'                : int(params['options']['seed']),
-        'subseed'             : -1,
-        'subseed_strength'    : 0,
-        'seed_resize_from_h'  : -1,
-        'seed_resize_from_w'  : -1,
-        'sampler_name'        : "",
-        'batch_size'          : 1,
-        'n_iter'              : 1,
-        'steps'               : int(params['options']['steps']),
-        'cfg_scale'           : float(params['options']['cfg']),
-        'width'               : int(params['options']['width']),
-        'height'              : int(params['options']['height']),
-        'restore_faces'       : False,
-        'tiling'              : False,
-        'do_not_save_samples' : False,
-        'do_not_save_grid'    : False,
-        'negative_prompt'     : params['options']['negatives'],
-        'eta'                 : 0,
-        's_churn'             : 0,
-        's_tmax'              : 0,
-        's_tmin'              : 0,
-        's_noise'             : 1,
-        'override_settings'   : {},
-        'override_settings_restore_afterwards': True,
-        'script_args'         : [],
-        'sampler_index'       : "Euler",
-        'script_name'         : "",
-        'send_images'         : True,
-        'save_images'         : params['options']['save_imgs'],
-        'alwayson_scripts'    : {}
-        }
-"""    
+  
 #####  Manager Class  #####
 
 class Manager:
@@ -95,14 +48,14 @@ class Manager:
         self.max_guilds     = int(opts['max_guilds'])
         self.max_guild_reqs = int(opts['max_guild_reqs'])
         self.post_cooldown  = float(opts['post_cooldown'])
-        self.web_url        = opts['webui_URL']
+        self.web_url        = urljoin(opts['webui_URL'], '/sdapi/v1/txt2img')
         
         #This may eventually be implemented as a concurrent futures ProcessPool
         #to allow future versions to invoke workers across computers (e.g.
         #subprocess_exec with TCP/UDP data to/from a set of remote terminals).
         self.queue = mp.Queue(self.depth)
         
-    def add(self, request : dict):
+    def Add(self, request : dict):
         """Passes queued jobs to the worker tasks.  Is effectively the 'main'
            of the class.  Workers return the image prompt and queue object id
            when compelte.  The Manager should post the result to the main thread
@@ -125,6 +78,58 @@ class Manager:
             #Else rate limit
         self.queue.put(request['data'])
     
+    def GetDefaultJobData(self) -> dict:
+        """Returns the default job settings that can be provided to an empty
+           query (or to reinitialize an object).
+
+           Input: None.
+
+           Output: opts - a dictionary of the default queue arguments.
+        """
+        return {
+        'enable_hr'           : False,
+        'denoising_strength'  : 0,
+        'firstphase_width'    : 0,
+        'firstphase_height'   : 0,
+        'hr_scale'            : 2,
+        'hr_upscaler'         : "string",
+        'hr_second_pass_steps': 0,
+        'hr_resize_x'         : 0,
+        'hr_resize_y'         : 0,
+        'prompt'              : "(exceptional, best aesthetic, best quality, masterpiece, extremely detailed:1.2), white dress, dress, short sleeves, strapless dress, frills, thighhigh stockings, black thighhighs, boots, red hair, long hair, medium breasts, blush, slight smile, painting, paintbrush, eyebrows visible through hair, standing, easel, paint, blue eyes, brown shoes, bangs, canvas (object), holding paintbrush, braid, braided hair, painting (object), bow, yellow bow, hands up, hair ornament, indoors, cute,",
+        'styles'              : ["string"],
+        'seed'                : -1, #Should really identify which seed IGSD used for itself.
+        'subseed'             : -1,
+        'subseed_strength'    : 0,
+        'seed_resize_from_h'  : -1,
+        'seed_resize_from_w'  : -1,
+        'sampler_name'        : "",
+        'batch_size'          : 1,
+        'n_iter'              : 1,
+        'steps'               : 70,
+        'cfg_scale'           : 22.0,
+        'width'               : 512,
+        'height'              : 512,
+        'restore_faces'       : False,
+        'tiling'              : False,
+        'do_not_save_samples' : False,
+        'do_not_save_grid'    : False,
+        'negative_prompt'     : " Negative prompt: lowres, ((bad anatomy)), ((bad hands)), text, missing finger, extra digits, fewer digits, blurry, ((mutated hands and fingers)), (poorly drawn face), ((mutation)), ((deformed face)), (ugly), ((bad proportions)), ((extra limbs)), extra face, (double head), (extra head), ((extra feet)), monster, logo, cropped, worst quality, jpeg, humpbacked, long body, long neck, ((jpeg artifacts)), deleted, old, oldest, ((censored)), ((bad aesthetic)), (mosaic censoring, bar censor, blur censor),  watermark, (low quality, worst quality:1.4), (bad anatomy), extra digit, fewer digits, (extra arms:1.2), bad hands, by (bad-artist:0.6), bad-image-v2-39000, NSFW, nipples, loli, child, children, shota, boy, male, men, man",
+        'eta'                 : 0,
+        's_churn'             : 0,
+        's_tmax'              : 0,
+        's_tmin'              : 0,
+        's_noise'             : 1,
+        'override_settings'   : {},
+        'override_settings_restore_afterwards': True,
+        'script_args'         : [],
+        'sampler_index'       : "DPM++ SDE Karras",
+        'script_name'         : "",
+        'send_images'         : True,
+        'save_images'         : True, #Should probably limit ability to run test command
+        'alwayson_scripts'    : {}
+        }
+        
     def PutRequest(self) :
         """Should be instantiated as an independent proecss for putting and
            getting data from the SD werver.  Results are provided back to the
@@ -138,16 +143,18 @@ class Manager:
         global jobs
         
         while self.keep_going:
-            self.disLog.info(f"Starting put to SD server at {self.web_url}.")
-            result = self.queue.get()
+            request = self.queue.get()
             #actually put the job.
-            job     = jobs.pop(result['id'])
-            result |= job['metadata']
-            job['metadata']['loop'].create_task(job['metadata']['ctx'].channel.send(result['reply']), name="reply")
-            #job['metadata']['loop'].call_soon_threadsafe(job['metadata']['poster'], result, context=None)#Put response here instread
+            self.disLog.info(f"Starting put to SD server at {self.web_url}.")
+            result  = req.post(url=self.web_url, json=request['post'])
+            jres    = result.json()
+            jres['status_code'] = result.status_code
+            job     = jobs.pop(request['id'])
+            jres   |= job['metadata']
+            job['metadata']['loop'].create_task(job['metadata']['poster'](msg=jres), name="reply")
         return
         
-    def run(self):
+    def Run(self):
         """SHould spawn the process that puts job requests to the SD server.
            The job task uses the provided pipe to post results, the manager 
            only needs to wait for completion before starting another job.  Is

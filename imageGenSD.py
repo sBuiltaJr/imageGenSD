@@ -127,14 +127,13 @@ async def testget(interaction: dis.Interaction):
     msg = { 'metadata' : {
                 'ctx'    : interaction,
                 'loop'   : IGSD_client.GetLoop(),
-                'poster' : Post,
-                #Requests are sorted by guild for rate-limiting
-                'guild'  : interaction.guild_id,
-                'id'     : "testgetid"
+                'poster' : Post
            },
            'data' : {
-                #The repeat is due to unpickelable data in the metadata dict.
+                #Requests are sorted by guild for rate-limiting
                 'guild'  : interaction.guild_id,
+                #This should really be metadata but the rest of the metadata
+                #can't be pickeled, so this must be passed with the work.
                 'id'     : "testgetid",
                 'post'  : {'empty'},
                 'reply' : "test msg"
@@ -159,14 +158,13 @@ async def testpost(interaction: dis.Interaction):
     msg = { 'metadata' : {
                 'ctx'    : interaction,
                 'loop'   : IGSD_client.GetLoop(),
-                'poster' : Post,
-                #Requests are sorted by guild for rate-limiting
-                'guild'  : interaction.guild_id,
-                'id'     :  "testpostid"
+                'poster' : Post
            },
            'data' : {
-                #The repeat is due to unpickelable data in the metadata dict.
+                #Requests are sorted by guild for rate-limiting
                 'guild'  : interaction.guild_id,
+                #This should really be metadata but the rest of the metadata
+                #can't be pickeled, so this must be passed with the work.
                 'id'     :  "testpostid",
                 'post'  : job_queue.GetDefaultJobData()},
                 'reply' : ""
@@ -280,20 +278,20 @@ if __name__ == '__main__':
     Startup()
 
 #Supported commands:
-#/flush:   clear queue and kill active jobs (if possible).  Needs Owern/Admin to run.
-#/Restart: Flush + recreates the queue objects.  Effectively restarts teh script.  Also requries Owner.
+#/flush:   clear queue and kill active jobs (if possible).  Needs Owner/Admin to run.
+#/Restart: Flush + recreates the queue objects.  Effectively restarts the script.  Also requires Owner.
 #/Cancel:  Kills most recent request from the poster, if possible. 
 #Have the slash command inherently check rate limit against user ID.
 # Raete limiting:
     # 1) Limit per guild (X requests in X seconds and Y total requests).
         #Check limits before accepting job to queue.
-        #respond error if full
+        #respond error if full.
         #Adds req. to guild dict (including making) and timestamp.
             #Only need 'last added' tiemstamp, limiting input not output. (jobs only produce one file)
-        #Support X number of guidls in config.
+        #Support X number of guilds in config.
     # 2) Allow configruable options later (Owner/inviter config commands, also in JSON)
-    # 3) Check Guild limits against dict size storing data (unique dicts per guild)
-    # 4) Queue msut be deep enough to handle guild sizes (multi-queue probably too painful)
-    # 5) No limit on specific user spam (yet).  May not be neede dwit Guild limit.
-    # 6) Worker pool(of 1 for now, ac nfarm with expansion) pops form queue and reports guild ID when complete.
-    # 7) Handler deletes entries from guild dict.
+    # 3) Check Guild limits against dict size storing data (unique dicts per Guild)
+    # 4) Queue must be deep enough to handle Guild sizes (multi-queue probably too painful)
+    # 5) No limit on specific user spam (yet).  May not be needed wit Guild limit.
+    # 6) Worker pool(of 1 for now, ac nfarm with expansion) pops from queue and reports Guild ID when complete.
+    # 7) Handler deletes entries from Guild dict.

@@ -66,24 +66,44 @@ class Manager:
         
         #Asyncio and Threading don't sidestep the GIL in a way that would make
         #these dict updates therad unsafe.  Change this if that changes.
-        if request['metadata']['guild'] not in jobs:
+        if request['data']['guild'] not in jobs:
         
-            jobs[request['metadata']['guild']] = {}
+            jobs[request['data']['guild']] = {}
         
-        #This isn't an else to avoid re-writing the contents. ID is also only
+        #This isn't an elif to avoid duplicating the contents. ID is also only
         #deleted after the job is done, so this function always losees the race.
-        if request['metadata']['id'] not in jobs[request['metadata']['guild']]:
+        if request['data']['id'] not in jobs[request['data']['guild']]:
         
-            (jobs[request['metadata']['guild']])[request['metadata']['id']] = request['metadata']
-            self.disLog.debug(f"Added new request to id {request['metadata']['id']}.")
+            (jobs[request['data']['guild']])[request['data']['id']] = request['metadata']
+            self.disLog.debug(f"Added new request from guild {{request['data']['guild']}} to id {request['data']['id']}.")
             
         else :
-            self.disLog.debug(f"Request id {request['metadata']['id']} alraedy exists!")
+        
+            self.disLog.debug(f"Request id {request['data']['id']} alraedy exists!")
+            
             return "You alerady have a job on the queue, please wait until it's finished."
         
             #Else rate limit
-        #The Metadata can't be pickeled, meaning we can only send data through the queue.
-        self.queue.put(request['data'])
+        try:
+        
+            #The Metadata can't be pickeled, meaning we can only send data
+            #through the queue.
+            self.queue.put(request['data'])
+            
+        except queue.Full as err:
+        
+            (jobs[request['data']['guild']]).pop(request['data']['id'])
+            self.disLog.warning(f" Encountered a full queue for request with metadata: {request['data']}, {err}!")
+            
+            return "The work queue is curerntly full, please wait a bit before making another request."
+            
+        except Exception as err:
+        
+            (jobs[request['data']['guild']]).pop(request['data']['id'])
+            self.disLog.error(f" Unable to add job to queue for request with metadata: {request['data']}, {err}!")
+            
+            return "Unable to add your job to the queue.  Are you sending more than text and numbers?"
+            
         return "Your job was added to the queue.  Please wait for it to finish before posting another."
     
     def GetDefaultJobData(self) -> dict:
@@ -167,19 +187,17 @@ class Manager:
 
             jres['status_code'] = result.status_code
             jres['reason']      = result.reason
+            jres['id']          = request['id'] #TODO this shouldn't be necesasry
             #Pop last to ensure a new request from the same ID can be added
             #only after their first request is completed.
             job     = (jobs[request['guild']]).pop(request['id'])
-            print(f'Job: {job} data {jobs}')
             jres   |= job
             job['loop'].create_task(job['poster'](msg=jres), name="reply")
         return
         
     def Run(self):
-        """SHould spawn the process that puts job requests to the SD server.
-           The job task uses the provided pipe to post results, the manager 
-           only needs to wait for completion before starting another job.  Is
-           the freamework for multiple concurrent jobs, but will need to be
+        """Should spawn the process that puts job requests to the SD server.
+           Is the freamework for multiple concurrent jobs, but will need to be
            modified to actually support them.
 
            Input: self - Pointer to the current object instance.

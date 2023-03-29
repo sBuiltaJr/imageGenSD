@@ -172,17 +172,31 @@ class Manager:
         
         while self.keep_going:
             request = self.queue.get()
-            jres = {}
+            result             = req.Response()
+            result.status_code = 404
+            result.reason      = "Exception Running Job, try again later."
+            jres               = {}
             
             #Have a special check for the GET test, which doesn't expect to get
             #any data from an actual job.
             if request['id'] == "testgetid":
+            
                 self.disLog.debug(f"Performing GET test of URL: {self.web_url}.")
-                result = req.get(url=urljoin(self.web_url, '/sdapi/v1/memory'), timeout=5)
+                try:
+                    result = req.get(url=urljoin(self.web_url, '/sdapi/v1/memory'), timeout=5)
+                    
+                except Exception as err:
+                    self.disLog.error(f"Exception trying to GET: {err}.")
             
             else:
-                self.disLog.info(f"Starting put to SD server at {self.web_url}.")
-                result  = req.post(url=urljoin(self.web_url, '/sdapi/v1/txt2img'), json=request['post'])
+
+                self.disLog.info(f"Starting PUT to SD server at {self.web_url}.")
+                try:
+                    result = req.post(url=urljoin(self.web_url, '/sdapi/v1/txt2img'), json=request['post'])
+                    
+                except Exception as err:
+                    self.disLog.error(f"Exception trying to PUT: {err}.")
+                    
                 jres    = result.json()
 
             jres['status_code'] = result.status_code

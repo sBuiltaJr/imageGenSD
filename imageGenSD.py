@@ -29,10 +29,10 @@ creds = {}
 default_params = {'cfg'       : 'config.json',
                   'cred'      : 'credentials.json',
                   'bot_token' : ''}
-IGSD_version = '0.0.3'
+IGSD_version = '0.1.0'
 params = {}
-job_queue = ()
-worker = ()
+job_queue = None
+worker = None
 
 #####  Package Classes  #####
 
@@ -128,19 +128,22 @@ async def testget(interaction: dis.Interaction):
                 'ctx'    : interaction,
                 'loop'   : IGSD_client.GetLoop(),
                 'poster' : Post,
-                'id'    : "testgetid"
+                #Requests are sorted by guild for rate-limiting
+                'guild'  : interaction.guild_id,
+                'id'     : "testgetid"
            },
            'data' : {
                 #The repeat is due to unpickelable data in the metadata dict.
-                'id'    : "testgetid",
+                'guild'  : interaction.guild_id,
+                'id'     : "testgetid",
                 'post'  : {'empty'},
                 'reply' : "test msg"
             }
         }
     disLog.debug(f"Posting test GET job {msg} to the queue") 
-    job_queue.Add(msg)
+    result = job_queue.Add(msg)
     
-    await interaction.response.send_message(f"Starting GET test.")
+    await interaction.response.send_message(f'{result}')
 
 @IGSD_client.tree.command()
 async def testpost(interaction: dis.Interaction):
@@ -157,18 +160,21 @@ async def testpost(interaction: dis.Interaction):
                 'ctx'    : interaction,
                 'loop'   : IGSD_client.GetLoop(),
                 'poster' : Post,
-                'id'    : "testpostid"
+                #Requests are sorted by guild for rate-limiting
+                'guild'  : interaction.guild_id,
+                'id'     :  "testpostid"
            },
            'data' : {
                 #The repeat is due to unpickelable data in the metadata dict.
-                'id'    : "testpostid",
+                'guild'  : interaction.guild_id,
+                'id'     :  "testpostid",
                 'post'  : job_queue.GetDefaultJobData()},
                 'reply' : ""
             }
     disLog.debug(f"Posting test PUT job {msg} to the queue") 
-    job_queue.Add(msg)
+    result = job_queue.Add(msg)
     
-    await interaction.response.send_message(f'Posted Test Message to work queue.')
+    await interaction.response.send_message(f'{result}')
        
 async def Post(msg):
     """Posts the query's result to Discord.  Runs in the main asyncio loop so

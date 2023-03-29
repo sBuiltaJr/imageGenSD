@@ -51,7 +51,7 @@ class Manager:
         #subprocess_exec with TCP/UDP data to/from a set of remote terminals).
         self.queue = mp.Queue(self.depth)
         
-    def Add(self, request : dict):
+    def Add(self, request : dict) -> str:
         """Passes queued jobs to the worker tasks.  Is effectively the 'main'
            of the class.  Workers return the image prompt and queue object id
            when compelte.  The Manager should post the result to the main thread
@@ -60,20 +60,31 @@ class Manager:
            Input: self - Pointer to the current object instance.
                   request - sanitized data to potentially add to the queue.
               
-           Output: None - Results are posted to a pipe.
+           Output: str - Result of the job scheduling attempt.
         """
         global jobs
         
-        if request['metadata']['id'] not in jobs:
-            jobs[request['metadata']['id']] = request['metadata']
+        #Asyncio and Threading don't sidestep the GIL in a way that would make
+        #these dict updates therad unsafe.  Change this if that changes.
+        if request['metadata']['guild'] not in jobs:
+        
+            jobs[request['metadata']['guild']] = {}
+        
+        #This isn't an else to avoid re-writing the contents. ID is also only
+        #deleted after the job is done, so this function always losees the race.
+        if request['metadata']['id'] not in jobs[request['metadata']['guild']]:
+        
+            (jobs[request['metadata']['guild']])[request['metadata']['id']] = request['metadata']
             self.disLog.debug(f"Added new request to id {request['metadata']['id']}.")
+            
         else :
             self.disLog.debug(f"Request id {request['metadata']['id']} alraedy exists!")
-            return
+            return "You alerady have a job on the queue, please wait until it's finished."
         
             #Else rate limit
         #The Metadata can't be pickeled, meaning we can only send data through the queue.
         self.queue.put(request['data'])
+        return "Your job was added to the queue.  Please wait for it to finish before posting another."
     
     def GetDefaultJobData(self) -> dict:
         """Returns the default job settings that can be provided to an empty
@@ -158,7 +169,8 @@ class Manager:
             jres['reason']      = result.reason
             #Pop last to ensure a new request from the same ID can be added
             #only after their first request is completed.
-            job     = jobs.pop(request['id'])
+            job     = (jobs[request['guild']]).pop(request['id'])
+            print(f'Job: {job} data {jobs}')
             jres   |= job
             job['loop'].create_task(job['poster'](msg=jres), name="reply")
         return

@@ -11,6 +11,7 @@ import logging as log
 import multiprocessing as mp
 import requests as req
 from urllib.parse import urljoin
+import time
 
 jobs = {}
 #####  Package Functions  #####
@@ -43,7 +44,6 @@ class Manager:
         self.job_cooldown   = float(opts['job_cooldown'])
         self.max_guilds     = int(opts['max_guilds'])
         self.max_guild_reqs = int(opts['max_guild_reqs'])
-        self.post_cooldown  = float(opts['post_cooldown'])
         self.web_url        = opts['webui_URL']
         
         #This may eventually be implemented as a concurrent futures ProcessPool
@@ -64,23 +64,42 @@ class Manager:
         """
         global jobs
         
-        #Asyncio and Threading don't sidestep the GIL in a way that would make
-        #these dict updates therad unsafe.  Change this if that changes.
         if request['data']['guild'] not in jobs:
         
-            jobs[request['data']['guild']] = {}
+            if len(jobs) >= self.max_guilds :
+            
+                self.disLog.warning(f"Trying to add guild {request['data']['guild']} goes over Guild limit {self.max_guilds}!")
+                return "Bot is currently servicing the maximum number of allowed Guilds."
+                
+            else:
+                #Asyncio and Threading are suppose to be GIL safe, making this
+                #safe.  Change this if that changes.
+                jobs[request['data']['guild']] = {}
         
+        #This is a form of rate-limiting; limiting a guild to X posts instead
+        #of attempting to track timing.
+        if len(jobs[request['data']['guild']]) >= self.max_guild_reqs:
+        
+            self.disLog.warning(f"User {request['data']['id']}'s request excedded the Guild request limit {self.max_guild_reqs}!")
+            
+            if len(jobs[request['data']['guild']]) == 0:
+            
+                del jobs[request['data']['guild']]
+            
+            return "Unable to add your job, too many requests from this Guild are already in the queue."
+            
         #This isn't an elif to avoid duplicating the contents. ID is also only
         #deleted after the job is done, so this function always losees the race.
         if request['data']['id'] not in jobs[request['data']['guild']]:
         
             (jobs[request['data']['guild']])[request['data']['id']] = request['metadata']
-            self.disLog.debug(f"Added new request from guild {{request['data']['guild']}} to id {request['data']['id']}.")
+            self.disLog.debug(f"Added new request from Guild {request['data']['guild']} to ID {request['data']['id']}.")
             
         else :
         
             self.disLog.debug(f"Request id {request['data']['id']} alraedy exists!")
-            
+            #In the future, this can be modified by converting ID into a
+            #snowflake, allowing users to post multiple jobs.
             return "You alerady have a job on the queue, please wait until it's finished."
         
             #Else rate limit
@@ -171,7 +190,7 @@ class Manager:
         global jobs
         
         while self.keep_going:
-            request = self.queue.get()
+            request            = self.queue.get()
             result             = req.Response()
             result.status_code = 404
             result.reason      = "Exception Running Job, try again later."
@@ -206,7 +225,17 @@ class Manager:
             #only after their first request is completed.
             job     = (jobs[request['guild']]).pop(request['id'])
             jres   |= job
+            
+            if len(jobs[request['guild']]) == 0:
+            
+                self.disLog.debug(f"Removing empty Guild {request['guild']} from the list.")
+                del jobs[request['guild']]
+                
             job['loop'].create_task(job['poster'](msg=jres), name="reply")
+            
+            if self.job_cooldown > 0.0:
+            
+                time.sleep(self.job_cooldown)
         return
         
     def Run(self):

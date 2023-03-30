@@ -31,7 +31,6 @@
 		"job_count"      : "1",
 		"max_guilds"     : "10",
 		"max_guild_reqs" : "10",
-		"post_cooldown"  : "1.0",
 		"webui_URL"      : "http://127.0.0.1:7861/"
 	},
     "samplers"      :
@@ -68,8 +67,7 @@
 			"job_cooldown"   : "How many seconds to delay before starting another job (in case your computer cates fire).",
 			"job_count"      : "How many job tasks to spawn.  Each job gets a signle queue object to send to the SD engine.",
 			"max_guilds"     : "Max guilds to serve at a time, if you want to limit that.",
-			"max_guild_reqs" : "How many requests can be submitted by a single guild.  Stops a single guild from spamming the bot.",
-			"post_cooldown"  : "How many seconds to delay before accepting a new job request form a guild.  Also limits guild spam."
+			"max_guild_reqs" : "How many requests can be submitted by a single guild.  Stops a single guild from spamming the bot."
 			
 		},
         "test_guild_id" : "Default ID for your test/sandbox guild (discord server). 0 is an invalid ID."

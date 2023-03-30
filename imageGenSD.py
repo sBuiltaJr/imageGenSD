@@ -18,7 +18,6 @@ import os
 import QueueMgr as qm
 import requests as req
 import threading as th
-import time
 
 #####  Package Variables  #####
 
@@ -271,7 +270,11 @@ def Startup():
     
     #Start manager tasks
     disLog.debug(f"Starting Bot client")
-    IGSD_client.run(creds['bot_token'])
+    
+    try:
+        IGSD_client.run(creds['bot_token'])
+    except Exception as err:
+        disLog.error(f"Caught exception {err} when trynig to run IGSD client!")
 
 
 if __name__ == '__main__':
@@ -281,17 +284,3 @@ if __name__ == '__main__':
 #/flush:   clear queue and kill active jobs (if possible).  Needs Owner/Admin to run.
 #/Restart: Flush + recreates the queue objects.  Effectively restarts the script.  Also requires Owner.
 #/Cancel:  Kills most recent request from the poster, if possible. 
-#Have the slash command inherently check rate limit against user ID.
-# Raete limiting:
-    # 1) Limit per guild (X requests in X seconds and Y total requests).
-        #Check limits before accepting job to queue.
-        #respond error if full.
-        #Adds req. to guild dict (including making) and timestamp.
-            #Only need 'last added' tiemstamp, limiting input not output. (jobs only produce one file)
-        #Support X number of guilds in config.
-    # 2) Allow configruable options later (Owner/inviter config commands, also in JSON)
-    # 3) Check Guild limits against dict size storing data (unique dicts per Guild)
-    # 4) Queue must be deep enough to handle Guild sizes (multi-queue probably too painful)
-    # 5) No limit on specific user spam (yet).  May not be needed wit Guild limit.
-    # 6) Worker pool(of 1 for now, ac nfarm with expansion) pops from queue and reports Guild ID when complete.
-    # 7) Handler deletes entries from Guild dict.

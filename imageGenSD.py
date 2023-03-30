@@ -18,6 +18,7 @@ import os
 import QueueMgr as qm
 import requests as req
 import threading as th
+from typing import Optional
 
 #####  Package Variables  #####
 
@@ -28,8 +29,13 @@ creds = {}
 default_params = {'cfg'       : 'config.json',
                   'cred'      : 'credentials.json',
                   'bot_token' : ''}
-IGSD_version = '0.1.0'
-params = {}
+IGSD_version = '0.1.0'    
+#This will be modified in the future to accept user-supplied paths.
+#This file must be loaded prior to the logger to allow for user-provided
+#options to be passed to the Logger.  Thus it must have special error
+#handling outside of the logger class.
+with open(default_params['cfg']) as json_file:
+    params = json.load(json_file)
 job_queue = None
 worker = None
 
@@ -90,7 +96,7 @@ async def on_ready():
     disLog = log.getLogger('discord')
     disLog.info(f'Logged in as {IGSD_client.user} (ID: {IGSD_client.user.id})')
     
-    disLog.debug(f"Creating Queue Manager)")
+    disLog.debug(f"Creating Queue Manager.")
     job_queue = qm.Manager(loop=IGSD_client.GetLoop(),
                            manager_id=1,
                            opts=params['queue_opts'])
@@ -109,7 +115,7 @@ async def hello(interaction: dis.Interaction):
 
        Output : None.
     """
-    await interaction.response.send_message(f'Hi, {interaction.user.mention}')
+    await interaction.response.send_message(f'Hi, {interaction.user.mention}', ephemeral=True)
     
         
 @IGSD_client.tree.command()
@@ -134,14 +140,14 @@ async def testget(interaction: dis.Interaction):
                 #This should really be metadata but the rest of the metadata
                 #can't be pickeled, so this must be passed with the work.
                 'id'     : "testgetid",
-                'post'  : {'empty'},
-                'reply' : "test msg"
+                'post'   : {'empty'},
+                'reply'  : "test msg"
             }
         }
-    disLog.debug(f"Posting test GET job {msg} to the queue") 
+    disLog.debug(f"Posting test GET job {msg} to the queue.") 
     result = job_queue.Add(msg)
     
-    await interaction.response.send_message(f'{result}')
+    await interaction.response.send_message(f'{result}', ephemeral=True)
 
 @IGSD_client.tree.command()
 async def testpost(interaction: dis.Interaction):
@@ -165,14 +171,75 @@ async def testpost(interaction: dis.Interaction):
                 #This should really be metadata but the rest of the metadata
                 #can't be pickeled, so this must be passed with the work.
                 'id'     :  "testpostid",
-                'post'  : job_queue.GetDefaultJobData()},
-                'reply' : ""
+                'post'   : job_queue.GetDefaultJobData()},
+                'reply'  : ""
             }
-    disLog.debug(f"Posting test PUT job {msg} to the queue") 
+    disLog.debug(f"Posting test PUT job {msg} to the queue.") 
     result = job_queue.Add(msg)
     
-    await interaction.response.send_message(f'{result}')
-       
+    await interaction.response.send_message(f'{result}', ephemeral=True)
+
+"""@dac.option("height",
+        choices=[x for x in range(params['options']['min_height'], params['options']['max_height'] + 64, 64)])
+@dac.option("width",
+        choices=[x for x in range(params['options']['min_width'], params['options']['max_width'] + 64, 64)])
+@dac.option("steps",
+        choices=[x for x in range(params['options']['min_steps'], params['options']['max_steps'] + params['options']['step_step'], params['options']['step_step'])])
+@dac.option("sampler",
+        choices=((params['options']['samplers']).split(','))):"""
+@IGSD_client.tree.command(nsfw=True)
+@dac.describe(prompt="The prompt(s) for generating the image.",
+              negative_prompt="Prompts to filter out of results.",
+              height="Image height.",
+              width="Image width.",
+              steps="Number of steps.",
+              seed="Use a seed for more repeatable results on a given iamge.",
+              cfg_scale="how much weight to give your prompts.",
+              sampler="Sampling method (like 'Euler').")
+#@dac.AppCommand.nsfw(True) #Enabled until the word filter and user blacklsiting is implemented.
+#@dac.Command(nsfw=True) #Enabled until the word filter and user blacklsiting is implemented.
+async def generate(interaction: dis.Interaction,
+                   prompt          : Optional[str]   = params['options']['prompts'],
+                   negative_prompt : Optional[str]   = params['options']['negatives'],
+                   height          : Optional[int]   = int(params['options']['height']),
+                   width           : Optional[int]   = int(params['options']['width']),
+                   steps           : Optional[int]   = int(params['options']['steps']),
+                   seed            : Optional[int]   = int(params['options']['seed']),
+                   cfg_scale       : Optional[float] = float(params['options']['cfg']),
+                   sampler         : Optional[str]   = params['options']['sampler']):
+    disLog = log.getLogger('discord')
+    msg = { 'metadata' : {
+                'ctx'    : interaction,
+                'loop'   : IGSD_client.GetLoop(),
+                'poster' : Post
+           },
+           'data' : {
+                #Requests are sorted by guild for rate-limiting
+                'guild'  : interaction.guild_id,
+                #This should really be metadata but the rest of the metadata
+                #can't be pickeled, so this must be passed with the work.
+                'id'     :  "testpostid",
+                'post'   : job_queue.GetDefaultJobData()},
+                'reply'  : ""
+            }
+
+    #Add prompt filter checking.
+    #And probably blacklist people who try to bypass X times.
+    msg['data']['post']['prompt']          = prompt
+    msg['data']['post']['negative_prompt'] = negative_prompt
+    msg['data']['post']['height']          = height
+    msg['data']['post']['width']           = width
+    msg['data']['post']['steps']           = steps
+    msg['data']['post']['seed']            = seed
+    msg['data']['post']['cfg_scale']       = cfg_scale
+    msg['data']['post']['sampler']         = sampler
+    
+    disLog.debug(f"Posting user job {msg} to the queue.") 
+    result = job_queue.Add(msg)
+    
+    await interaction.response.send_message(f'{result}', ephemeral=True)
+
+
 async def Post(msg):
     """Posts the query's result to Discord.  Runs in the main asyncio loop so
        the manager can start the next job concurrently.
@@ -233,13 +300,6 @@ def Startup():
     global params
     global creds
     global job_queue
-    
-    #This will be modified in the future to accept user-supplied paths.
-    #This file must be loaded prior to the logger to allow for user-provided
-    #options to be passed to the Logger.  Thus it must have special error
-    #handling outside of the logger class.
-    with open(default_params['cfg']) as json_file:
-        params = json.load(json_file)
         
     disLog = log.getLogger('discord')
     disLog.setLevel(params['log_lvl'])

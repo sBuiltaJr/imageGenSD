@@ -11,14 +11,18 @@
     "options"       :
     {
         "cfg"       : "18",
-        "HDR"       : "False",
+        "HDR"       : "false",
         "height"    : "512",
         "max_height": "768",
         "max_width" : "768",
         "max_steps" : "150",
+        "min_height": "256",
+        "min_steps" : "20",
+        "min_width" : "256",
         "negatives" : "(low quality, worst quality:1.4), (bad anatomy), extra digit, fewer digits, (extra arms:1.2), bad hands, by (bad-artist:0.6), bad-image-v2-39000, NSFW, nipples, loli, child, children, shota, boy, male, men, man,",
 		"prompts"   : "detailed background, masterpiece, best quality, 1girl, laser, bullets, bullet hell, funny hat,",
         "sampler"   : "DPM++ 2M Karras",
+		"samplers"  : "Euler a,Euler,LMS,Heun,DPM2,DM2 a,DPM++ 2S a,DPM++ 2M,DPM++ SDE,DPM fast,DPM adaptive,LMS Karras,DPM2 Karras,DPM2 a Karras,DPM++ 2M Karras,DPM++ SDE Karras,DDIM,PLMS",
 		"save_imgs" : "False",
         "seed"      : "-1",
         "steps"     : "50",
@@ -33,30 +37,8 @@
 		"max_guild_reqs" : "10",
 		"webui_URL"      : "http://127.0.0.1:7861/"
 	},
-    "samplers"      :
-    {
-        "1"  : "Euler a",
-        "2"  : "Euler",
-        "3"  : "LMS",
-        "4"  : "Heun",
-        "5"  : "DPM2",
-        "6"  : "DM2 a",
-        "7"  : "DPM++ 2S a",
-        "8"  : "DPM++ 2M",
-        "9"  : "DPM++ SDE",
-        "10" : "DPM fast",
-        "11" : "DPM adaptive",
-        "12" : "LMS Karras",
-        "13" : "DPM2 Karras",
-        "14" : "DPM2 a Karras",
-        "15" : "DPM++ 2M Karras",
-        "16" : "DPM++ SDE Karras",
-        "17" : "DDIM",
-        "18" : "PLMS"
-    },
     "comments"      : 
     {
-        "guild_id"      : "Default ID for your guild (discord server). 0 is an invalid ID.",
         "log_file_cnt"  : "Number of logfiles to cycle through.  e.g. you could have 5 files each 32 MB.",
 		"managers"      : "How many job mangers to spawn.  Each manager oversees an independent job queue.",
         "max_bytes"     : "Maximum size of a logfile, measured in Bytes.",
@@ -69,7 +51,6 @@
 			"max_guilds"     : "Max guilds to serve at a time, if you want to limit that.",
 			"max_guild_reqs" : "How many requests can be submitted by a single guild.  Stops a single guild from spamming the bot."
 			
-		},
-        "test_guild_id" : "Default ID for your test/sandbox guild (discord server). 0 is an invalid ID."
+		}
     }
 }

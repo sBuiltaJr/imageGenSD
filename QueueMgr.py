@@ -212,11 +212,11 @@ class Manager:
                 self.disLog.info(f"Starting PUT to SD server at {self.web_url}.")
                 try:
                     result = req.post(url=urljoin(self.web_url, '/sdapi/v1/txt2img'), json=request['post'])
+                    jres   = result.json()
                     
                 except Exception as err:
                     self.disLog.error(f"Exception trying to PUT: {err}.")
                     
-                jres    = result.json()
 
             jres['status_code'] = result.status_code
             jres['reason']      = result.reason

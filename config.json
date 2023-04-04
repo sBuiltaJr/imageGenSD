@@ -6,13 +6,13 @@
     "log_lvl"       : "DEBUG",
     "log_name"      : "IGSD_Main.log",
     "log_mode"      : "w",
-    "managers"     : "1",
+    "managers"      : "1",
     "max_bytes"     : "33554432",
     "options"       :
     {
         "cfg"       : "18",
         "HDR"       : "false",
-        "height"    : "512",
+        "height"    : "768",
         "max_height": "768",
         "max_width" : "768",
         "max_steps" : "150",
@@ -25,7 +25,7 @@
 		"samplers"  : "Euler a,Euler,LMS,Heun,DPM2,DM2 a,DPM++ 2S a,DPM++ 2M,DPM++ SDE,DPM fast,DPM adaptive,LMS Karras,DPM2 Karras,DPM2 a Karras,DPM++ 2M Karras,DPM++ SDE Karras,DDIM,PLMS",
 		"save_imgs" : "False",
         "seed"      : "-1",
-        "steps"     : "50",
+        "steps"     : "35",
         "width"     : "512"
     },
 	"queue_opts"    :

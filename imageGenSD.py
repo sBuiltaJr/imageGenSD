@@ -115,7 +115,7 @@ async def hello(interaction: dis.Interaction):
 
        Output : None.
     """
-    await interaction.response.send_message(f'Hi, {interaction.user.mention}', ephemeral=True)
+    await interaction.response.send_message(f'Hi, {interaction.user.mention}', ephemeral=True, delete_after=45.0)
     
         
 @IGSD_client.tree.command()
@@ -147,7 +147,7 @@ async def testget(interaction: dis.Interaction):
     disLog.debug(f"Posting test GET job {msg} to the queue.") 
     result = job_queue.Add(msg)
     
-    await interaction.response.send_message(f'{result}', ephemeral=True)
+    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=45.0)
 
 @IGSD_client.tree.command()
 async def testpost(interaction: dis.Interaction):
@@ -177,7 +177,7 @@ async def testpost(interaction: dis.Interaction):
     disLog.debug(f"Posting test PUT job {msg} to the queue.") 
     result = job_queue.Add(msg)
     
-    await interaction.response.send_message(f'{result}', ephemeral=True)
+    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=45.0)
 
 """@dac.option("height",
         choices=[x for x in range(params['options']['min_height'], params['options']['max_height'] + 64, 64)])

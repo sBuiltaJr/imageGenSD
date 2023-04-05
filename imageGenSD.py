@@ -18,7 +18,7 @@ import os
 import QueueMgr as qm
 import requests as req
 import threading as th
-from typing import Optional
+from typing import Literal, Optional
 
 #####  Package Variables  #####
 
@@ -179,35 +179,42 @@ async def testpost(interaction: dis.Interaction):
     
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=45.0)
 
-"""@dac.option("height",
-        choices=[x for x in range(params['options']['min_height'], params['options']['max_height'] + 64, 64)])
-@dac.option("width",
-        choices=[x for x in range(params['options']['min_width'], params['options']['max_width'] + 64, 64)])
-@dac.option("steps",
-        choices=[x for x in range(params['options']['min_steps'], params['options']['max_steps'] + params['options']['step_step'], params['options']['step_step'])])
-@dac.option("sampler",
-        choices=((params['options']['samplers']).split(','))):"""
-@IGSD_client.tree.command(nsfw=True)
-@dac.describe(prompt="The prompt(s) for generating the image.",
-              negative_prompt="Prompts to filter out of results.",
-              height="Image height.",
-              width="Image width.",
-              steps="Number of steps.",
-              seed="Use a seed for more repeatable results on a given iamge.",
+@IGSD_client.tree.command()
+@dac.describe(prompt=f"The prompt(s) for generating the image, up to {params['options']['max_prompt_len']} characters.",
+              negative_prompt=f"Prompts to filter out of results, up to {params['options']['max_prompt_len']} characters.",
+              height=f"Image height, rounded down to a {params['options']['step_size']} pixel size.",
+              width=f"Image width, rounded down to a {params['options']['step_size']} pixel size.",
+              steps=f"Number of steps, from {params['options']['min_steps']} to {params['options']['max_steps']}.",
+              seed="Use a seed for more repeatable results on a given image.",
               cfg_scale="how much weight to give your prompts.",
               sampler="Sampling method (like 'Euler').")
-#@dac.AppCommand.nsfw(True) #Enabled until the word filter and user blacklsiting is implemented.
-#@dac.Command(nsfw=True) #Enabled until the word filter and user blacklsiting is implemented.
 async def generate(interaction: dis.Interaction,
-                   prompt          : Optional[str]   = params['options']['prompts'],
-                   negative_prompt : Optional[str]   = params['options']['negatives'],
-                   height          : Optional[int]   = int(params['options']['height']),
-                   width           : Optional[int]   = int(params['options']['width']),
-                   steps           : Optional[int]   = int(params['options']['steps']),
-                   seed            : Optional[int]   = int(params['options']['seed']),
-                   cfg_scale       : Optional[float] = float(params['options']['cfg']),
-                   sampler         : Optional[str]   = params['options']['sampler']):
+                   prompt          : Optional[dac.Range[str, 0, int(params['options']['max_prompt_len'])]]                                 = params['options']['prompts'],
+                   negative_prompt : Optional[dac.Range[str, 0, int(params['options']['max_prompt_len'])]]                                 = params['options']['negatives'],
+                   height          : Optional[dac.Range[int, int(params['options']['min_height']), int(params['options']['max_height'])]]  = int(params['options']['height']),
+                   width           : Optional[dac.Range[int, int(params['options']['min_width']), int(params['options']['max_width'])]]    = int(params['options']['width']),
+                   steps           : Optional[dac.Range[int, int(params['options']['min_steps']), int(params['options']['max_steps'])]]    = int(params['options']['steps']),
+                   seed            : Optional[dac.Range[int, -(pow(2,53) - 1), (pow(2,53) - 1)]]                                           = int(params['options']['seed']), #These are limits imposed by Discord.
+                   cfg_scale       : Optional[dac.Range[float, 0.0, 30.0]]                                                                 = float(params['options']['cfg']),
+                   sampler         : Optional[Literal["Euler a","Euler","LMS","Heun","DPM2","DM2 a","DPM++ 2S a","DPM++ 2M","DPM++ SDE","DPM fast","DPM adaptive","LMS Karras","DPM2 Karras","DPM2 a Karras","DPM++ 2M Karras","DPM++ SDE Karras","DDIM","PLMS"]]  = params['options']['sampler']):
+                   #Yes, I am disappoitned I can't wrangle this into a config parameter.  Thanks PEP 586.
+    """Generates a image based on user-supplied prompts, if provided.  Provides
+       defaults if not.  Enforces any parameter limits, including an optional
+       banned word filter.
+
+        Input  : prompt - what the user wants to append to the default prompt.
+                 negative_prompt - what the user wants to append to the default.
+                 height - How tall to make the pre-scaled image.
+                 width - How wide to make the pre-scaled image.
+                 steps - How many steps to itterate in the SD process.
+                 seed - What seed value to use (-1 is random).
+                 cfg_scale - How much weight to give prompts in generation.
+                 sampler - Which algorithm to use.
+
+        Output : N/A.
+    """
     disLog = log.getLogger('discord')
+    error = False;
     msg = { 'metadata' : {
                 'ctx'    : interaction,
                 'loop'   : IGSD_client.GetLoop(),
@@ -225,10 +232,10 @@ async def generate(interaction: dis.Interaction,
 
     #Add prompt filter checking.
     #And probably blacklist people who try to bypass X times.
-    msg['data']['post']['prompt']          = prompt
-    msg['data']['post']['negative_prompt'] = negative_prompt
-    msg['data']['post']['height']          = height
-    msg['data']['post']['width']           = width
+    msg['data']['post']['prompt']          = msg['data']['post']['prompt'] + prompt
+    msg['data']['post']['negative_prompt'] = msg['data']['post']['negative_prompt'] + negative_prompt
+    msg['data']['post']['height']          = (height - (height % int(params['options']['step_size'])))
+    msg['data']['post']['width']           = (width  - (width  % int(params['options']['step_size'])))
     msg['data']['post']['steps']           = steps
     msg['data']['post']['seed']            = seed
     msg['data']['post']['cfg_scale']       = cfg_scale
@@ -319,13 +326,18 @@ def Startup():
     logHandler.setFormatter(formatter)
     disLog.addHandler(logHandler)
     
+    if int(params['options']['step_size']) <= 1:
+    
+        disLog.error(f"Image dimension step size must be greater than 1!")
+        exti(1)
+        
     #This will be modified in the future to accept user-supplied paths.
     try:
         with open(default_params['cred']) as json_file:
             creds = json.load(json_file)
 
     except OSError as err:
-        disLog.critical(f"Can\'t load file from path {default_params['cred']}")
+        disLog.critical(f"Can't load file from path {default_params['cred']}")
         exit(1)
     
     #Start manager tasks

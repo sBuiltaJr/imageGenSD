@@ -87,6 +87,24 @@ intents = dis.Intents.default()
 IGSD_client = IGSDClient(intents=intents)
 
 #####  Package Functions  #####
+def BannedWordsFound(prompt: str, banned_words: str) -> bool:
+    """Tests if banded words exist in the provided parameters.  This is written
+       as a separate function to allow future updates to the banned word list
+       without restarting the bot.
+
+       Input  : None.
+
+       Output : None.
+    """
+    result = False;
+    
+    #The default prompt is assumed to not be banned.
+    if banned_words != None and prompt != None:
+        #re-sanatize the word list in case spaces/separators snuck in
+        word_list = (banned_words.replace(" ", "")).split(",")
+        result    = any(word in prompt for word in word_list)
+    
+    return result
 
 @IGSD_client.event
 async def on_ready():
@@ -215,37 +233,39 @@ async def generate(interaction: dis.Interaction,
     """
     disLog = log.getLogger('discord')
     error = False;
-    msg = { 'metadata' : {
-                'ctx'    : interaction,
-                'loop'   : IGSD_client.GetLoop(),
-                'poster' : Post
-           },
-           'data' : {
-                #Requests are sorted by guild for rate-limiting
-                'guild'  : interaction.guild_id,
-                #This should really be metadata but the rest of the metadata
-                #can't be pickeled, so this must be passed with the work.
-                'id'     :  "testpostid",
-                'post'   : job_queue.GetDefaultJobData()},
-                'reply'  : ""
-            }
-
-    #Add prompt filter checking.
-    #And probably blacklist people who try to bypass X times.
-    msg['data']['post']['prompt']          = msg['data']['post']['prompt'] + prompt
-    msg['data']['post']['negative_prompt'] = msg['data']['post']['negative_prompt'] + negative_prompt
-    msg['data']['post']['height']          = (height - (height % int(params['options']['step_size'])))
-    msg['data']['post']['width']           = (width  - (width  % int(params['options']['step_size'])))
-    msg['data']['post']['steps']           = steps
-    msg['data']['post']['seed']            = seed
-    msg['data']['post']['cfg_scale']       = cfg_scale
-    msg['data']['post']['sampler']         = sampler
     
-    disLog.debug(f"Posting user job {msg} to the queue.") 
-    result = job_queue.Add(msg)
+    if BannedWordsFound(prompt, params['options']['banned_words']) or BannedWordsFound(negative_prompt, params['options']['banned_neg_words']):
+        result = f"Job ignored.  Please do not use words containing: {params['options']['banned_words']} in the positive prompt or {params['options']['banned_neg_words']} in the negative prompt."
+    else:
+        msg = { 'metadata' : {
+                    'ctx'    : interaction,
+                    'loop'   : IGSD_client.GetLoop(),
+                    'poster' : Post
+               },
+               'data' : {
+                    #Requests are sorted by guild for rate-limiting
+                    'guild'  : interaction.guild_id,
+                    #This should really be metadata but the rest of the metadata
+                    #can't be pickeled, so this must be passed with the work.
+                    'id'     :  "testpostid",
+                    'post'   : job_queue.GetDefaultJobData()},
+                    'reply'  : ""
+                }
+
+        #And probably blacklist people who try to bypass X times.
+        msg['data']['post']['prompt']          = prompt
+        msg['data']['post']['negative_prompt'] = negative_prompt
+        msg['data']['post']['height']          = (height - (height % int(params['options']['step_size'])))
+        msg['data']['post']['width']           = (width  - (width  % int(params['options']['step_size'])))
+        msg['data']['post']['steps']           = steps
+        msg['data']['post']['seed']            = seed
+        msg['data']['post']['cfg_scale']       = cfg_scale
+        msg['data']['post']['sampler']         = sampler
+        
+        disLog.debug(f"Posting user job {msg} to the queue.") 
+        result = job_queue.Add(msg)
     
     await interaction.response.send_message(f'{result}', ephemeral=True)
-
 
 async def Post(msg):
     """Posts the query's result to Discord.  Runs in the main asyncio loop so

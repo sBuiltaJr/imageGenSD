@@ -5,10 +5,9 @@ This plan should be pulling features from the [improvements list](IMPROVEMENTS_L
 
 # Version 0.2.0
 - Allow user-provided paths to be supplied for config files and other setings.
-- Create command permissions (like a owner who can run `/flush`.
+- Create command permissions (like a owner who can run `/flush`).
 
 # Version 0.1.5
-- Add prompt word filters (and maybe ban controls for users that attempt abuse).
 - Override the base Queue class to expose the (remove) function from deque for the `/cancel` command.
   - File a complaint with cpython that they didn't already expose this.
   - Add job data back to jobs list so the queue data can be proeprly removed.
@@ -16,6 +15,7 @@ This plan should be pulling features from the [improvements list](IMPROVEMENTS_L
 
 # Version 0.1.0
 - Respond to specific user requests with an embedded image and prompt list (positive and negative).
+- Add prompt word filters (and maybe ban controls for users that attempt abuse).
 - Implement rate-limiting features by Guild.
 - Enforce a limit of 1 active request per user.
 - Implement proper try/catch logic on requests that may need it.

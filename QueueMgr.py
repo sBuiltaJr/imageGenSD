@@ -100,7 +100,7 @@ class Manager:
             self.disLog.debug(f"Request id {request['data']['id']} alraedy exists!")
             #In the future, this can be modified by converting ID into a
             #snowflake, allowing users to post multiple jobs.
-            return "You alerady have a job on the queue, please wait until it's finished."
+            return "You already have a job on the queue, please wait until it's finished."
         
             #Else rate limit
         try:

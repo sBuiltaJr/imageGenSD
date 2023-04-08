@@ -58,7 +58,7 @@ server's ability to actually supply data.
 
 `/generate {prompt} {negative_prompt} {height} {width} {steps} {seed} {cfg_scale} {sampler}`
 
-Generate provides a user-supplied job to the webui back-end.  All aarameters
+Provides a user-supplied job to the webui back-end.  All parameters
 are optional and defaults are provided.  All inputs are limited to reasonable
 values (or the constraints of Discord/Stable Diffusion).
 

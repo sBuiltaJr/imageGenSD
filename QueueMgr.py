@@ -11,6 +11,7 @@ import logging as log
 import multiprocessing as mp
 import requests as req
 from urllib.parse import urljoin
+import time
 
 jobs = {}
 #####  Package Functions  #####
@@ -43,7 +44,6 @@ class Manager:
         self.job_cooldown   = float(opts['job_cooldown'])
         self.max_guilds     = int(opts['max_guilds'])
         self.max_guild_reqs = int(opts['max_guild_reqs'])
-        self.post_cooldown  = float(opts['post_cooldown'])
         self.web_url        = opts['webui_URL']
         
         #This may eventually be implemented as a concurrent futures ProcessPool
@@ -51,7 +51,7 @@ class Manager:
         #subprocess_exec with TCP/UDP data to/from a set of remote terminals).
         self.queue = mp.Queue(self.depth)
         
-    def Add(self, request : dict):
+    def Add(self, request : dict) -> str:
         """Passes queued jobs to the worker tasks.  Is effectively the 'main'
            of the class.  Workers return the image prompt and queue object id
            when compelte.  The Manager should post the result to the main thread
@@ -60,20 +60,70 @@ class Manager:
            Input: self - Pointer to the current object instance.
                   request - sanitized data to potentially add to the queue.
               
-           Output: None - Results are posted to a pipe.
+           Output: str - Result of the job scheduling attempt.
         """
         global jobs
         
-        if request['metadata']['id'] not in jobs:
-            jobs[request['metadata']['id']] = request
-            self.disLog.debug(f"Added new request to id {request['metadata']['id']}.")
+        if request['data']['guild'] not in jobs:
+        
+            if len(jobs) >= self.max_guilds :
+            
+                self.disLog.warning(f"Trying to add guild {request['data']['guild']} goes over Guild limit {self.max_guilds}!")
+                return "Bot is currently servicing the maximum number of allowed Guilds."
+                
+            else:
+                #Asyncio and Threading are suppose to be GIL safe, making this
+                #safe.  Change this if that changes.
+                jobs[request['data']['guild']] = {}
+        
+        #This is a form of rate-limiting; limiting a guild to X posts instead
+        #of attempting to track timing.
+        if len(jobs[request['data']['guild']]) >= self.max_guild_reqs:
+        
+            self.disLog.warning(f"User {request['data']['id']}'s request excedded the Guild request limit {self.max_guild_reqs}!")
+            
+            if len(jobs[request['data']['guild']]) == 0:
+            
+                del jobs[request['data']['guild']]
+            
+            return "Unable to add your job, too many requests from this Guild are already in the queue."
+            
+        #This isn't an elif to avoid duplicating the contents. ID is also only
+        #deleted after the job is done, so this function always losees the race.
+        if request['data']['id'] not in jobs[request['data']['guild']]:
+        
+            (jobs[request['data']['guild']])[request['data']['id']] = request['metadata']
+            self.disLog.debug(f"Added new request from Guild {request['data']['guild']} to ID {request['data']['id']}.")
+            
         else :
-            self.disLog.debug(f"Request id {request['metadata']['id']} alraedy exists!")
-            return
+        
+            self.disLog.debug(f"Request id {request['data']['id']} alraedy exists!")
+            #In the future, this can be modified by converting ID into a
+            #snowflake, allowing users to post multiple jobs.
+            return "You already have a job on the queue, please wait until it's finished."
         
             #Else rate limit
-        #The Metadata can't be pickeled, meaning we can only send data through the queue.
-        self.queue.put(request['data'])
+        try:
+        
+            #The Metadata can't be pickeled, meaning we can only send data
+            #through the queue.
+            self.queue.put(request['data'])
+            
+        except queue.Full as err:
+        
+            (jobs[request['data']['guild']]).pop(request['data']['id'])
+            self.disLog.warning(f" Encountered a full queue for request with metadata: {request['data']}, {err}!")
+            
+            return "The work queue is curerntly full, please wait a bit before making another request."
+            
+        except Exception as err:
+        
+            (jobs[request['data']['guild']]).pop(request['data']['id'])
+            self.disLog.error(f" Unable to add job to queue for request with metadata: {request['data']}, {err}!")
+            
+            return "Unable to add your job to the queue.  Are you sending more than text and numbers?"
+            
+        return "Your job was added to the queue.  Please wait for it to finish before posting another."
     
     def GetDefaultJobData(self) -> dict:
         """Returns the default job settings that can be provided to an empty
@@ -84,18 +134,18 @@ class Manager:
            Output: opts - a dictionary of the default queue arguments.
         """
         return {
-        'enable_hr'           : False,
-        'denoising_strength'  : 0,
+        'enable_hr'           : True,
+        'denoising_strength'  : 0.35,
         'firstphase_width'    : 0,
         'firstphase_height'   : 0,
         'hr_scale'            : 2,
-        'hr_upscaler'         : "string",
-        'hr_second_pass_steps': 0,
-        'hr_resize_x'         : 0,
-        'hr_resize_y'         : 0,
-        'prompt'              : "(exceptional, best aesthetic, best quality, masterpiece, extremely detailed:1.2), white dress, dress, short sleeves, strapless dress, frills, thighhigh stockings, black thighhighs, boots, red hair, long hair, medium breasts, blush, slight smile, painting, paintbrush, eyebrows visible through hair, standing, easel, paint, blue eyes, brown shoes, bangs, canvas (object), holding paintbrush, braid, braided hair, painting (object), bow, yellow bow, hands up, hair ornament, indoors, cute,",
+        'hr_upscaler'         : "4x-AnimeSharp",
+        'hr_second_pass_steps': 10,
+        'hr_resize_x'         : 1024,
+        'hr_resize_y'         : 1536,
+        'prompt'              : "detailed background, masterpiece, best quality, 1girl, white dress, dress, short sleeves, strapless dress, frills, thighhigh stockings, black thighhighs, boots, red hair, long hair, medium breasts, blush, slight smile, painting, paintbrush, eyebrows visible through hair, standing, easel, paint, blue eyes, brown shoes, bangs, canvas \(object\), holding paintbrush, braid, braided hair, painting \(object\), bow, yellow bow, hands up, hair ornament, indoors, cute,",
         'styles'              : ["string"],
-        'seed'                : -1, #Should really identify which seed IGSD used for itself.
+        'seed'                : 2920639719,
         'subseed'             : -1,
         'subseed_strength'    : 0,
         'seed_resize_from_h'  : -1,
@@ -103,15 +153,15 @@ class Manager:
         'sampler_name'        : "",
         'batch_size'          : 1,
         'n_iter'              : 1,
-        'steps'               : 70,
+        'steps'               : 50,
         'cfg_scale'           : 22.0,
         'width'               : 512,
-        'height'              : 512,
+        'height'              : 768,
         'restore_faces'       : False,
         'tiling'              : False,
         'do_not_save_samples' : False,
         'do_not_save_grid'    : False,
-        'negative_prompt'     : " Negative prompt: lowres, ((bad anatomy)), ((bad hands)), text, missing finger, extra digits, fewer digits, blurry, ((mutated hands and fingers)), (poorly drawn face), ((mutation)), ((deformed face)), (ugly), ((bad proportions)), ((extra limbs)), extra face, (double head), (extra head), ((extra feet)), monster, logo, cropped, worst quality, jpeg, humpbacked, long body, long neck, ((jpeg artifacts)), deleted, old, oldest, ((censored)), ((bad aesthetic)), (mosaic censoring, bar censor, blur censor),  watermark, (low quality, worst quality:1.4), (bad anatomy), extra digit, fewer digits, (extra arms:1.2), bad hands, by (bad-artist:0.6), bad-image-v2-39000, NSFW, nipples, loli, child, children, shota, boy, male, men, man",
+        'negative_prompt'     : "(low quality, worst quality:1.4), (bad anatomy), extra digit, fewer digits, (extra arms:1.2), bad hands, by (bad-artist:0.6), bad-image-v2-39000, NSFW, nipples, loli, child, children, shota, boy, male, men, man",
         'eta'                 : 0,
         's_churn'             : 0,
         's_tmax'              : 0,
@@ -120,7 +170,7 @@ class Manager:
         'override_settings'   : {},
         'override_settings_restore_afterwards': True,
         'script_args'         : [],
-        'sampler_index'       : "DPM++ SDE Karras",
+        'sampler_index'       : "DPM++ 2M Karras",
         'script_name'         : "",
         'send_images'         : True,
         'save_images'         : True, #Should probably limit ability to run test command
@@ -140,34 +190,57 @@ class Manager:
         global jobs
         
         while self.keep_going:
-            request = self.queue.get()
-            jres = {}
+            request            = self.queue.get()
+            result             = req.Response()
+            result.status_code = 404
+            result.reason      = "Exception Running Job, try again later."
+            jres               = {}
             
             #Have a special check for the GET test, which doesn't expect to get
             #any data from an actual job.
             if request['id'] == "testgetid":
+            
                 self.disLog.debug(f"Performing GET test of URL: {self.web_url}.")
-                result = req.get(url=urljoin(self.web_url, '/sdapi/v1/memory'), timeout=5)
+                try:
+                    result = req.get(url=urljoin(self.web_url, '/sdapi/v1/memory'), timeout=5)
+                    
+                except Exception as err:
+                    self.disLog.error(f"Exception trying to GET: {err}.")
             
             else:
-                self.disLog.info(f"Starting put to SD server at {self.web_url}.")
-                result  = req.post(url=urljoin(self.web_url, '/sdapi/v1/txt2img'), json=request['post'])
-                jres    = result.json()
+
+                self.disLog.info(f"Starting PUT to SD server at {self.web_url}.")
+                try:
+                    result = req.post(url=urljoin(self.web_url, '/sdapi/v1/txt2img'), json=request['post'])
+                    jres   = result.json()
+                    
+                except Exception as err:
+                    self.disLog.error(f"Exception trying to PUT: {err}.")
+                    
 
             jres['status_code'] = result.status_code
             jres['reason']      = result.reason
+            jres['id']          = request['id'] #TODO this shouldn't be necesasry
             #Pop last to ensure a new request from the same ID can be added
-            #only after thier first request is completed.
-            job     = jobs.pop(request['id'])
-            jres   |= job['metadata']
-            job['metadata']['loop'].create_task(job['metadata']['poster'](msg=jres), name="reply")
+            #only after their first request is completed.
+            job     = (jobs[request['guild']]).pop(request['id'])
+            jres   |= job
+            
+            if len(jobs[request['guild']]) == 0:
+            
+                self.disLog.debug(f"Removing empty Guild {request['guild']} from the list.")
+                del jobs[request['guild']]
+                
+            job['loop'].create_task(job['poster'](msg=jres), name="reply")
+            
+            if self.job_cooldown > 0.0:
+            
+                time.sleep(self.job_cooldown)
         return
         
     def Run(self):
-        """SHould spawn the process that puts job requests to the SD server.
-           The job task uses the provided pipe to post results, the manager 
-           only needs to wait for completion before starting another job.  Is
-           the freamework for multiple concurrent jobs, but will need to be
+        """Should spawn the process that puts job requests to the SD server.
+           Is the freamework for multiple concurrent jobs, but will need to be
            modified to actually support them.
 
            Input: self - Pointer to the current object instance.

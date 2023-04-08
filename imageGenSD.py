@@ -265,7 +265,6 @@ async def generate(interaction: dis.Interaction,
         result = job_queue.Add(msg)
     
     await interaction.response.send_message(f'{result}', ephemeral=True)
-
 async def Post(msg):
     """Posts the query's result to Discord.  Runs in the main asyncio loop so
        the manager can start the next job concurrently.

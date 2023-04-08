@@ -54,6 +54,13 @@ Runs a pre-defined job through the webui interface, verifying that the SD
 server is able to provide data to a known request.  Meant for verifying the
 server's ability to actually supply data.
 
+- Generate an image
+
+`/generate {prompt} {negative_prompt} {height} {width} {steps} {seed} {cfg_scale} {sampler}`
+
+Generate provides a user-supplied job to the webui back-end.  All aarameters
+are optional and defaults are provided.  All inputs are limited to reasonable
+values (or the constraints of Discord/Stable Diffusion).
 
 ## Limitations/Known Issues
 Also see the [changelog](ROADMAP.md).

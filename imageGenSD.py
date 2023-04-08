@@ -69,10 +69,9 @@ class IGSDClient(dis.Client):
         #of message posting.  It's more efficent and better separated.
         self.loop = asy.get_running_loop()
         
-        self.tree.copy_global_to(guild=dis.Object(creds['guild_id']))
-        self.disLog.debug(f"Syncing Guild Tree to {creds['guild_id']}.")
+        self.disLog.debug(f"Syncing Guild Tree to Global.")
         
-        await self.tree.sync(guild=dis.Object(creds['guild_id']))
+        await self.tree.sync()
         
     def GetLoop(self):
         """Returns a reference to this client's asyncio event loop.

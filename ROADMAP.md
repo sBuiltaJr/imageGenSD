@@ -10,7 +10,7 @@ This plan should be pulling features from the [improvements list](IMPROVEMENTS_L
 # Version 0.1.5
 - Override the base Queue class to expose the (remove) function from deque for the `/cancel` command.
   - File a complaint with cpython that they didn't already expose this.
-  - Add job data back to jobs list so the queue data can be proeprly removed.
+  - Add job data back to jobs list so the queue data can be properly removed.
   - Add Queue clear() in the same manner for the `/flush` command.
 
 # Version 0.1.0

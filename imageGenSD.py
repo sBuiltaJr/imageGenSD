@@ -18,6 +18,7 @@ import os
 import QueueMgr as qm
 import requests as req
 import threading as th
+import time
 from typing import Literal, Optional
 
 #####  Package Variables  #####
@@ -110,10 +111,27 @@ async def on_ready():
     global job_queue
     global worker
     
-    disLog = log.getLogger('discord')
-    disLog.info(f'Logged in as {IGSD_client.user} (ID: {IGSD_client.user.id})')
+        
+    queLog = log.getLogger('queue')
+    queLog.setLevel(params['log_lvl'])
+
+    logHandler = lh.RotatingFileHandler(
+        filename=params['log_name_queue'],
+        encoding=params['log_encoding'],
+        maxBytes=int(params['max_bytes']),
+        backupCount=int(params['log_file_cnt']),
+    )
     
-    disLog.debug(f"Creating Queue Manager.")
+    formatter = log.Formatter(
+        '[{asctime}] [{levelname:<8}] {name}: {message}', 
+        params['date_fmt'],
+        style='{'
+    )
+    logHandler.setFormatter(formatter)
+    queLog.addHandler(logHandler)
+    queLog.info(f'Logged in as {IGSD_client.user} (ID: {IGSD_client.user.id})')
+    
+    queLog.debug(f"Creating Queue Manager.")
     job_queue = qm.Manager(loop=IGSD_client.GetLoop(),
                            manager_id=1,
                            opts=params['queue_opts'])
@@ -132,9 +150,45 @@ async def hello(interaction: dis.Interaction):
 
        Output : None.
     """
-    await interaction.response.send_message(f'Hi, {interaction.user.mention}', ephemeral=True, delete_after=45.0)
-    
-        
+    await interaction.response.send_message(f'Hi, {interaction.user.mention}', ephemeral=True, delete_after=9.0)
+
+#This is commented until the failed inheritance issue can be resolved.
+#@IGSD_client.tree.command()
+#async def testclear(interaction: dis.Interaction):
+#    """A test HTTP GET command to verify basic connection to the webui page.
+#       Also tests the internal data path.
+#
+#       Input  : None.
+#
+#       Output : None.
+#    """
+#    disLog = log.getLogger('discord')
+#    rng    = range(1,10)
+#
+#    msg = [{ 'metadata' : {
+#                'ctx'    : interaction,
+#                'loop'   : IGSD_client.GetLoop(),
+#                'poster' : Post
+#           },
+#           'data' : {
+#                #Requests are sorted by guild for rate-limiting
+#                'guild'  : interaction.guild_id,
+#                #This should really be metadata but the rest of the metadata
+#                #can't be pickeled, so this must be passed with the work.
+#                'id'     : x,
+#                'post'   : {'empty'},
+#                'reply'  : "test msg"
+#            }
+#        } for x in rng]
+#    disLog.debug(f"trying to clear the queue.") 
+#    
+#    for m in rng:
+#        result = job_queue.Add(msg[m -1])
+#
+#    job_queue.Flush()
+#    
+#    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
+
 @IGSD_client.tree.command()
 async def testget(interaction: dis.Interaction):
     """A test HTTP GET command to verify basic connection to the webui page.
@@ -164,7 +218,7 @@ async def testget(interaction: dis.Interaction):
     disLog.debug(f"Posting test GET job {msg} to the queue.") 
     result = job_queue.Add(msg)
     
-    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=45.0)
+    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 @IGSD_client.tree.command()
 async def testpost(interaction: dis.Interaction):
@@ -194,7 +248,7 @@ async def testpost(interaction: dis.Interaction):
     disLog.debug(f"Posting test PUT job {msg} to the queue.") 
     result = job_queue.Add(msg)
     
-    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=45.0)
+    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 @IGSD_client.tree.command()
 @dac.describe(prompt=f"The prompt(s) for generating the image, up to {params['options']['max_prompt_len']} characters.",
@@ -246,7 +300,7 @@ async def generate(interaction: dis.Interaction,
                     'guild'  : interaction.guild_id,
                     #This should really be metadata but the rest of the metadata
                     #can't be pickeled, so this must be passed with the work.
-                    'id'     :  "testpostid",
+                    'id'     :  interaction.user.id,
                     'post'   : job_queue.GetDefaultJobData()},
                     'reply'  : ""
                 }
@@ -265,6 +319,7 @@ async def generate(interaction: dis.Interaction,
         result = job_queue.Add(msg)
     
     await interaction.response.send_message(f'{result}', ephemeral=True)
+
 async def Post(msg):
     """Posts the query's result to Discord.  Runs in the main asyncio loop so
        the manager can start the next job concurrently.
@@ -284,7 +339,7 @@ async def Post(msg):
         await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
                                       embed=embed)
         
-    elif msg['id'] == 'testgetid':
+    elif msg['id'] == 'testgetid' or ((type(msg['id']) != str) and (msg['id'] < 10)):
         #Maybe a future version will have a generic image to return and eliminate this clause.
         embed = dis.Embed(title='Test GET successful:',
                           description=f"Status code: {msg['status_code']} Reason: {msg['reason']}",

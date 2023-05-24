@@ -303,3 +303,9 @@ class Manager:
         #This may, someday, need to be a proper multiprocessing queue.
         #jobs = [QueueObject(x) for x in range(self.depth)], in a loop
 
+
+#Implement as a subclass of Queue
+#Allows queue to farm out work in batches in the future
+#Also allows main to count a user job as active, acoiding races of offloading the requests in main
+#better to hold main queue than have weird races aroudn parallelism
+#Should still try and be able to make description generator run parallel to iamge; maybe async?

@@ -402,7 +402,7 @@ def Startup():
     if int(params['options']['step_size']) <= 1:
     
         disLog.error(f"Image dimension step size must be greater than 1!")
-        exti(1)
+        exit(1)
         
     #This will be modified in the future to accept user-supplied paths.
     try:

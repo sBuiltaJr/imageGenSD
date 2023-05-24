@@ -2,12 +2,29 @@
 This page describes the current project plan as it exists between revisions.
 This plan should be pulling features from the [improvements list](IMPROVEMENTS_LIST.md) page.
 
+#version 0.6.5
+- Implement a method for allowing user intput to feed the description generator prompt.
+
+#Version 0.6.0
+- Implement a description generator that can run in parallel with the image generator.
+- Have the description generator use StableLM to generate a character description based on the image.
+
+# Version 0.5.0
+- Implement a method to allow both the LLM and randomizer to feed data into a prompt.
+
+# Version 0.4.0
+- Implement StableAI's LLM as a prompt generator.
+
+# Version 0.3.0
+- Implement a prompt list randomizer.  Adds comma-separated words to a prompt, with optional defaults.
 
 # Version 0.2.0
+- Note: The features in this version were paused due to implementation issues.
 - Allow user-provided paths to be supplied for config files and other setings.
 - Create command permissions (like a owner who can run `/flush`).
 
 # Version 0.1.5
+- Note: The features in this version were paused due to implementation issues.
 - Override the base Queue class to expose the (remove) function from deque for the `/cancel` command.
   - File a complaint with cpython that they didn't already expose this.
   - Add job data back to jobs list so the queue data can be properly removed.

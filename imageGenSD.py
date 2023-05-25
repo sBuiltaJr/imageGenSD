@@ -428,3 +428,7 @@ if __name__ == '__main__':
 #/flush:   clear queue and kill active jobs (if possible).  Needs Owner/Admin to run.
 #/Restart: Flush + recreates the queue objects.  Effectively restarts the script.  Also requires Owner.
 #/Cancel:  Kills most recent request from the poster, if possible. 
+
+#Make random tags a parameter for default gen to avoid code dupe.
+#ML-to-ML prompt gen will just have to accept dupe
+#Use empty/nonempty param to decide if the randgen is needed.

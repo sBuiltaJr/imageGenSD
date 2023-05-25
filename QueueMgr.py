@@ -101,11 +101,11 @@ class Manager:
     def Add(self, request : dict) -> str:
         """Passes queued jobs to the worker tasks.  Is effectively the 'main'
            of the class.  Workers return the image prompt and queue object id
-           when compelte.  The Manager should post the result to the main thread
+           when complete.  The Manager should post the result to the main thread
            via a pipe to allow simultaneous handling of commands and responses.
 
            Input: self - Pointer to the current object instance.
-                  request - sanitized data to potentially add to the queue.
+                  request - Sanitized data to potentially add to the queue.
               
            Output: str - Result of the job scheduling attempt.
         """
@@ -136,7 +136,7 @@ class Manager:
             return "Unable to add your job, too many requests from this Guild are already in the queue."
             
         #This isn't an elif to avoid duplicating the contents. ID is also only
-        #deleted after the job is done, so this function always losees the race.
+        #deleted after the job is done, so this function always loses the race.
         if request['data']['id'] not in jobs[request['data']['guild']]:
         
             (jobs[request['data']['guild']])[request['data']['id']] = request['metadata']
@@ -227,7 +227,7 @@ class Manager:
     def PutRequest(self) :
         """Should be instantiated as an independent proecss for putting and
            getting data from the SD werver.  Results are provided back to the
-           main IGSD thread viathe supplied event loop.  Has no knowledge of
+           main IGSD thread via the supplied event loop.  Has no knowledge of
            Guilds or how to post the provided image to the requestor.
 
             Input: pipe - where to return the SD image gen result.
@@ -250,7 +250,7 @@ class Manager:
             
             #Have a special check for the GET test, which doesn't expect to get
             #any data from an actual job.
-            if request['id'] == "testgetid" or ((type(request['id']) != str) and (request['id'] < 10)):
+            if request['id'] == "testgetid" or ((not (isinstance(request['id'], str))) and (request['id'] < 10)):
             
                 self.queLog.debug(f"Performing GET test of URL: {self.web_url}.")
                 try:

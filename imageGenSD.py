@@ -155,8 +155,7 @@ async def hello(interaction: dis.Interaction):
 #This is commented until the failed inheritance issue can be resolved.
 #@IGSD_client.tree.command()
 #async def testclear(interaction: dis.Interaction):
-#    """A test HTTP GET command to verify basic connection to the webui page.
-#       Also tests the internal data path.
+#    """A test flood of requests to verify the flush command works.
 #
 #       Input  : None.
 #
@@ -268,13 +267,13 @@ async def generate(interaction: dis.Interaction,
                    seed            : Optional[dac.Range[int, -(pow(2,53) - 1), (pow(2,53) - 1)]]                                           = int(params['options']['seed']), #These are limits imposed by Discord.
                    cfg_scale       : Optional[dac.Range[float, 0.0, 30.0]]                                                                 = float(params['options']['cfg']),
                    sampler         : Optional[Literal["Euler a","Euler","LMS","Heun","DPM2","DM2 a","DPM++ 2S a","DPM++ 2M","DPM++ SDE","DPM fast","DPM adaptive","LMS Karras","DPM2 Karras","DPM2 a Karras","DPM++ 2M Karras","DPM++ SDE Karras","DDIM","PLMS"]]  = params['options']['sampler']):
-                   #Yes, I am disappoitned I can't wrangle this into a config parameter.  Thanks PEP 586.
+                   #Yes, I am disappointed I can't wrangle this into a config parameter.  Thanks PEP 586.
     """Generates a image based on user-supplied prompts, if provided.  Provides
        defaults if not.  Enforces any parameter limits, including an optional
        banned word filter.
 
-        Input  : prompt - what the user wants to append to the default prompt.
-                 negative_prompt - what the user wants to append to the default.
+        Input  : prompt - What the user wants to append to the default prompt.
+                 negative_prompt - What the user wants to append to the default.
                  height - How tall to make the pre-scaled image.
                  width - How wide to make the pre-scaled image.
                  steps - How many steps to itterate in the SD process.
@@ -402,7 +401,7 @@ def Startup():
     if int(params['options']['step_size']) <= 1:
     
         disLog.error(f"Image dimension step size must be greater than 1!")
-        exti(1)
+        exit(1)
         
     #This will be modified in the future to accept user-supplied paths.
     try:

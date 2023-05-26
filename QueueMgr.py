@@ -1,21 +1,57 @@
-#Manages the job queue for processing IGSD images. Also handles reate limits
-#nad other checks, including tracking guilds.
+#Manages the job queue for processing IGSD images. Also handles rate limits and
+#other checks, including tracking guilds.
 #
 #A seaprate manager is reqruied by Discord becuase all slash commands have a
-#Hard 3-second timeout.  Even modern HW is not yet able to meet this demand.
+#hard 3-second timeout.  Even modern HW is not yet able to meet this demand.
 
 
 #####  Imports  #####
 
 import logging as log
 import multiprocessing as mp
+#from multiprocessing.queues import Queue
+#from multiprocessing import get_context
+#import queue
 import requests as req
 from urllib.parse import urljoin
 import time
 
 jobs = {}
+
+#####  Manager Class  #####
+
+#class ManagedQueue(Queue):
+#    """This overloads the default MP class to add useful basic functions, like
+#       Queue flushing.
+#    """
+   
+#    def __init__(self, maxsize=0, *, ctx=None):
+#        ctx = get_context()
+#        super().__init__(maxsize=maxsize, ctx=ctx)
+
+#    def Flush(self, block=True, timeout=None):
+#        """Empties the base cpython Queue to add useful features from the
+#           underlying dequeue class that weren't exposed for some reason.
+#           Is unable to cancel the current job being processed by the webui.
+#       
+#           Inputs: self - Pointer to the current object instance.
+#              
+#           Output: None.
+#        """
+#        if self._closed:
+#            raise ValueError(f"Queue {self!r} is closed")
+#        if not self._sem.acquire(block, timeout):
+#            raise Full
+
+#        with self._notempty:
+#            if self._thread is None:
+#                self._start_thread()
+#            self._buffer.clear()
+#            print(f"Cleared! {self.empty()}")
+#            self._notempty.notify()
+
 #####  Package Functions  #####
-  
+
 #####  Manager Class  #####
 
 class Manager:
@@ -32,9 +68,10 @@ class Manager:
               
            Output: None - Throws exceptions on error.
         """
-        self.disLog     = log.getLogger('discord')
+        self.queLog     = log.getLogger('queue')
         self.id         = manager_id
         self.keep_going = True
+        self.flush      = False
         self.post_loop  = loop
         #It's possible all opts are provided directly from config.json,
         #requiring them to be cast appropriately for the manager.  This also
@@ -50,15 +87,25 @@ class Manager:
         #to allow future versions to invoke workers across computers (e.g.
         #subprocess_exec with TCP/UDP data to/from a set of remote terminals).
         self.queue = mp.Queue(self.depth)
+
+    def Flush(self):
+        """Sets the 'flush' flag true to enable the job queue to flush jobs
+           when able.  
+
+           Input: self - Pointer to the current object instance.
+              
+           Output: none.
+        """
+        self.flush = True
         
     def Add(self, request : dict) -> str:
         """Passes queued jobs to the worker tasks.  Is effectively the 'main'
            of the class.  Workers return the image prompt and queue object id
-           when compelte.  The Manager should post the result to the main thread
+           when complete.  The Manager should post the result to the main thread
            via a pipe to allow simultaneous handling of commands and responses.
 
            Input: self - Pointer to the current object instance.
-                  request - sanitized data to potentially add to the queue.
+                  request - Sanitized data to potentially add to the queue.
               
            Output: str - Result of the job scheduling attempt.
         """
@@ -68,7 +115,7 @@ class Manager:
         
             if len(jobs) >= self.max_guilds :
             
-                self.disLog.warning(f"Trying to add guild {request['data']['guild']} goes over Guild limit {self.max_guilds}!")
+                self.queLog.warning(f"Trying to add guild {request['data']['guild']} goes over Guild limit {self.max_guilds}!")
                 return "Bot is currently servicing the maximum number of allowed Guilds."
                 
             else:
@@ -80,7 +127,7 @@ class Manager:
         #of attempting to track timing.
         if len(jobs[request['data']['guild']]) >= self.max_guild_reqs:
         
-            self.disLog.warning(f"User {request['data']['id']}'s request excedded the Guild request limit {self.max_guild_reqs}!")
+            self.queLog.warning(f"User {request['data']['id']}'s request excedded the Guild request limit {self.max_guild_reqs}!")
             
             if len(jobs[request['data']['guild']]) == 0:
             
@@ -89,15 +136,15 @@ class Manager:
             return "Unable to add your job, too many requests from this Guild are already in the queue."
             
         #This isn't an elif to avoid duplicating the contents. ID is also only
-        #deleted after the job is done, so this function always losees the race.
+        #deleted after the job is done, so this function always loses the race.
         if request['data']['id'] not in jobs[request['data']['guild']]:
         
             (jobs[request['data']['guild']])[request['data']['id']] = request['metadata']
-            self.disLog.debug(f"Added new request from Guild {request['data']['guild']} to ID {request['data']['id']}.")
+            self.queLog.debug(f"Added new request from Guild {request['data']['guild']} to ID {request['data']['id']}.")
             
         else :
         
-            self.disLog.debug(f"Request id {request['data']['id']} alraedy exists!")
+            self.queLog.debug(f"Request id {request['data']['id']} alraedy exists!")
             #In the future, this can be modified by converting ID into a
             #snowflake, allowing users to post multiple jobs.
             return "You already have a job on the queue, please wait until it's finished."
@@ -112,14 +159,14 @@ class Manager:
         except queue.Full as err:
         
             (jobs[request['data']['guild']]).pop(request['data']['id'])
-            self.disLog.warning(f" Encountered a full queue for request with metadata: {request['data']}, {err}!")
+            self.queLog.warning(f" Encountered a full queue for request with metadata: {request['data']}, {err}!")
             
             return "The work queue is curerntly full, please wait a bit before making another request."
             
         except Exception as err:
         
             (jobs[request['data']['guild']]).pop(request['data']['id'])
-            self.disLog.error(f" Unable to add job to queue for request with metadata: {request['data']}, {err}!")
+            self.queLog.error(f" Unable to add job to queue for request with metadata: {request['data']}, {err}!")
             
             return "Unable to add your job to the queue.  Are you sending more than text and numbers?"
             
@@ -180,7 +227,7 @@ class Manager:
     def PutRequest(self) :
         """Should be instantiated as an independent proecss for putting and
            getting data from the SD werver.  Results are provided back to the
-           main IGSD thread viathe supplied event loop.  Has no knowledge of
+           main IGSD thread via the supplied event loop.  Has no knowledge of
            Guilds or how to post the provided image to the requestor.
 
             Input: pipe - where to return the SD image gen result.
@@ -190,6 +237,11 @@ class Manager:
         global jobs
         
         while self.keep_going:
+        
+            if self.flush:
+#                self.queue.Flush()
+                self.flush = False
+                continue
             request            = self.queue.get()
             result             = req.Response()
             result.status_code = 404
@@ -198,24 +250,24 @@ class Manager:
             
             #Have a special check for the GET test, which doesn't expect to get
             #any data from an actual job.
-            if request['id'] == "testgetid":
+            if request['id'] == "testgetid" or ((not (isinstance(request['id'], str))) and (request['id'] < 10)):
             
-                self.disLog.debug(f"Performing GET test of URL: {self.web_url}.")
+                self.queLog.debug(f"Performing GET test of URL: {self.web_url}.")
                 try:
                     result = req.get(url=urljoin(self.web_url, '/sdapi/v1/memory'), timeout=5)
                     
                 except Exception as err:
-                    self.disLog.error(f"Exception trying to GET: {err}.")
-            
+                    self.queLog.error(f"Exception trying to GET: {err}.")
+                
             else:
 
-                self.disLog.info(f"Starting PUT to SD server at {self.web_url}.")
+                self.queLog.info(f"Starting PUT to SD server at {self.web_url}.")
                 try:
                     result = req.post(url=urljoin(self.web_url, '/sdapi/v1/txt2img'), json=request['post'])
                     jres   = result.json()
                     
                 except Exception as err:
-                    self.disLog.error(f"Exception trying to PUT: {err}.")
+                    self.queLog.error(f"Exception trying to PUT: {err}.")
                     
 
             jres['status_code'] = result.status_code
@@ -228,7 +280,7 @@ class Manager:
             
             if len(jobs[request['guild']]) == 0:
             
-                self.disLog.debug(f"Removing empty Guild {request['guild']} from the list.")
+                self.queLog.debug(f"Removing empty Guild {request['guild']} from the list.")
                 del jobs[request['guild']]
                 
             job['loop'].create_task(job['poster'](msg=jres), name="reply")
@@ -247,7 +299,7 @@ class Manager:
               
            Output: None - Results are posted to a pipe.
         """
-        self.disLog.info(f"Queue Manager {self.id} starting workers.")
+        self.queLog.info(f"Queue Manager {self.id} starting workers.")
         #This may, someday, need to be a proper multiprocessing queue.
         #jobs = [QueueObject(x) for x in range(self.depth)], in a loop
 

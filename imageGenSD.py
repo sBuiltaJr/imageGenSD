@@ -15,7 +15,7 @@ import logging.handlers as lh
 import json
 import multiprocessing as mp
 import os
-import QueueMgr as qm
+import src.managers.QueueMgr as qm
 import requests as req
 import threading as th
 import time

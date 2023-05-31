@@ -15,8 +15,9 @@ import logging.handlers as lh
 import json
 import multiprocessing as mp
 import os
-import src.managers.QueueMgr as qm
+import pathlib as pl
 import requests as req
+import src.managers.QueueMgr as qm
 import threading as th
 import time
 from typing import Literal, Optional
@@ -27,15 +28,18 @@ from typing import Literal, Optional
 #capability, avoiding constant passing down to 'lower' defs. 
 #Static data only, no file objects or similar (or else!).
 creds = {}
-default_params = {'cfg'       : 'config.json',
-                  'cred'      : 'credentials.json',
+#These can be specified as POSIX style since the using call will normalize them.
+default_params = {'cfg'       : 'src/config/config.json',
+                  'cred'      : 'src/config/credentials.json',
                   'bot_token' : ''}
 IGSD_version = '0.1.0'    
 #This will be modified in the future to accept user-supplied paths.
 #This file must be loaded prior to the logger to allow for user-provided
 #options to be passed to the Logger.  Thus it must have special error
 #handling outside of the logger class.
-with open(default_params['cfg']) as json_file:
+cfg_path = pl.Path(default_params['cfg'])
+#The .absoltue call normalizes the path in case the user had slashing issues.
+with open(cfg_path.absolute()) as json_file:
     params = json.load(json_file)
 job_queue = None
 worker = None
@@ -114,9 +118,10 @@ async def on_ready():
         
     queLog = log.getLogger('queue')
     queLog.setLevel(params['log_lvl'])
+    log_path = pl.Path(params['log_name_queue'])
 
     logHandler = lh.RotatingFileHandler(
-        filename=params['log_name_queue'],
+        filename=log_path.absolute(),
         encoding=params['log_encoding'],
         maxBytes=int(params['max_bytes']),
         backupCount=int(params['log_file_cnt']),
@@ -382,9 +387,10 @@ def Startup():
         
     disLog = log.getLogger('discord')
     disLog.setLevel(params['log_lvl'])
+    log_path = pl.Path(params['log_name'])
 
     logHandler = lh.RotatingFileHandler(
-        filename=params['log_name'],
+        filename=log_path.absolute(),
         encoding=params['log_encoding'],
         maxBytes=int(params['max_bytes']),
         backupCount=int(params['log_file_cnt']),
@@ -405,11 +411,13 @@ def Startup():
         
     #This will be modified in the future to accept user-supplied paths.
     try:
-        with open(default_params['cred']) as json_file:
+        cred_path = pl.Path(default_params['cred'])
+        
+        with open(cred_path.absolute()) as json_file:
             creds = json.load(json_file)
 
     except OSError as err:
-        disLog.critical(f"Can't load file from path {default_params['cred']}")
+        disLog.critical(f"Can't load file from path {cred_path.absolute()}")
         exit(1)
     
     #Start manager tasks

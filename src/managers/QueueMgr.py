@@ -1,7 +1,7 @@
 #Manages the job queue for processing IGSD images. Also handles rate limits and
 #other checks, including tracking guilds.
 #
-#A seaprate manager is reqruied by Discord becuase all slash commands have a
+#A seaprate manager is reqruied by Discord because all slash commands have a
 #hard 3-second timeout.  Even modern HW is not yet able to meet this demand.
 
 

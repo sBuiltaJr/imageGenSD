@@ -32,7 +32,7 @@ creds = {}
 default_params = {'cfg'       : 'src/config/config.json',
                   'cred'      : 'src/config/credentials.json',
                   'bot_token' : ''}
-IGSD_version = '0.1.0'    
+IGSD_version = '0.3.0'    
 #This will be modified in the future to accept user-supplied paths.
 #This file must be loaded prior to the logger to allow for user-provided
 #options to be passed to the Logger.  Thus it must have special error

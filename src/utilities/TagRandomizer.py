@@ -6,9 +6,10 @@
 
 
 #####  Imports  #####
+import linecache as lc
 
 
-class Manager:
+class TagRandomizer:
 
     def __init__(self):
         """Manages job request queueing and tracks relevant discord context,

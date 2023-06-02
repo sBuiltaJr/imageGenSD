@@ -88,7 +88,7 @@ class Manager:
         #to allow future versions to invoke workers across computers (e.g.
         #subprocess_exec with TCP/UDP data to/from a set of remote terminals).
         self.queue = mp.Queue(self.depth)
-        
+    
         #Currently it doesn't make sense for a queue to create multiple
         #randomizers since jobs are processed serially.  This may need to
         #change if the jobs are ever made parallel.
@@ -97,8 +97,9 @@ class Manager:
         #the parent before being passed down.
         self.randomizer = tr.TagRandomizer(opts['rand_dict_path'],
                                            int(opts['dict_size']),
+                                           int(opts['min_rand_tag_cnt']),
                                            int(opts['max_rand_tag_cnt']),
-                                           int(opts['min_rand_tag_cnt']))
+                                           int(opts['tag_retry_limit']))
 
     def Flush(self):
         """Sets the 'flush' flag true to enable the job queue to flush jobs
@@ -169,7 +170,9 @@ class Manager:
             #preventing them from spamming requests if the randomizer takes a
             #long time for some reason.
             if request['data']['post']['random'] == True:
-                tags = tr.getRandomTags()
+                tag_data = self.randomizer.getRandomTags(int(request['data']['post']['tag_cnt']))
+                request['data']['post']['prompt'] += tag_data[0]
+                request['data']['post']['tags_added'] = tag_data[1]
             
             #The Metadata can't be pickeled, meaning we can only send data
             #through the queue.
@@ -223,7 +226,7 @@ class Manager:
         'cfg_scale'           : 22.0,
         'width'               : 512,
         'height'              : 768,
-        'random'              : False,
+        'random'              : False, #Custom parameter not for SD POST
         'restore_faces'       : False,
         'tiling'              : False,
         'do_not_save_samples' : False,
@@ -241,6 +244,8 @@ class Manager:
         'script_name'         : "",
         'send_images'         : True,
         'save_images'         : True, #Should probably limit ability to run test command
+        'tags_added'          :'', #Custom parameter not for SD POST
+        'tag_cnt'             : 0, #Custom parameter not for SD POST
         'alwayson_scripts'    : {}
         }
         
@@ -294,6 +299,7 @@ class Manager:
             jres['reason']      = result.reason
             jres['id']          = request['id'] #TODO this shouldn't be necessary
             jres['random']      = request['post']['random']
+            jres['tags_added']  = request['post']['tags_added']
             #Pop last to ensure a new request from the same ID can be added
             #only after their first request is completed.
             job     = (jobs[request['guild']]).pop(request['id'])

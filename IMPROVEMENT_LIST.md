@@ -5,16 +5,24 @@ order. [The discord.py github](https://github.com/Rapptz/discord.py/tree/master/
 
 ## Bug-fixes
 (These items have higher priority but aren't guaranteed to be first).
+- Properly manage the 1024-character embed limit.
+  - Requires all fields in the embed message, as currently written, to be less than 1024 characters.
+  - Causes annoying interactions with the tag randomizer.
+  - Is currently only partially mitigated by simply shrinking the allowed tag size.
+  - Perhaps prompts should be returned in a separate embed?
+  - See Discord's [embed limits](https://discord.com/developers/docs/resources/channel#embed-object-embed-limits) for more details.
 
 ## Investigations
 (Items that may not be bugs but should still be investigated)
-- Determine why the discord.py examples always requrie hard-coding a guild. (should be auto-detectable?)
+- Determine why the discord.py examples always require hard-coding a guild. (should be auto-detectable?)
 - Determine how to properly background the task (discord.py has some examples, may not work as needed?)
 
 ## Planned
+- Allow the default prompt to be added to a user prompt, especially if suing randomized tags.
 - Allow a bot to manage multiple guilds.
 - Allow a bot to shard.
 - Crash recovery.
+- Add the image's actual seed value to the embed.
 - Guild info command (for setting parameters).
 - Argument sanitization/limiting (discord knows as transformers).
 - Add user-supplied paths for config/credential files.

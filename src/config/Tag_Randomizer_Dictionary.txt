@@ -43,7 +43,6 @@ anchor
 faceless
 pantyhose
 red choker
-blue swimsuit
 spikes
 musical note
 holding food
@@ -79,7 +78,6 @@ chromatic aberration
 tree
 crop top
 print kimono
-swimsuit
 headgear
 beachball
 tress ribbon
@@ -175,7 +173,6 @@ lace-trimmed legwear
 tatami
 fox girl
 blonde hair
-bra
 shirt
 veins
 two-tone hair
@@ -202,7 +199,6 @@ single horn
 bush
 indian style
 sharp fingernails
-white swimsuit
 shiny clothes
 sleeves rolled up
 outstretched arms
@@ -322,7 +318,6 @@ pom pom \(clothes\)
 building
 chinese clothes
 strapless
-black swimsuit
 frog hair ornament
 red legwear
 candy
@@ -463,7 +458,6 @@ black sailor collar
 angel wings
 light smile
 blue dress
-one-piece swimsuit
 teddy bear
 grey skirt
 red gloves
@@ -698,7 +692,6 @@ magical girl
 haori
 short kimono
 polka dot background
-highleg swimsuit
 argyle
 covering mouth
 yellow ribbon
@@ -895,7 +888,6 @@ lantern
 on stomach
 hands up
 bare shoulders
-sports bra
 hair ornament
 makeup
 tiles

@@ -59,7 +59,8 @@ try:
         #value, hence we have to scan ourselves.
         params['queue_opts']['dict_size'] = sum(1 for line in open(params['queue_opts']['rand_dict_path']))
         
-        if int(params['queue_opts']['dict_size']) < int(params['queue_opts']['max_rand_tag_cnt']):
+        if int(params['queue_opts']['dict_size']) < int(params['queue_opts']['max_rand_tag_cnt']) or \
+           int(params['queue_opts']['max_rand_tag_cnt']) <= int(params['queue_opts']['min_rand_tag_cnt']):
             raise IndexError
     else:
         raise FileNotFoundError
@@ -73,7 +74,7 @@ except FileNotFoundError as err:
     exit(-4)
     
 except IndexError as err:
-    print(f"The tag dictionary is {params['queue_opts']['dict_size']} lines long, shorter than the tag randomizer max size of {params['queue_opts']['max_rand_tag_cnt']}!")
+    print(f"The tag dictionary is {params['queue_opts']['dict_size']} lines long, shorter than the tag randomizer max size of {params['queue_opts']['max_rand_tag_cnt']} OR Max tags {params['queue_opts']['max_rand_tag_cnt']} is less than min tags {params['queue_opts']['min_rand_tag_cnt']}!")
     exit(-5)
         
 job_queue = None
@@ -250,7 +251,7 @@ async def testget(interaction: dis.Interaction):
                 #This should really be metadata but the rest of the metadata
                 #can't be pickeled, so this must be passed with the work.
                 'id'     : "testgetid",
-                'post'   : {'random': False},
+                'post'   : {'random': False, 'tags_added':'', 'tag_cnt':0},
                 'reply'  : "test msg"
             }
         }
@@ -291,6 +292,7 @@ async def testpost(interaction: dis.Interaction):
 
 @IGSD_client.tree.command()
 @dac.describe(random=f"A flag to add between {params['queue_opts']['min_rand_tag_cnt']} and {params['queue_opts']['max_rand_tag_cnt']} random tags to the user prompt.  Does not count towards the maximum prompt length.",
+              tag_cnt=f"If 'random' is enabled, an exact number of tags to add to the prompt, up to params['queue_opts']['max_rand_tag_cnt']",
               prompt=f"The prompt(s) for generating the image, up to {params['options']['max_prompt_len']} characters.",
               negative_prompt=f"Prompts to filter out of results, up to {params['options']['max_prompt_len']} characters.",
               height=f"Image height, rounded down to a {params['options']['step_size']} pixel size.",
@@ -301,6 +303,7 @@ async def testpost(interaction: dis.Interaction):
               sampler="Sampling method (like 'Euler').")
 async def generate(interaction: dis.Interaction,
                    random          : Optional[bool]                                                                                        = False,
+                   tag_cnt         : Optional[dac.Range[int, 0, int(params['queue_opts']['max_rand_tag_cnt'])]]                            = 0,
                    prompt          : Optional[dac.Range[str, 0, int(params['options']['max_prompt_len'])]]                                 = params['options']['prompts'],
                    negative_prompt : Optional[dac.Range[str, 0, int(params['options']['max_prompt_len'])]]                                 = params['options']['negatives'],
                    height          : Optional[dac.Range[int, int(params['options']['min_height']), int(params['options']['max_height'])]]  = int(params['options']['height']),
@@ -315,6 +318,7 @@ async def generate(interaction: dis.Interaction,
        banned word filter.
 
         Input  : random - Adds a random number of random tags to the prompt input if True.
+                 tag_cnt - A specific number of random tags to add to a prompt.
                  prompt - What the user wants to append to the default prompt.
                  negative_prompt - What the user wants to append to the default.
                  height - How tall to make the pre-scaled image.
@@ -347,8 +351,10 @@ async def generate(interaction: dis.Interaction,
                     'reply'  : ""
                 }
 
-        #And probably blacklist people who try to bypass X times.
+        #And probably blacklist people who try to bypass prompt filters X times.
+        #Also nearly all input sanitization is done by the function call.
         msg['data']['post']['random']          = random
+        msg['data']['post']['tag_cnt']         = tag_cnt 
         msg['data']['post']['prompt']          = prompt
         msg['data']['post']['negative_prompt'] = negative_prompt
         msg['data']['post']['height']          = (height - (height % int(params['options']['step_size'])))
@@ -393,8 +399,6 @@ async def Post(msg):
         
     else:
         embed = dis.Embed()
-        #Randomized is special because it's not a parameter sent to SD.
-        embed.add_field(name='Randomized', value=msg['random'])
         embed.add_field(name='Prompt', value=msg['parameters']['prompt'])
         embed.add_field(name='Negative Prompt', value=msg['parameters']['negative_prompt'])
         embed.add_field(name='Steps', value=msg['parameters']['steps'])
@@ -404,6 +408,9 @@ async def Post(msg):
         embed.add_field(name='Seed', value=msg['parameters']['seed'])
         embed.add_field(name='CFG Scale', value=msg['parameters']['cfg_scale'])
         embed.add_field(name='Highres Fix', value=msg['parameters']['enable_hr'])
+        #Randomized and co are special because they're not a parameter sent to SD.
+        embed.add_field(name='Randomized', value=msg['random'])
+        embed.add_field(name='Tags Added to Prompt', value=msg['tags_added'])
 
         for i in msg['images']:
             image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
@@ -477,7 +484,3 @@ if __name__ == '__main__':
 #/flush:   clear queue and kill active jobs (if possible).  Needs Owner/Admin to run.
 #/Restart: Flush + recreates the queue objects.  Effectively restarts the script.  Also requires Owner.
 #/Cancel:  Kills most recent request from the poster, if possible. 
-
-#Make random tags a parameter for default gen to avoid code dupe.
-#ML-to-ML prompt gen will just have to accept dupe
-#Use empty/nonempty param to decide if the randgen is needed.

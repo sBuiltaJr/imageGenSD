@@ -14,6 +14,7 @@ import multiprocessing as mp
 #import queue
 import requests as req
 from urllib.parse import urljoin
+from ..utilities import TagRandomizer as tr
 import time
 
 jobs = {}
@@ -68,11 +69,11 @@ class Manager:
               
            Output: None - Throws exceptions on error.
         """
-        self.queLog     = log.getLogger('queue')
+        self.flush      = False
         self.id         = manager_id
         self.keep_going = True
-        self.flush      = False
         self.post_loop  = loop
+        self.queLog     = log.getLogger('queue')
         #It's possible all opts are provided directly from config.json,
         #requiring them to be cast appropriately for the manager.  This also
         #allows the caller to never have to worry about casting the types
@@ -87,6 +88,16 @@ class Manager:
         #to allow future versions to invoke workers across computers (e.g.
         #subprocess_exec with TCP/UDP data to/from a set of remote terminals).
         self.queue = mp.Queue(self.depth)
+        
+        #Currently it doesn't make sense for a queue to create multiple
+        #randomizers since jobs are processed serially.  This may need to
+        #change if the jobs are ever made parallel.
+        #
+        #This call also assumes opts['rand_dict_path'] has been sanitized by
+        #the parent before being passed down.
+        self.randomizer = tr.TagRandomizer(opts['rand_dict_path'],
+                                           int(opts['max_rand_tag_cnt']),
+                                           int(opts['min_rand_tag_cnt']))
 
     def Flush(self):
         """Sets the 'flush' flag true to enable the job queue to flush jobs
@@ -152,6 +163,13 @@ class Manager:
             #Else rate limit
         try:
         
+            #This is both the latest time possible to get the randomized tags
+            #and the safest time, since a user's request is already recorded,
+            #preventing them from spamming requests if the randomizer takes a
+            #long time for some reason.
+            if request['data']['post']['random'] == True:
+                tr.getRandomTags()
+            
             #The Metadata can't be pickeled, meaning we can only send data
             #through the queue.
             self.queue.put(request['data'])
@@ -204,6 +222,7 @@ class Manager:
         'cfg_scale'           : 22.0,
         'width'               : 512,
         'height'              : 768,
+        'random'              : False,
         'restore_faces'       : False,
         'tiling'              : False,
         'do_not_save_samples' : False,
@@ -302,10 +321,3 @@ class Manager:
         self.queLog.info(f"Queue Manager {self.id} starting workers.")
         #This may, someday, need to be a proper multiprocessing queue.
         #jobs = [QueueObject(x) for x in range(self.depth)], in a loop
-
-
-#Implement as a subclass of Queue
-#Allows queue to farm out work in batches in the future
-#Also allows main to count a user job as active, acoiding races of offloading the requests in main
-#better to hold main queue than have weird races aroudn parallelism
-#Should still try and be able to make description generator run parallel to iamge; maybe async?

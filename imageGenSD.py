@@ -38,11 +38,35 @@ IGSD_version = '0.3.0'
 #options to be passed to the Logger.  Thus it must have special error
 #handling outside of the logger class.
 cfg_path = pl.Path(default_params['cfg'])
-#The .absoltue call normalizes the path in case the user had slashing issues.
-with open(cfg_path.absolute()) as json_file:
-    params = json.load(json_file)
+
+try:
+    #The .absoltue call normalizes the path in case the user had slashing
+    #issues.  Obviously can't solve all potential problems.
+    with open(cfg_path.absolute()) as json_file:
+        params = json.load(json_file)
+    
+    dict_path = pl.Path(params['queue_opts']['rand_dict_path'])
+    
+    #This is just an access check and is done early to allow for an exit if
+    #the file has read/access issues.  The Tag Randomizer class will
+    #separately open a copy when needed with a more read-efficent module.
+    if dict_path.is_file():
+        #This is to guarantee there's no confusion about where the dict is.
+        #If run across computers, this will need to be changed.
+        params['queue_opts']['rand_dict_path'] = dict_path.absolute()
+    else:
+        raise FileNotFoundError
+
+except OSError as err:
+    print(f"Can't load the config file from path: {cred_path.absolute()}!")
+    exit(1)
+    
+except FileNotFoundError as err:
+    print(f"Can't load the tag dictionary from the user path: {params['queue_opts']['rand_dict_path']}!")
+    exit(2)
+        
 job_queue = None
-worker = None
+worker    = None
 
 #####  Package Classes  #####
 
@@ -255,7 +279,8 @@ async def testpost(interaction: dis.Interaction):
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 @IGSD_client.tree.command()
-@dac.describe(prompt=f"The prompt(s) for generating the image, up to {params['options']['max_prompt_len']} characters.",
+@dac.describe(random=f"A flag to add between {params['queue_opts']['min_rand_tag_cnt']} and {params['queue_opts']['max_rand_tag_cnt']} random tags to the user prompt.  Does not count towards the maximum prompt length.",
+              prompt=f"The prompt(s) for generating the image, up to {params['options']['max_prompt_len']} characters.",
               negative_prompt=f"Prompts to filter out of results, up to {params['options']['max_prompt_len']} characters.",
               height=f"Image height, rounded down to a {params['options']['step_size']} pixel size.",
               width=f"Image width, rounded down to a {params['options']['step_size']} pixel size.",
@@ -264,6 +289,7 @@ async def testpost(interaction: dis.Interaction):
               cfg_scale="how much weight to give your prompts.",
               sampler="Sampling method (like 'Euler').")
 async def generate(interaction: dis.Interaction,
+                   random          : Optional[bool]                                                                                        = False,
                    prompt          : Optional[dac.Range[str, 0, int(params['options']['max_prompt_len'])]]                                 = params['options']['prompts'],
                    negative_prompt : Optional[dac.Range[str, 0, int(params['options']['max_prompt_len'])]]                                 = params['options']['negatives'],
                    height          : Optional[dac.Range[int, int(params['options']['min_height']), int(params['options']['max_height'])]]  = int(params['options']['height']),
@@ -272,12 +298,13 @@ async def generate(interaction: dis.Interaction,
                    seed            : Optional[dac.Range[int, -(pow(2,53) - 1), (pow(2,53) - 1)]]                                           = int(params['options']['seed']), #These are limits imposed by Discord.
                    cfg_scale       : Optional[dac.Range[float, 0.0, 30.0]]                                                                 = float(params['options']['cfg']),
                    sampler         : Optional[Literal["Euler a","Euler","LMS","Heun","DPM2","DM2 a","DPM++ 2S a","DPM++ 2M","DPM++ SDE","DPM fast","DPM adaptive","LMS Karras","DPM2 Karras","DPM2 a Karras","DPM++ 2M Karras","DPM++ SDE Karras","DDIM","PLMS"]]  = params['options']['sampler']):
-                   #Yes, I am disappointed I can't wrangle this into a config parameter.  Thanks PEP 586.
+                   #Yes, I am disappointed I can't wrangle the sampler list into a config parameter.  Thanks PEP 586.
     """Generates a image based on user-supplied prompts, if provided.  Provides
        defaults if not.  Enforces any parameter limits, including an optional
        banned word filter.
 
-        Input  : prompt - What the user wants to append to the default prompt.
+        Input  : random - Adds a random number of random tags to the prompt input if True.
+                 prompt - What the user wants to append to the default prompt.
                  negative_prompt - What the user wants to append to the default.
                  height - How tall to make the pre-scaled image.
                  width - How wide to make the pre-scaled image.
@@ -310,6 +337,7 @@ async def generate(interaction: dis.Interaction,
                 }
 
         #And probably blacklist people who try to bypass X times.
+        msg['data']['post']['random']          = random
         msg['data']['post']['prompt']          = prompt
         msg['data']['post']['negative_prompt'] = negative_prompt
         msg['data']['post']['height']          = (height - (height % int(params['options']['step_size'])))
@@ -408,8 +436,8 @@ def Startup():
     
         disLog.error(f"Image dimension step size must be greater than 1!")
         exit(1)
-        
-    #This will be modified in the future to accept user-supplied paths.
+    
+    #This will eventually be updated to allow for user-supplied paths.
     try:
         cred_path = pl.Path(default_params['cred'])
         

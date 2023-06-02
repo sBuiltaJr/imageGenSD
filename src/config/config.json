@@ -12,20 +12,20 @@
     "options"       :
     {
 		"banned_words"     : "sex,nipple,vagina,vaginal,dick,penis,orgasm,oral,cum,semen,slut,whore,cunt,bitch,poop,shit,piss,pee,orgy,loli,child,shota,kid,anal,intercourse",
-        "cfg"              : "18",
 		"banned_neg_words" : "clothed,adult,mature",
+		"cfg"              : "18",
         "HDR"              : "false",
         "height"           : "768",
         "max_height"       : "768",
         "max_prompt_len"   : "1024",
-        "max_width"        : "768",
         "max_steps"        : "150",
+        "max_width"        : "768",
         "min_height"       : "256",
         "min_steps"        : "20",
         "min_width"        : "256",
         "negatives"	        : "(low quality, worst quality:1.4), (bad anatomy), extra digit, fewer digits, (extra arms:1.2), bad hands, by (bad-artist:0.6), bad-image-v2-39000, NSFW, nipples, loli, child, children, shota, boy, male, men, man,",
-		"prompts"          : "detailed background, masterpiece, best quality, 1girl, laser, orb, energy orb, funny hat, outside, long dress",
-        "sampler"          : "DPM++ 2M Karras",
+		"prompts"          : "detailed background, masterpiece, best quality, 1girl, laser, orb, energy orb, funny hat",
+		"sampler"          : "DPM++ 2M Karras",
 		"save_imgs"        : "False",
         "seed"             : "-1",
 		"step_size"        : "64",
@@ -34,12 +34,15 @@
     },
 	"queue_opts"    :
 	{
-		"depth"          : "100",
-		"job_cooldown"   : "0.25",
-		"job_count"      : "1",
-		"max_guilds"     : "10",
-		"max_guild_reqs" : "10",
-		"webui_URL"      : "http://127.0.0.1:7861/"
+		"depth"            : "100",
+		"job_cooldown"     : "0.25",
+		"job_count"        : "1",
+		"max_guilds"       : "10",
+		"max_guild_reqs"   : "10",
+        "max_rand_tag_cnt" : "75",
+        "min_rand_tag_cnt" : "10",
+        "rand_dict_path"   : "src/config/Tag_Randomizer_Dictionary.txt",
+		"webui_URL"        : "http://127.0.0.1:7861/"
 	},
     "comments"      : 
     {
@@ -56,16 +59,20 @@
 			"prompts"          : "Default positive prompts.",
 			"sampler"          : "Default noise sampler, greatly influences image output.",
 			"seed"             : "Default image seeds, -1 is random.",
-			"step_size"        : "Specifices width and height increments. (e.g. default settings require width/heigths in increments of 64 pixels).",
+			"step_size"        : "Specifies width and height increments. (e.g. default settings require width/heights in increments of 64 pixels).",
 			"width"            : "Default image width.  SD usually expects images greater than 255 pixels."
 		},
 		"queue_opts"    : 
 		{
 			"depth"          : "How many jobs can be in the queue.",
-			"job_cooldown"   : "How many seconds to delay before starting another job (in case your computer cates fire).",
-			"job_count"      : "How many job tasks to spawn.  Each job gets a signle queue object to send to the SD engine.",
+			"job_cooldown"   : "How many seconds to delay before starting another job (in case your computer catches fire).",
+			"job_count"      : "How many job tasks to spawn.  Each job gets a single queue object to send to the SD engine.",
 			"max_guilds"     : "Max guilds to serve at a time, if you want to limit that.",
-			"max_guild_reqs" : "How many requests can be submitted by a single guild.  Stops a single guild from spamming the bot."
+			"max_guild_reqs" : "How many requests can be submitted by a single guild.  Stops a single guild from spamming the bot.",
+			"max_rand_tag_cnt" : "The maximum number of tags to add to a prompt if a user requests prompt randomization.  Does not count towards max_prompt_len.",
+			"min_rand_tag_cnt" : "The minimum number of tags to add to a prompt if a user requests prompt randomization.  Does not count towards max_prompt_len.",
+			"rand_dict_path"   : "Path to a newline-separated list of words for tag randomization.  Can be an absolute path or relative to imageGenSD.py.  Must conform to SD requirements (no underscores, escaped parentheses, etc)."
+			
 		}
     }
 }

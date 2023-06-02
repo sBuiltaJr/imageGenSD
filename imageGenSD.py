@@ -54,16 +54,27 @@ try:
         #This is to guarantee there's no confusion about where the dict is.
         #If run across computers, this will need to be changed.
         params['queue_opts']['rand_dict_path'] = dict_path.absolute()
+        #While it would be ideal to simply rely on a user-supplied size, we
+        #can't assume the user will think to do this nor give an accurate
+        #value, hence we have to scan ourselves.
+        params['queue_opts']['dict_size'] = sum(1 for line in open(params['queue_opts']['rand_dict_path']))
+        
+        if int(params['queue_opts']['dict_size']) < int(params['queue_opts']['max_rand_tag_cnt']):
+            raise IndexError
     else:
         raise FileNotFoundError
 
 except OSError as err:
     print(f"Can't load the config file from path: {cred_path.absolute()}!")
-    exit(1)
+    exit(-3)
     
 except FileNotFoundError as err:
     print(f"Can't load the tag dictionary from the user path: {params['queue_opts']['rand_dict_path']}!")
-    exit(2)
+    exit(-4)
+    
+except IndexError as err:
+    print(f"The tag dictionary is {params['queue_opts']['dict_size']} lines long, shorter than the tag randomizer max size of {params['queue_opts']['max_rand_tag_cnt']}!")
+    exit(-5)
         
 job_queue = None
 worker    = None
@@ -239,7 +250,7 @@ async def testget(interaction: dis.Interaction):
                 #This should really be metadata but the rest of the metadata
                 #can't be pickeled, so this must be passed with the work.
                 'id'     : "testgetid",
-                'post'   : {'empty'},
+                'post'   : {'random': False},
                 'reply'  : "test msg"
             }
         }
@@ -382,6 +393,8 @@ async def Post(msg):
         
     else:
         embed = dis.Embed()
+        #Randomized is special because it's not a parameter sent to SD.
+        embed.add_field(name='Randomized', value=msg['random'])
         embed.add_field(name='Prompt', value=msg['parameters']['prompt'])
         embed.add_field(name='Negative Prompt', value=msg['parameters']['negative_prompt'])
         embed.add_field(name='Steps', value=msg['parameters']['steps'])
@@ -397,7 +410,7 @@ async def Post(msg):
         
         await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
                                       file=dis.File(fp=image,
-                                      filename='image.png') ,embed=embed)
+                                      filename='image.png'), embed=embed)
 
 #####  main  #####
 
@@ -435,7 +448,7 @@ def Startup():
     if int(params['options']['step_size']) <= 1:
     
         disLog.error(f"Image dimension step size must be greater than 1!")
-        exit(1)
+        exit(-1)
     
     #This will eventually be updated to allow for user-supplied paths.
     try:
@@ -446,7 +459,7 @@ def Startup():
 
     except OSError as err:
         disLog.critical(f"Can't load file from path {cred_path.absolute()}")
-        exit(1)
+        exit(-2)
     
     #Start manager tasks
     disLog.debug(f"Starting Bot client")

@@ -11,7 +11,7 @@ import logging as log
 import multiprocessing as mp
 #from multiprocessing.queues import Queue
 #from multiprocessing import get_context
-#import queue
+import queue
 import requests as req
 from urllib.parse import urljoin
 from ..utilities import TagRandomizer as tr
@@ -96,6 +96,7 @@ class Manager:
         #This call also assumes opts['rand_dict_path'] has been sanitized by
         #the parent before being passed down.
         self.randomizer = tr.TagRandomizer(opts['rand_dict_path'],
+                                           int(opts['dict_size']),
                                            int(opts['max_rand_tag_cnt']),
                                            int(opts['min_rand_tag_cnt']))
 
@@ -168,7 +169,7 @@ class Manager:
             #preventing them from spamming requests if the randomizer takes a
             #long time for some reason.
             if request['data']['post']['random'] == True:
-                tr.getRandomTags()
+                tags = tr.getRandomTags()
             
             #The Metadata can't be pickeled, meaning we can only send data
             #through the queue.
@@ -179,7 +180,7 @@ class Manager:
             (jobs[request['data']['guild']]).pop(request['data']['id'])
             self.queLog.warning(f" Encountered a full queue for request with metadata: {request['data']}, {err}!")
             
-            return "The work queue is curerntly full, please wait a bit before making another request."
+            return "The work queue is currently full, please wait a bit before making another request."
             
         except Exception as err:
         
@@ -291,7 +292,8 @@ class Manager:
 
             jres['status_code'] = result.status_code
             jres['reason']      = result.reason
-            jres['id']          = request['id'] #TODO this shouldn't be necesasry
+            jres['id']          = request['id'] #TODO this shouldn't be necessary
+            jres['random']      = request['post']['random']
             #Pop last to ensure a new request from the same ID can be added
             #only after their first request is completed.
             job     = (jobs[request['guild']]).pop(request['id'])

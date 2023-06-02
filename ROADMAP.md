@@ -21,7 +21,6 @@ This plan should be pulling features from the [improvements list](IMPROVEMENTS_L
 # Version 0.2.0
 - Note: The features in this version were paused due to implementation issues.
 - Allow user-provided paths to be supplied for config files and other settings.
-- Create command permissions (like a owner who can run `/flush`).
 
 # Version 0.1.5
 - Note: The features in this version were paused due to implementation issues.

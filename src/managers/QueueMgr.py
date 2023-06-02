@@ -72,6 +72,7 @@ class Manager:
         self.flush      = False
         self.id         = manager_id
         self.keep_going = True
+        self.flush      = False
         self.post_loop  = loop
         self.queLog     = log.getLogger('queue')
         #It's possible all opts are provided directly from config.json,

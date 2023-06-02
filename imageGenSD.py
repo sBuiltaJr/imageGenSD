@@ -456,8 +456,8 @@ def Startup():
     
         disLog.error(f"Image dimension step size must be greater than 1!")
         exit(-1)
-    
-    #This will eventually be updated to allow for user-supplied paths.
+        
+    #This will be modified in the future to accept user-supplied paths.
     try:
         cred_path = pl.Path(default_params['cred'])
         

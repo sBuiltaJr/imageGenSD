@@ -2,7 +2,7 @@
 #pseudo-randomization of the output images given generic user prompts.  Also
 #enables image generation of just randomized prompts.
 #
-#A dictionary-style format is used for user convenience and compatability.
+#A dictionary-style format is used for user convenience and compatibility.
 
 
 #####  Imports  #####
@@ -30,9 +30,9 @@ class TagRandomizer:
         
         #Maybe this should be a separate log at some point.
         self.rngLog        = log.getLogger('queue')
-        #This is deliberatly not a Path, like in the parent, to allow linecache
+        #This is deliberately not a Path, like in the parent, to allow linecache
         #to read the file in case the user decided to provide a large file.
-        #Also, apparently Paythlib is missing methods that cachelib is using
+        #Also, apparently Pathlib is missing methods that cachelib is using
         #(probably for sanitization), causing exceptions if you give it a Path.
         self.dict_path     = os.path.abspath(dict_path)
         self.dict_size     = dict_size
@@ -54,7 +54,7 @@ class TagRandomizer:
         
     def getRandomTags(self, exact=0) -> (str, int):
         """Generates a string of comma-separated random tags extracted from the
-           provided soruce dictionary.  Selects a random number of tags between
+           provided source dictionary.  Selects a random number of tags between
            the specified min and max values, defaulting to the init values.
 
            Input: self - Pointer to the current object instance.
@@ -62,7 +62,7 @@ class TagRandomizer:
               
            Output: str - A comma-separated string of tags, doesn't assume the
                          parent added its own leading comma.
-                   int - How many random tags were added the the prompt.
+                   int - How many random tags were added to the prompt.
         """
         tag_count = 0
         tag_list  = ""
@@ -79,7 +79,7 @@ class TagRandomizer:
              
              if tag_list.find(tag) > -1:
              
-                self.rngLog.debug(f"Found duplicate tag {tag} from tag_list {tag_list}, attemptiong to get another")
+                self.rngLog.debug(f"Found duplicate tag {tag} from tag_list {tag_list}, attempting to get another")
                 
                 for retry in range (0, self.rand_retries):
                 
@@ -94,7 +94,7 @@ class TagRandomizer:
              #The getline function includes getting the separator.
              tag_list += (', ' + tag.rstrip(os.linesep))
         
-        #Note: Embedded fields (like how tags are dispalyed in the Discord post)
+        #Note: Embedded fields (like how tags are displayed in the Discord post)
         #only allow up to self.post_limit characters, meaning we must truncate
         #the list to avoid exceptions in post-processing.
         if len(tag_list) > self.post_limit:
@@ -111,7 +111,7 @@ class TagRandomizer:
                 
             else:
                 tag_list = tag_list[0:index]
-                self.rngLog.warning(f"Tag_list exceeded allwoed tag size limit of {self.post_limit}, truncated to {len(tag_list)}.  This may still fail to post!")
+                self.rngLog.warning(f"Tag_list exceeded allowed tag size limit of {self.post_limit}, truncated to {len(tag_list)}.  This may still fail to post!")
         
         self.rngLog.info(f"Used {tag_count} tags to get prompt input: {tag_list} of len {len(tag_list)}")
         

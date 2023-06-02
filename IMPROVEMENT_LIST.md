@@ -18,7 +18,7 @@ order. [The discord.py github](https://github.com/Rapptz/discord.py/tree/master/
 - Determine how to properly background the task (discord.py has some examples, may not work as needed?)
 
 ## Planned
-- Allow the default prompt to be added to a user prompt, especially if suing randomized tags.
+- Allow the default prompt to be added to a user prompt, especially if using randomized tags.
 - Allow a bot to manage multiple guilds.
 - Allow a bot to shard.
 - Crash recovery.

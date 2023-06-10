@@ -15,8 +15,9 @@ import logging.handlers as lh
 import json
 import multiprocessing as mp
 import os
-import QueueMgr as qm
+import pathlib as pl
 import requests as req
+import src.managers.QueueMgr as qm
 import threading as th
 import time
 from typing import Literal, Optional
@@ -27,18 +28,57 @@ from typing import Literal, Optional
 #capability, avoiding constant passing down to 'lower' defs. 
 #Static data only, no file objects or similar (or else!).
 creds = {}
-default_params = {'cfg'       : 'config.json',
-                  'cred'      : 'credentials.json',
+#These can be specified as POSIX style since the using call will normalize them.
+default_params = {'cfg'       : 'src/config/config.json',
+                  'cred'      : 'src/config/credentials.json',
                   'bot_token' : ''}
-IGSD_version = '0.1.0'    
+IGSD_version = '0.3.0'    
 #This will be modified in the future to accept user-supplied paths.
 #This file must be loaded prior to the logger to allow for user-provided
 #options to be passed to the Logger.  Thus it must have special error
 #handling outside of the logger class.
-with open(default_params['cfg']) as json_file:
-    params = json.load(json_file)
+cfg_path = pl.Path(default_params['cfg'])
+
+try:
+    #The .absoltue call normalizes the path in case the user had slashing
+    #issues.  Obviously can't solve all potential problems.
+    with open(cfg_path.absolute()) as json_file:
+        params = json.load(json_file)
+    
+    dict_path = pl.Path(params['queue_opts']['rand_dict_path'])
+    
+    #This is just an access check and is done early to allow for an exit if
+    #the file has read/access issues.  The Tag Randomizer class will
+    #separately open a copy when needed with a more read-efficent module.
+    if dict_path.is_file():
+        #This is to guarantee there's no confusion about where the dict is.
+        #If run across computers, this will need to be changed.
+        params['queue_opts']['rand_dict_path'] = dict_path.absolute()
+        #While it would be ideal to simply rely on a user-supplied size, we
+        #can't assume the user will think to do this nor give an accurate
+        #value, hence we have to scan ourselves.
+        params['queue_opts']['dict_size'] = sum(1 for line in open(params['queue_opts']['rand_dict_path']))
+        
+        if int(params['queue_opts']['dict_size']) < int(params['queue_opts']['max_rand_tag_cnt']) or \
+           int(params['queue_opts']['max_rand_tag_cnt']) <= int(params['queue_opts']['min_rand_tag_cnt']):
+            raise IndexError
+    else:
+        raise FileNotFoundError
+
+except OSError as err:
+    print(f"Can't load the config file from path: {cred_path.absolute()}!")
+    exit(-3)
+    
+except FileNotFoundError as err:
+    print(f"Can't load the tag dictionary from the user path: {params['queue_opts']['rand_dict_path']}!")
+    exit(-4)
+    
+except IndexError as err:
+    print(f"The tag dictionary is {params['queue_opts']['dict_size']} lines long, shorter than the tag randomizer max size of {params['queue_opts']['max_rand_tag_cnt']} OR Max tags {params['queue_opts']['max_rand_tag_cnt']} is less than min tags {params['queue_opts']['min_rand_tag_cnt']}!")
+    exit(-5)
+        
 job_queue = None
-worker = None
+worker    = None
 
 #####  Package Classes  #####
 
@@ -114,9 +154,10 @@ async def on_ready():
         
     queLog = log.getLogger('queue')
     queLog.setLevel(params['log_lvl'])
+    log_path = pl.Path(params['log_name_queue'])
 
     logHandler = lh.RotatingFileHandler(
-        filename=params['log_name_queue'],
+        filename=log_path.absolute(),
         encoding=params['log_encoding'],
         maxBytes=int(params['max_bytes']),
         backupCount=int(params['log_file_cnt']),
@@ -210,7 +251,7 @@ async def testget(interaction: dis.Interaction):
                 #This should really be metadata but the rest of the metadata
                 #can't be pickeled, so this must be passed with the work.
                 'id'     : "testgetid",
-                'post'   : {'empty'},
+                'post'   : {'random': False, 'tags_added':'', 'tag_cnt':0},
                 'reply'  : "test msg"
             }
         }
@@ -250,7 +291,9 @@ async def testpost(interaction: dis.Interaction):
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 @IGSD_client.tree.command()
-@dac.describe(prompt=f"The prompt(s) for generating the image, up to {params['options']['max_prompt_len']} characters.",
+@dac.describe(random=f"A flag to add between {params['queue_opts']['min_rand_tag_cnt']} and {params['queue_opts']['max_rand_tag_cnt']} random tags to the user prompt.  Does not count towards the maximum prompt length.",
+              tag_cnt=f"If 'random' is enabled, an exact number of tags to add to the prompt, up to params['queue_opts']['max_rand_tag_cnt']",
+              prompt=f"The prompt(s) for generating the image, up to {params['options']['max_prompt_len']} characters.",
               negative_prompt=f"Prompts to filter out of results, up to {params['options']['max_prompt_len']} characters.",
               height=f"Image height, rounded down to a {params['options']['step_size']} pixel size.",
               width=f"Image width, rounded down to a {params['options']['step_size']} pixel size.",
@@ -259,6 +302,8 @@ async def testpost(interaction: dis.Interaction):
               cfg_scale="how much weight to give your prompts.",
               sampler="Sampling method (like 'Euler').")
 async def generate(interaction: dis.Interaction,
+                   random          : Optional[bool]                                                                                        = False,
+                   tag_cnt         : Optional[dac.Range[int, 0, int(params['queue_opts']['max_rand_tag_cnt'])]]                            = 0,
                    prompt          : Optional[dac.Range[str, 0, int(params['options']['max_prompt_len'])]]                                 = params['options']['prompts'],
                    negative_prompt : Optional[dac.Range[str, 0, int(params['options']['max_prompt_len'])]]                                 = params['options']['negatives'],
                    height          : Optional[dac.Range[int, int(params['options']['min_height']), int(params['options']['max_height'])]]  = int(params['options']['height']),
@@ -267,12 +312,14 @@ async def generate(interaction: dis.Interaction,
                    seed            : Optional[dac.Range[int, -(pow(2,53) - 1), (pow(2,53) - 1)]]                                           = int(params['options']['seed']), #These are limits imposed by Discord.
                    cfg_scale       : Optional[dac.Range[float, 0.0, 30.0]]                                                                 = float(params['options']['cfg']),
                    sampler         : Optional[Literal["Euler a","Euler","LMS","Heun","DPM2","DM2 a","DPM++ 2S a","DPM++ 2M","DPM++ SDE","DPM fast","DPM adaptive","LMS Karras","DPM2 Karras","DPM2 a Karras","DPM++ 2M Karras","DPM++ SDE Karras","DDIM","PLMS"]]  = params['options']['sampler']):
-                   #Yes, I am disappointed I can't wrangle this into a config parameter.  Thanks PEP 586.
+                   #Yes, I am disappointed I can't wrangle the sampler list into a config parameter.  Thanks PEP 586.
     """Generates a image based on user-supplied prompts, if provided.  Provides
        defaults if not.  Enforces any parameter limits, including an optional
        banned word filter.
 
-        Input  : prompt - What the user wants to append to the default prompt.
+        Input  : random - Adds a random number of random tags to the prompt input if True.
+                 tag_cnt - A specific number of random tags to add to a prompt.
+                 prompt - What the user wants to append to the default prompt.
                  negative_prompt - What the user wants to append to the default.
                  height - How tall to make the pre-scaled image.
                  width - How wide to make the pre-scaled image.
@@ -304,7 +351,10 @@ async def generate(interaction: dis.Interaction,
                     'reply'  : ""
                 }
 
-        #And probably blacklist people who try to bypass X times.
+        #And probably blacklist people who try to bypass prompt filters X times.
+        #Also nearly all input sanitization is done by the function call.
+        msg['data']['post']['random']          = random
+        msg['data']['post']['tag_cnt']         = tag_cnt 
         msg['data']['post']['prompt']          = prompt
         msg['data']['post']['negative_prompt'] = negative_prompt
         msg['data']['post']['height']          = (height - (height % int(params['options']['step_size'])))
@@ -358,13 +408,16 @@ async def Post(msg):
         embed.add_field(name='Seed', value=msg['parameters']['seed'])
         embed.add_field(name='CFG Scale', value=msg['parameters']['cfg_scale'])
         embed.add_field(name='Highres Fix', value=msg['parameters']['enable_hr'])
+        #Randomized and co are special because they're not a parameter sent to SD.
+        embed.add_field(name='Randomized', value=msg['random'])
+        embed.add_field(name='Tags Added to Prompt', value=msg['tags_added'])
 
         for i in msg['images']:
             image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
         
         await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
                                       file=dis.File(fp=image,
-                                      filename='image.png') ,embed=embed)
+                                      filename='image.png'), embed=embed)
 
 #####  main  #####
 
@@ -382,9 +435,10 @@ def Startup():
         
     disLog = log.getLogger('discord')
     disLog.setLevel(params['log_lvl'])
+    log_path = pl.Path(params['log_name'])
 
     logHandler = lh.RotatingFileHandler(
-        filename=params['log_name'],
+        filename=log_path.absolute(),
         encoding=params['log_encoding'],
         maxBytes=int(params['max_bytes']),
         backupCount=int(params['log_file_cnt']),
@@ -401,16 +455,18 @@ def Startup():
     if int(params['options']['step_size']) <= 1:
     
         disLog.error(f"Image dimension step size must be greater than 1!")
-        exit(1)
+        exit(-1)
         
     #This will be modified in the future to accept user-supplied paths.
     try:
-        with open(default_params['cred']) as json_file:
+        cred_path = pl.Path(default_params['cred'])
+        
+        with open(cred_path.absolute()) as json_file:
             creds = json.load(json_file)
 
     except OSError as err:
-        disLog.critical(f"Can't load file from path {default_params['cred']}")
-        exit(1)
+        disLog.critical(f"Can't load file from path {cred_path.absolute()}")
+        exit(-2)
     
     #Start manager tasks
     disLog.debug(f"Starting Bot client")

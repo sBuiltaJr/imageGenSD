@@ -3,7 +3,7 @@ This page describes the current project plan as it exists between revisions.
 This plan should be pulling features from the [improvements list](IMPROVEMENTS_LIST.md) page.
 
 #version 0.6.5
-- Implement a method for allowing user intput to feed the description generator prompt.
+- Implement a method for allowing user input to feed the description generator prompt.
 
 #Version 0.6.0
 - Implement a description generator that can run in parallel with the image generator.
@@ -20,8 +20,7 @@ This plan should be pulling features from the [improvements list](IMPROVEMENTS_L
 
 # Version 0.2.0
 - Note: The features in this version were paused due to implementation issues.
-- Allow user-provided paths to be supplied for config files and other setings.
-- Create command permissions (like a owner who can run `/flush`).
+- Allow user-provided paths to be supplied for config files and other settings.
 
 # Version 0.1.5
 - Note: The features in this version were paused due to implementation issues.

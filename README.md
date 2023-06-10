@@ -56,14 +56,18 @@ server's ability to actually supply data.
 
 - Generate an image
 
-`/generate {prompt} {negative_prompt} {height} {width} {steps} {seed} {cfg_scale} {sampler}`
+`/generate {randomize} {tag_cnt} {prompt} {negative_prompt} {height} {width} {steps} {seed} {cfg_scale} {sampler}`
 
 Provides a user-supplied job to the webui back-end.  All parameters
 are optional and defaults are provided.  All inputs are limited to reasonable
 values (or the constraints of Discord/Stable Diffusion).
 
+Setting Randomize to 'true' causes the system to select a random number of tags
+to append to the prompt (or a specific number if 'tag_cnt' is specified).  This
+can be combined with a user-supplied prompt.
+
 ## Limitations/Known Issues
-Also see the [changelog](ROADMAP.md).
+Also see the [changelog](changelog.md) and [roadmap](ROADMAP.md).
 
 - No automated way to switch dataset types.
 - Sharding not yet implemented.

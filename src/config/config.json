@@ -43,7 +43,7 @@
         "min_rand_tag_cnt" : "5",
         "rand_dict_path"   : "src/config/Tag_Randomizer_Dictionary.txt",
         "tag_retry_limit"  : "5",
-        "webui_URL"        : "http://127.0.0.1:7861/"
+        "webui_URL"        : "http://127.0.0.1:7860/"
     },
     "comments":
     {

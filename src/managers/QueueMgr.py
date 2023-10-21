@@ -244,7 +244,7 @@ class Manager:
         'sampler_index'       : "DPM++ 2M Karras",
         'script_name'         : "",
         'send_images'         : True,
-        'save_images'         : True, #Should probably limit ability to run test command
+        'save_images'         : False,
         'tags_added'          :'', #Custom parameter not for SD POST
         'tag_cnt'             : 0, #Custom parameter not for SD POST
         'alwayson_scripts'    : {}

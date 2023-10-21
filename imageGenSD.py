@@ -379,6 +379,8 @@ async def Post(msg):
     """
     embed = None
     image = None
+
+    info_dict = json.loads(msg['info'])
     
     if msg['status_code'] != 200:
         embed = dis.Embed(title='Job Error:',
@@ -399,15 +401,15 @@ async def Post(msg):
         
     else:
         embed = dis.Embed()
-        embed.add_field(name='Prompt', value=msg['parameters']['prompt'])
-        embed.add_field(name='Negative Prompt', value=msg['parameters']['negative_prompt'])
-        embed.add_field(name='Steps', value=msg['parameters']['steps'])
-        embed.add_field(name='Height', value=msg['parameters']['height'])
-        embed.add_field(name='Width', value=msg['parameters']['width'])
-        embed.add_field(name='Sampler', value=msg['parameters']['sampler_index'])
-        embed.add_field(name='Seed', value=msg['parameters']['seed'])
-        embed.add_field(name='CFG Scale', value=msg['parameters']['cfg_scale'])
-        embed.add_field(name='Highres Fix', value=msg['parameters']['enable_hr'])
+        embed.add_field(name='Prompt', value=info_dict['prompt'])
+        embed.add_field(name='Negative Prompt', value=info_dict['negative_prompt'])
+        embed.add_field(name='Steps', value=info_dict['steps'])
+        embed.add_field(name='Height', value=info_dict['height'])
+        embed.add_field(name='Width', value=info_dict['width'])
+        embed.add_field(name='Sampler', value=info_dict['sampler_name'])
+        embed.add_field(name='Seed', value=info_dict['seed'])
+        embed.add_field(name='Subseed', value=info_dict['subseed'])
+        embed.add_field(name='CFG Scale', value=info_dict['cfg_scale'])
         #Randomized and co are special because they're not a parameter sent to SD.
         embed.add_field(name='Randomized', value=msg['random'])
         embed.add_field(name='Tags Added to Prompt', value=msg['tags_added'])

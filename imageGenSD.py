@@ -379,8 +379,6 @@ async def Post(msg):
     """
     embed = None
     image = None
-
-    info_dict = json.loads(msg['info'])
     
     if msg['status_code'] != 200:
         embed = dis.Embed(title='Job Error:',
@@ -400,6 +398,7 @@ async def Post(msg):
                                       embed=embed)
         
     else:
+        info_dict = json.loads(msg['info'])
         embed = dis.Embed()
         embed.add_field(name='Prompt', value=info_dict['prompt'])
         embed.add_field(name='Negative Prompt', value=info_dict['negative_prompt'])

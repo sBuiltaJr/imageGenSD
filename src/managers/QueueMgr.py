@@ -311,6 +311,7 @@ class Manager:
                 self.queLog.debug(f"Removing empty Guild {request['guild']} from the list.")
                 del jobs[request['guild']]
                 
+            self.queLog.debug(f"Job Id {jres['id']} result was: {jres}")
             job['loop'].create_task(job['poster'](msg=jres), name="reply")
             
             if self.job_cooldown > 0.0:

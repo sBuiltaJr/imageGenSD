@@ -244,7 +244,7 @@ class Manager:
         'sampler_index'       : "DPM++ 2M Karras",
         'script_name'         : "",
         'send_images'         : True,
-        'save_images'         : True, #Should probably limit ability to run test command
+        'save_images'         : False,
         'tags_added'          :'', #Custom parameter not for SD POST
         'tag_cnt'             : 0, #Custom parameter not for SD POST
         'alwayson_scripts'    : {}
@@ -311,6 +311,7 @@ class Manager:
                 self.queLog.debug(f"Removing empty Guild {request['guild']} from the list.")
                 del jobs[request['guild']]
                 
+            self.queLog.debug(f"Job Id {jres['id']} result was: {jres}")
             job['loop'].create_task(job['poster'](msg=jres), name="reply")
             
             if self.job_cooldown > 0.0:

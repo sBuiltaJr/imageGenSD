@@ -154,7 +154,6 @@ smirk
 forest
 letterboxed
 aqua eyes
-bottomless
 rabbit girl
 happy
 hair censor
@@ -640,7 +639,6 @@ blue shirt
 mittens
 upside-down
 purple skirt
-military uniform
 ankle boots
 battle
 headpiece
@@ -721,8 +719,6 @@ blood
 string
 green shirt
 ponytail
-assault rifle
-silent comic
 bow \(weapon\)
 tray
 gem
@@ -871,7 +867,6 @@ crystal
 sky
 green skirt
 eyes visible through hair
-comic
 sitting
 clenched hand
 tears
@@ -1109,7 +1104,6 @@ white dress
 wet hair
 eyeliner
 double v
-turret
 white apron
 snow
 purple eyes

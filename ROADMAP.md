@@ -2,10 +2,10 @@
 This page describes the current project plan as it exists between revisions.
 This plan should be pulling features from the [improvements list](IMPROVEMENTS_LIST.md) page.
 
-#version 0.6.5
+# Version 0.6.5
 - Implement a method for allowing user input to feed the description generator prompt.
 
-#Version 0.6.0
+# Version 0.6.0
 - Implement a description generator that can run in parallel with the image generator.
 - Have the description generator use StableLM to generate a character description based on the image.
 

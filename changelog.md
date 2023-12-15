@@ -12,7 +12,7 @@
 - The Generate command has two new options: 'Randomize' and 'tag_cnt'
   - Randomize determines whether the tag randomizer should add random tags to the user's prompt
   - tag_cnt defines how many tags to add, up to a limit in the config file.
-  - These optiosn can be used in addition to a user-supplied prompt.
+  - These options can be used in addition to a user-supplied prompt.
 - Log files have been moved to a log/ folder in the root directory.
 - QueueManager has been moved to src/managers.
   - The config and credentials files have been moved to src/config.

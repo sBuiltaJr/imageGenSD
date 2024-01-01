@@ -18,6 +18,7 @@ import os
 import pathlib as pl
 import requests as req
 import src.managers.QueueMgr as qm
+import src.utilities.ProfileGenerator as pg
 import threading as th
 import time
 from typing import Literal, Optional
@@ -25,14 +26,14 @@ from typing import Literal, Optional
 #####  Package Variables  #####
 
 #The great thing about package-level dictionaries is their global (public-like)
-#capability, avoiding constant passing down to 'lower' defs. 
+#capability, avoiding constant passing down to 'lower' defs.
 #Static data only, no file objects or similar (or else!).
 creds = {}
 #These can be specified as POSIX style since the using call will normalize them.
 default_params = {'cfg'       : 'src/config/config.json',
                   'cred'      : 'src/config/credentials.json',
                   'bot_token' : ''}
-IGSD_version = '0.3.0'    
+IGSD_version = '0.3.0'
 #This will be modified in the future to accept user-supplied paths.
 #This file must be loaded prior to the logger to allow for user-provided
 #options to be passed to the Logger.  Thus it must have special error
@@ -44,9 +45,9 @@ try:
     #issues.  Obviously can't solve all potential problems.
     with open(cfg_path.absolute()) as json_file:
         params = json.load(json_file)
-    
+
     dict_path = pl.Path(params['queue_opts']['rand_dict_path'])
-    
+
     #This is just an access check and is done early to allow for an exit if
     #the file has read/access issues.  The Tag Randomizer class will
     #separately open a copy when needed with a more read-efficent module.
@@ -58,7 +59,7 @@ try:
         #can't assume the user will think to do this nor give an accurate
         #value, hence we have to scan ourselves.
         params['queue_opts']['dict_size'] = sum(1 for line in open(params['queue_opts']['rand_dict_path']))
-        
+
         if int(params['queue_opts']['dict_size']) < int(params['queue_opts']['max_rand_tag_cnt']) or \
            int(params['queue_opts']['max_rand_tag_cnt']) <= int(params['queue_opts']['min_rand_tag_cnt']):
             raise IndexError
@@ -68,17 +69,17 @@ try:
 except OSError as err:
     print(f"Can't load the config file from path: {cred_path.absolute()}!")
     exit(-3)
-    
+
 except FileNotFoundError as err:
     print(f"Can't load the tag dictionary from the user path: {params['queue_opts']['rand_dict_path']}!")
     exit(-4)
-    
+
 except IndexError as err:
     print(f"The tag dictionary is {params['queue_opts']['dict_size']} lines long, shorter than the tag randomizer max size of {params['queue_opts']['max_rand_tag_cnt']} OR Max tags {params['queue_opts']['max_rand_tag_cnt']} is less than min tags {params['queue_opts']['min_rand_tag_cnt']}!")
     exit(-5)
-        
-job_queue = None
-worker    = None
+
+job_queue   = None
+worker      = None
 
 #####  Package Classes  #####
 
@@ -93,7 +94,7 @@ class IGSDClient(dis.Client):
         """
         self.disLog = log.getLogger('discord')
         self.disLog.debug(f"Intents are: {intents}")
-        
+
         super().__init__(intents=intents)
         self.tree = dac.CommandTree(self)
 
@@ -104,16 +105,16 @@ class IGSDClient(dis.Client):
 
             Output : None
         """
-        
+
         #Replies should be managed in a separate task to allow the main UI to
         #always be responsive, and allow the backend to process work independent
         #of message posting.  It's more efficent and better separated.
         self.loop = asy.get_running_loop()
-        
+
         self.disLog.debug(f"Syncing Guild Tree to Global.")
-        
+
         await self.tree.sync()
-        
+
     def GetLoop(self):
         """Returns a reference to this client's asyncio event loop.
 
@@ -137,21 +138,22 @@ def BannedWordsFound(prompt: str, banned_words: str) -> bool:
        Output : None.
     """
     result = False;
-    
+
     #The default prompt is assumed to not be banned.
     if banned_words != None and prompt != None:
         #re-sanatize the word list in case spaces/separators snuck in
         word_list = (banned_words.replace(" ", "")).split(",")
         result    = any(word in prompt for word in word_list)
-    
+
     return result
 
 @IGSD_client.event
 async def on_ready():
     global job_queue
+    global profile_gen
     global worker
-    
-        
+
+
     queLog = log.getLogger('queue')
     queLog.setLevel(params['log_lvl'])
     log_path = pl.Path(params['log_name_queue'])
@@ -162,16 +164,16 @@ async def on_ready():
         maxBytes=int(params['max_bytes']),
         backupCount=int(params['log_file_cnt']),
     )
-    
+
     formatter = log.Formatter(
-        '[{asctime}] [{levelname:<8}] {name}: {message}', 
+        '[{asctime}] [{levelname:<8}] {name}: {message}',
         params['date_fmt'],
         style='{'
     )
     logHandler.setFormatter(formatter)
     queLog.addHandler(logHandler)
     queLog.info(f'Logged in as {IGSD_client.user} (ID: {IGSD_client.user.id})')
-    
+
     queLog.debug(f"Creating Queue Manager.")
     job_queue = qm.Manager(loop=IGSD_client.GetLoop(),
                            manager_id=1,
@@ -180,9 +182,9 @@ async def on_ready():
                           name="Queue mgr",
                           daemon=True)
     worker.start()
-    
+
     print('------')
-    
+
 @IGSD_client.tree.command()
 async def hello(interaction: dis.Interaction):
     """A test echo command to verify basic discord functionality.
@@ -220,13 +222,13 @@ async def hello(interaction: dis.Interaction):
 #                'reply'  : "test msg"
 #            }
 #        } for x in rng]
-#    disLog.debug(f"trying to clear the queue.") 
-#    
+#    disLog.debug(f"trying to clear the queue.")
+#
 #    for m in rng:
 #        result = job_queue.Add(msg[m -1])
 #
 #    job_queue.Flush()
-#    
+#
 #    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 @IGSD_client.tree.command()
@@ -255,9 +257,9 @@ async def testget(interaction: dis.Interaction):
                 'reply'  : "test msg"
             }
         }
-    disLog.debug(f"Posting test GET job {msg} to the queue.") 
+    disLog.debug(f"Posting test GET job {msg} to the queue.")
     result = job_queue.Add(msg)
-    
+
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 @IGSD_client.tree.command()
@@ -267,7 +269,7 @@ async def testpost(interaction: dis.Interaction):
        Input  : None.
 
        Output : None.
-       
+
        Note: All slash commands *MUST* respond in 3 seconds or be terminated.
     """
     disLog = log.getLogger('discord')
@@ -285,9 +287,9 @@ async def testpost(interaction: dis.Interaction):
                 'post'   : job_queue.GetDefaultJobData()},
                 'reply'  : ""
             }
-    disLog.debug(f"Posting test PUT job {msg} to the queue.") 
+    disLog.debug(f"Posting test PUT job {msg} to the queue.")
     result = job_queue.Add(msg)
-    
+
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 @IGSD_client.tree.command()
@@ -332,7 +334,7 @@ async def generate(interaction: dis.Interaction,
     """
     disLog = log.getLogger('discord')
     error = False;
-    
+
     if BannedWordsFound(prompt, params['options']['banned_words']) or BannedWordsFound(negative_prompt, params['options']['banned_neg_words']):
         result = f"Job ignored.  Please do not use words containing: {params['options']['banned_words']} in the positive prompt or {params['options']['banned_neg_words']} in the negative prompt."
     else:
@@ -354,7 +356,7 @@ async def generate(interaction: dis.Interaction,
         #And probably blacklist people who try to bypass prompt filters X times.
         #Also nearly all input sanitization is done by the function call.
         msg['data']['post']['random']          = random
-        msg['data']['post']['tag_cnt']         = tag_cnt 
+        msg['data']['post']['tag_cnt']         = tag_cnt
         msg['data']['post']['prompt']          = prompt
         msg['data']['post']['negative_prompt'] = negative_prompt
         msg['data']['post']['height']          = (height - (height % int(params['options']['step_size'])))
@@ -363,10 +365,10 @@ async def generate(interaction: dis.Interaction,
         msg['data']['post']['seed']            = seed
         msg['data']['post']['cfg_scale']       = cfg_scale
         msg['data']['post']['sampler']         = sampler
-        
-        disLog.debug(f"Posting user job {msg} to the queue.") 
+
+        disLog.debug(f"Posting user job {msg} to the queue.")
         result = job_queue.Add(msg)
-    
+
     await interaction.response.send_message(f'{result}', ephemeral=True)
 
 async def Post(msg):
@@ -379,15 +381,15 @@ async def Post(msg):
     """
     embed = None
     image = None
-    
+
     if msg['status_code'] != 200:
         embed = dis.Embed(title='Job Error:',
                           description=f"Status code: {msg['status_code']} Reason: {msg['reason']}",
                           color=0xec1802)
-                          
+
         await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
                                       embed=embed)
-        
+
     elif msg['id'] == 'testgetid' or ((type(msg['id']) != str) and (msg['id'] < 10)):
         #Maybe a future version will have a generic image to return and eliminate this clause.
         embed = dis.Embed(title='Test GET successful:',
@@ -396,7 +398,7 @@ async def Post(msg):
 
         await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
                                       embed=embed)
-        
+
     else:
         info_dict = json.loads(msg['info'])
         embed = dis.Embed()
@@ -415,11 +417,46 @@ async def Post(msg):
 
         for i in msg['images']:
             image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
-        
+
         await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
                                       file=dis.File(fp=image,
                                       filename='image.png'), embed=embed)
 
+@IGSD_client.tree.command()
+async def roll(interaction: dis.Interaction):
+    """Create a new image with stats and description.
+
+       Input  : None.
+
+       Output : None.
+
+       Note: All slash commands *MUST* respond in 3 seconds or be terminated.
+    """
+    disLog = log.getLogger('discord')
+    #Get stats from waifucreator
+    #Probability something like 50% common 26% uncommon, 13% rare, 9% SR, 1.6 UR, .4% Legendary
+    #Stats increase wtih rarity
+    #Get randomized tag image
+    #Post to SD
+    #Post to discord on return.
+
+    #Waifu tracking:
+    #DB to track users and owned waifus (and image)
+    #Forge waifus via combination?
+    #
+    #Daily rolls measured on UTC for days
+    #Table to track?  Annoying in Mongo.  Internal dict okay?  Handling scale?
+
+    #Waifu stats will need to be passed to queue to get psoted with picture.
+    #Add a switch case for gacha to dispaly different info (don't need tags ,seed, etc shown).
+    #Can get seed # info from Waifu stats when querying with a separate command.
+    #Store all data to the DB post generation.
+
+    #Need a randomized name
+    profile = pg.Profile(id=interaction.user.id)
+
+
+    await interaction.response.send_message(f'temp {profile} with {profile.rarity} from {profile.creator}', ephemeral=True, delete_after=9.0)
 #####  main  #####
 
 def Startup():
@@ -433,7 +470,8 @@ def Startup():
     global params
     global creds
     global job_queue
-        
+    
+
     disLog = log.getLogger('discord')
     disLog.setLevel(params['log_lvl'])
     log_path = pl.Path(params['log_name'])
@@ -444,38 +482,38 @@ def Startup():
         maxBytes=int(params['max_bytes']),
         backupCount=int(params['log_file_cnt']),
     )
-    
+
     formatter = log.Formatter(
-        '[{asctime}] [{levelname:<8}] {name}: {message}', 
+        '[{asctime}] [{levelname:<8}] {name}: {message}',
         params['date_fmt'],
         style='{'
     )
     logHandler.setFormatter(formatter)
     disLog.addHandler(logHandler)
-    
+
     if int(params['options']['step_size']) <= 1:
-    
+
         disLog.error(f"Image dimension step size must be greater than 1!")
         exit(-1)
-        
+
     #This will be modified in the future to accept user-supplied paths.
     try:
         cred_path = pl.Path(default_params['cred'])
-        
+
         with open(cred_path.absolute()) as json_file:
             creds = json.load(json_file)
 
     except OSError as err:
         disLog.critical(f"Can't load file from path {cred_path.absolute()}")
         exit(-2)
-    
+
     #Start manager tasks
     disLog.debug(f"Starting Bot client")
-    
+
     try:
         IGSD_client.run(creds['bot_token'])
     except Exception as err:
-        disLog.error(f"Caught exception {err} when trynig to run IGSD client!")
+        disLog.error(f"Caught exception {err} when trying to run IGSD client!")
 
 
 if __name__ == '__main__':
@@ -484,4 +522,14 @@ if __name__ == '__main__':
 #Supported commands:
 #/flush:   clear queue and kill active jobs (if possible).  Needs Owner/Admin to run.
 #/Restart: Flush + recreates the queue objects.  Effectively restarts the script.  Also requires Owner.
-#/Cancel:  Kills most recent request from the poster, if possible. 
+#/Cancel:  Kills most recent request from the poster, if possible.
+
+#    try:
+        #Note the possibility of IO exceptions if /dev/urandom (or similar) is
+        #not initialized/empty on your machine.  Using less workers can help.
+#        random.seed(random.getrandbits(int(params['num_rand_bits'])) \
+#                    if (params['search_seed']) else os.urandom(8))
+#        w_log.debug(f"Using rand state: {random.getstate()}")
+#    except Exception as err:
+#        status = {False, err}
+#        w_log.error(f"Process {worker} encountered {err=}, {type(err)=}")

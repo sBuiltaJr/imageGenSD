@@ -203,6 +203,7 @@ class Manager:
 
            Output: opts - a dictionary of the default queue arguments.
         """
+        #TODO: move to the profile interface.
         return {
         'enable_hr'           : True,
         'denoising_strength'  : 0.35,
@@ -252,7 +253,7 @@ class Manager:
         
     def PutRequest(self) :
         """Should be instantiated as an independent proecss for putting and
-           getting data from the SD werver.  Results are provided back to the
+           getting data from the SD server.  Results are provided back to the
            main IGSD thread via the supplied event loop.  Has no knowledge of
            Guilds or how to post the provided image to the requestor.
 

@@ -128,6 +128,7 @@ intents = dis.Intents.default()
 IGSD_client = IGSDClient(intents=intents)
 
 #####  Package Functions  #####
+
 def BannedWordsFound(prompt: str, banned_words: str) -> bool:
     """Tests if banded words exist in the provided parameters.  This is written
        as a separate function to allow future updates to the banned word list
@@ -456,7 +457,7 @@ async def roll(interaction: dis.Interaction):
     profile = pg.Profile(id=interaction.user.id)
 
 
-    await interaction.response.send_message(f'temp {profile} with {profile.rarity} from {profile.creator}', ephemeral=True, delete_after=9.0)
+    await interaction.response.send_message(f'temp {profile} with {profile.rarity.value} with {profile.stats.agility} {profile.stats.defense} {profile.stats.endurance} {profile.stats.luck} {profile.stats.strength}', ephemeral=True, delete_after=30.0)
 #####  main  #####
 
 def Startup():
@@ -470,7 +471,7 @@ def Startup():
     global params
     global creds
     global job_queue
-    
+
 
     disLog = log.getLogger('discord')
     disLog.setLevel(params['log_lvl'])

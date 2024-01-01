@@ -10,7 +10,7 @@ import random as rand
 @verify(UNIQUE)
 class RarityList(Enum):
 
-    SPECIAL    =   0
+    SPECIAL    =    0
     LEGENDARY  = 1000
     ULTRA_RARE = 2000
     SUPER_RARE = 3000
@@ -53,31 +53,9 @@ class Rarity:
 
            Input: self - Pointer to the current object instance.
 
-           Output: None - Throws exceptions on error.
+           Output: enum - A randomly selected rarity from the distribution.
         """
-        #percent = rand.random()
-        #rarity  = Rarity.CUSTOM
 
-        #55% common 35% uncommon, 8.25% rare, 1.35% SR, .35% UR, .05% Legendary
-        #This could also be a random.choices sequence instead, but requires
-        #converting the rarity enum into an iterable.
-        #if percent < 0.0 or percent >= 0.45:
-        #    rarity = Rarity.COMMON
-
-        #elif percent >= 0.1:
-        #    rarity = Rarity.UNCOMMON
-
-        #elif percent >= 0.0175:
-        #    rarity = Rarity.RARE
-
-        #elif percent >= 0.004
-        #    rarity = Rarity.SUPER_RARE
-
-        #elif percent >= 0.0005
-        #    rarity = Rarity.ULTRA_RARE
-
-        #elif percent >= 0.0000
-        #    rarity = Rarity.LEGENDARY
-
+        #This is a quirk of choices returning the output as a list.
         return rand.choices(population = RarityList.getStandardNameList(),
-                            weights    = RarityList.getProbabilityList())
+                            weights    = RarityList.getProbabilityList())[0]

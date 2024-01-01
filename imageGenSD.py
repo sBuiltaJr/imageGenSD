@@ -285,7 +285,7 @@ async def testpost(interaction: dis.Interaction):
                 #This should really be metadata but the rest of the metadata
                 #can't be pickeled, so this must be passed with the work.
                 'id'     :  "testpostid",
-                'post'   : job_queue.GetDefaultJobData()},
+                'post'   : pg.GetDefaultJobData()},
                 'reply'  : ""
             }
     disLog.debug(f"Posting test PUT job {msg} to the queue.")
@@ -350,7 +350,7 @@ async def generate(interaction: dis.Interaction,
                     #This should really be metadata but the rest of the metadata
                     #can't be pickeled, so this must be passed with the work.
                     'id'     :  interaction.user.id,
-                    'post'   : job_queue.GetDefaultJobData()},
+                    'post'   : pg.GetDefaultJobData()},
                     'reply'  : ""
                 }
 

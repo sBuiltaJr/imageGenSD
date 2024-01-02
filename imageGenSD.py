@@ -256,6 +256,7 @@ async def testget(interaction: dis.Interaction):
                 #can't be pickeled, so this must be passed with the work.
                 'id'     : "testgetid",
                 'post'   : {'random': False, 'tags_added':'', 'tag_cnt':0},
+                'profile' : "",
                 'reply'  : "test msg"
             }
         }
@@ -287,12 +288,58 @@ async def testpost(interaction: dis.Interaction):
                 #can't be pickeled, so this must be passed with the work.
                 'id'     :  "testpostid",
                 'post'   : pg.GetDefaultJobData()},
+                'profile' : "",
                 'reply'  : ""
             }
     disLog.debug(f"Posting test PUT job {msg} to the queue.")
     result = job_queue.Add(msg)
 
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
+
+@IGSD_client.tree.command()
+async def testroll(interaction: dis.Interaction):
+    """Verifies a profile can be added to a test image.
+
+       Input  : None.
+
+       Output : None.
+
+       Note: All slash commands *MUST* respond in 3 seconds or be terminated.
+    """
+    disLog = log.getLogger('discord')
+    msg = { 'metadata' : {
+                'ctx'     : interaction,
+                'loop'    : IGSD_client.GetLoop(),
+                'poster'  : Post
+           },
+           'data' : {
+                #Requests are sorted by guild for rate-limiting
+                'guild'   : interaction.guild_id,
+                #This should really be metadata but the rest of the metadata
+                #can't be pickeled, so this must be passed with the work.
+                'id'      : "testroll",
+                'post'    : pg.GetDefaultJobData()},
+                'profile' : "",
+                'reply'   : ""
+            }
+
+    #Waifu tracking:
+    #DB to track users and owned waifus (and image)
+    #Forge waifus via combination?
+    #
+    #Daily rolls measured on UTC for days
+    #Table to track?  Annoying in Mongo.  Internal dict okay?  Handling scale?
+    #Store all data to the DB post generation.
+
+    #Need a randomized name
+    disLog.debug(f"Creating a new profile.")
+    msg['data']['profile'] = pic.dumps(pg.Profile(id=interaction.user.id))
+    disLog.debug(f"Profile complete: {msg['data']['profile']}")
+
+    disLog.debug(f"Posting test GET job {msg} to the queue.")
+    result = job_queue.Add(msg)
+
+    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=30.0)
 
 @IGSD_client.tree.command()
 @dac.describe(random=f"A flag to add between {params['queue_opts']['min_rand_tag_cnt']} and {params['queue_opts']['max_rand_tag_cnt']} random tags to the user prompt.  Does not count towards the maximum prompt length.",
@@ -352,6 +399,7 @@ async def generate(interaction: dis.Interaction,
                     #can't be pickeled, so this must be passed with the work.
                     'id'     :  interaction.user.id,
                     'post'   : pg.GetDefaultJobData()},
+                    'profile' : "",
                     'reply'  : ""
                 }
 
@@ -396,17 +444,18 @@ async def Post(msg):
 
         info_dict = json.loads(msg['info'])
         embed = dis.Embed()
-        embed.add_field(name='Creator', value=f"<@{msg['profile'].creator}>")
-        embed.add_field(name='Owner', value=f"<@{msg['profile'].owner}>")
+        profile = pic.loads(msg['profile'])
+        embed.add_field(name='Creator', value=f"<@{profile.creator}>")
+        embed.add_field(name='Owner', value=f"<@{profile.owner}>")
         embed.add_field(name='Name', value=msg['id'])
-        embed.add_field(name='Rarity', value=msg['profile'].rarity.name)
-        embed.add_field(name='Agility', value=msg['profile'].stats.agility)
-        embed.add_field(name='Defense', value=msg['profile'].stats.defense)
-        embed.add_field(name='Endurance', value=msg['profile'].stats.endurance)
-        embed.add_field(name='Luck', value=msg['profile'].stats.luck)
-        embed.add_field(name='Strength', value=msg['profile'].stats.strength)
+        embed.add_field(name='Rarity', value=profile.rarity.name)
+        embed.add_field(name='Agility', value=profile.stats.agility)
+        embed.add_field(name='Defense', value=profile.stats.defense)
+        embed.add_field(name='Endurance', value=profile.stats.endurance)
+        embed.add_field(name='Luck', value=profile.stats.luck)
+        embed.add_field(name='Strength', value=profile.stats.strength)
         embed.add_field(name='Description', value="The weakest test gacha roll.")
-        embed.add_field(name='Range', value=msg['profile'].stats.range)
+        embed.add_field(name='Range', value=profile.stats.range)
 
         for i in msg['images']:
             image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
@@ -447,50 +496,6 @@ async def Post(msg):
                                       file=dis.File(fp=image,
                                       filename='image.png'), embed=embed)
 
-@IGSD_client.tree.command()
-async def roll(interaction: dis.Interaction):
-    """Create a new image with stats and description.
-
-       Input  : None.
-
-       Output : None.
-
-       Note: All slash commands *MUST* respond in 3 seconds or be terminated.
-    """
-    disLog = log.getLogger('discord')
-    msg = { 'metadata' : {
-                'ctx'     : interaction,
-                'loop'    : IGSD_client.GetLoop(),
-                'poster'  : Post
-           },
-           'data' : {
-                #Requests are sorted by guild for rate-limiting
-                'guild'   : interaction.guild_id,
-                #This should really be metadata but the rest of the metadata
-                #can't be pickeled, so this must be passed with the work.
-                'id'      : "testroll",
-                'post'    : pg.GetDefaultJobData()},
-                'profile' : "",
-                'reply'   : ""
-            }
-
-    #Waifu tracking:
-    #DB to track users and owned waifus (and image)
-    #Forge waifus via combination?
-    #
-    #Daily rolls measured on UTC for days
-    #Table to track?  Annoying in Mongo.  Internal dict okay?  Handling scale?
-    #Store all data to the DB post generation.
-
-    #Need a randomized name
-    disLog.debug(f"Creating a new profile.")
-    msg['data']['profile'] = pg.Profile(id=interaction.user.id)
-    disLog.debug(f"Profile complete: {msg['data']['profile']}")
-    
-    disLog.debug(f"Posting test GET job {msg} to the queue.")
-    result = job_queue.Add(msg)
-
-    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=30.0)
 #####  main  #####
 
 def Startup():

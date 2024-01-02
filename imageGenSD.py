@@ -16,6 +16,7 @@ import json
 import multiprocessing as mp
 import os
 import pathlib as pl
+import pickle as pic
 import requests as req
 import src.managers.QueueMgr as qm
 import src.utilities.ProfileGenerator as pg
@@ -391,6 +392,29 @@ async def Post(msg):
         await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
                                       embed=embed)
 
+    elif msg['id'] == 'testroll':
+
+        info_dict = json.loads(msg['info'])
+        embed = dis.Embed()
+        embed.add_field(name='Creator', value=f"<@{msg['profile'].creator}>")
+        embed.add_field(name='Owner', value=f"<@{msg['profile'].owner}>")
+        embed.add_field(name='Name', value=msg['id'])
+        embed.add_field(name='Rarity', value=msg['profile'].rarity.name)
+        embed.add_field(name='Agility', value=msg['profile'].stats.agility)
+        embed.add_field(name='Defense', value=msg['profile'].stats.defense)
+        embed.add_field(name='Endurance', value=msg['profile'].stats.endurance)
+        embed.add_field(name='Luck', value=msg['profile'].stats.luck)
+        embed.add_field(name='Strength', value=msg['profile'].stats.strength)
+        embed.add_field(name='Description', value="The weakest test gacha roll.")
+        embed.add_field(name='Range', value=msg['profile'].stats.range)
+
+        for i in msg['images']:
+            image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
+
+        await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
+                                      file=dis.File(fp=image,
+                                      filename='image.png'), embed=embed)
+
     elif msg['id'] == 'testgetid' or ((type(msg['id']) != str) and (msg['id'] < 10)):
         #Maybe a future version will have a generic image to return and eliminate this clause.
         embed = dis.Embed(title='Test GET successful:',
@@ -434,12 +458,21 @@ async def roll(interaction: dis.Interaction):
        Note: All slash commands *MUST* respond in 3 seconds or be terminated.
     """
     disLog = log.getLogger('discord')
-    #Get stats from waifucreator
-    #Probability something like 50% common 26% uncommon, 13% rare, 9% SR, 1.6 UR, .4% Legendary
-    #Stats increase wtih rarity
-    #Get randomized tag image
-    #Post to SD
-    #Post to discord on return.
+    msg = { 'metadata' : {
+                'ctx'     : interaction,
+                'loop'    : IGSD_client.GetLoop(),
+                'poster'  : Post
+           },
+           'data' : {
+                #Requests are sorted by guild for rate-limiting
+                'guild'   : interaction.guild_id,
+                #This should really be metadata but the rest of the metadata
+                #can't be pickeled, so this must be passed with the work.
+                'id'      : "testroll",
+                'post'    : pg.GetDefaultJobData()},
+                'profile' : "",
+                'reply'   : ""
+            }
 
     #Waifu tracking:
     #DB to track users and owned waifus (and image)
@@ -447,17 +480,17 @@ async def roll(interaction: dis.Interaction):
     #
     #Daily rolls measured on UTC for days
     #Table to track?  Annoying in Mongo.  Internal dict okay?  Handling scale?
-
-    #Waifu stats will need to be passed to queue to get psoted with picture.
-    #Add a switch case for gacha to dispaly different info (don't need tags ,seed, etc shown).
-    #Can get seed # info from Waifu stats when querying with a separate command.
     #Store all data to the DB post generation.
 
     #Need a randomized name
-    profile = pg.Profile(id=interaction.user.id)
+    disLog.debug(f"Creating a new profile.")
+    msg['data']['profile'] = pg.Profile(id=interaction.user.id)
+    disLog.debug(f"Profile complete: {msg['data']['profile']}")
+    
+    disLog.debug(f"Posting test GET job {msg} to the queue.")
+    result = job_queue.Add(msg)
 
-
-    await interaction.response.send_message(f'temp {profile} with {profile.rarity.value} with {profile.stats.agility} {profile.stats.defense} {profile.stats.endurance} {profile.stats.luck} {profile.stats.strength}', ephemeral=True, delete_after=30.0)
+    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=30.0)
 #####  main  #####
 
 def Startup():

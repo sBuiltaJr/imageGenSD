@@ -240,10 +240,11 @@ class Manager:
                 except Exception as err:
                     self.queLog.error(f"Exception trying to PUT: {err}.")
 
-
+            self.queLog.debug(f"Request is: {request}")
             jres['status_code'] = result.status_code
             jres['reason']      = result.reason
             jres['id']          = request['id'] #TODO this shouldn't be necessary
+            jres['profile']     = request['profile']
             jres['random']      = request['post']['random']
             jres['tags_added']  = request['post']['tags_added']
             #Pop last to ensure a new request from the same ID can be added

@@ -12,6 +12,7 @@ from typing import Literal, Optional
 #####  Package Variables  #####
 
 #####  Package Functions  #####
+
 def GetDefaultJobData() -> dict:
     """Returns the default job settings that can be provided to an empty
        query (or to reinitialize an object).

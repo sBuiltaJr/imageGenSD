@@ -19,6 +19,7 @@ import pathlib as pl
 import pickle as pic
 import requests as req
 import src.managers.QueueMgr as qm
+import src.utilities.NameRandomizer as nr
 import src.utilities.ProfileGenerator as pg
 import threading as th
 import time
@@ -34,7 +35,8 @@ creds = {}
 default_params = {'cfg'       : 'src/config/config.json',
                   'cred'      : 'src/config/credentials.json',
                   'bot_token' : ''}
-IGSD_version = '0.3.0'
+dict_path = ["","",""]
+IGSD_version = '0.3.5'
 #This will be modified in the future to accept user-supplied paths.
 #This file must be loaded prior to the logger to allow for user-provided
 #options to be passed to the Logger.  Thus it must have special error
@@ -47,32 +49,40 @@ try:
     with open(cfg_path.absolute()) as json_file:
         params = json.load(json_file)
 
-    dict_path = pl.Path(params['queue_opts']['rand_dict_path'])
+    dict_path[0] = pl.Path(params['queue_opts']['rand_dict_path'])
+    dict_path[1] = pl.Path(params['profile_opts']['fn_dict_path'])
+    dict_path[2] = pl.Path(params['profile_opts']['ln_dict_path'])
 
-    #This is just an access check and is done early to allow for an exit if
-    #the file has read/access issues.  The Tag Randomizer class will
-    #separately open a copy when needed with a more read-efficent module.
-    if dict_path.is_file():
-        #This is to guarantee there's no confusion about where the dict is.
-        #If run across computers, this will need to be changed.
-        params['queue_opts']['rand_dict_path'] = dict_path.absolute()
-        #While it would be ideal to simply rely on a user-supplied size, we
-        #can't assume the user will think to do this nor give an accurate
-        #value, hence we have to scan ourselves.
-        params['queue_opts']['dict_size'] = sum(1 for line in open(params['queue_opts']['rand_dict_path']))
+    for dir in range(len(dict_path)):
+        #This is just an access check and is done early to allow for an exit if
+        #the file has read/access issues.  The Tag Randomizer class will
+        #separately open a copy when needed with a more read-efficent module.
+        if not dict_path[dir].is_file():
+            raise FileNotFoundError
 
-        if int(params['queue_opts']['dict_size']) < int(params['queue_opts']['max_rand_tag_cnt']) or \
-           int(params['queue_opts']['max_rand_tag_cnt']) <= int(params['queue_opts']['min_rand_tag_cnt']):
-            raise IndexError
-    else:
-        raise FileNotFoundError
+    #This is to guarantee there's no confusion about where the dict is.
+    #If run across computers, this will need to be changed.
+    params['queue_opts']['rand_dict_path'] = dict_path[0].absolute()
+    params['profile_opts']['fn_dict_path'] = dict_path[1].absolute()
+    params['profile_opts']['ln_dict_path'] = dict_path[2].absolute()
+
+    #While it would be ideal to simply rely on a user-supplied size, we
+    #can't assume the user will think to do this nor give an accurate
+    #value, hence we have to scan ourselves.
+    params['queue_opts']['dict_size']      = sum(1 for line in open(params['queue_opts']['rand_dict_path']))
+    params['profile_opts']['fn_dict_size'] = sum(1 for line in open(params['profile_opts']['fn_dict_path']))
+    params['profile_opts']['ln_dict_size'] = sum(1 for line in open(params['profile_opts']['ln_dict_path']))
+
+    if int(params['queue_opts']['dict_size']) < int(params['queue_opts']['max_rand_tag_cnt']) or \
+       int(params['queue_opts']['max_rand_tag_cnt']) <= int(params['queue_opts']['min_rand_tag_cnt']):
+        raise IndexError
 
 except OSError as err:
     print(f"Can't load the config file from path: {cred_path.absolute()}!")
     exit(-3)
 
 except FileNotFoundError as err:
-    print(f"Can't load the tag dictionary from the user path: {params['queue_opts']['rand_dict_path']}!")
+    print(f"Can't load one of the dictionaries dictionaries: {dict_path[0]} {dict_path[1]} {dict_path[2]}")
     exit(-4)
 
 except IndexError as err:
@@ -331,7 +341,6 @@ async def testroll(interaction: dis.Interaction):
     #Table to track?  Annoying in Mongo.  Internal dict okay?  Handling scale?
     #Store all data to the DB post generation.
 
-    #Need a randomized name
     disLog.debug(f"Creating a new profile.")
     msg['data']['profile'] = pic.dumps(pg.Profile(id=interaction.user.id))
     disLog.debug(f"Profile complete: {msg['data']['profile']}")
@@ -440,6 +449,15 @@ async def Post(msg):
         await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
                                       embed=embed)
 
+    elif msg['id'] == 'testgetid' or ((type(msg['id']) != str) and (msg['id'] < 10)):
+        #Maybe a future version will have a generic image to return and eliminate this clause.
+        embed = dis.Embed(title='Test GET successful:',
+                          description=f"Status code: {msg['status_code']} Reason: {msg['reason']}",
+                          color=0x008000)
+
+        await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
+                                      embed=embed)
+
     elif msg['id'] == 'testroll':
 
         info_dict = json.loads(msg['info'])
@@ -447,7 +465,7 @@ async def Post(msg):
         profile = pic.loads(msg['profile'])
         embed.add_field(name='Creator', value=f"<@{profile.creator}>")
         embed.add_field(name='Owner', value=f"<@{profile.owner}>")
-        embed.add_field(name='Name', value=msg['id'])
+        embed.add_field(name='Name', value=profile.name)
         embed.add_field(name='Rarity', value=profile.rarity.name)
         embed.add_field(name='Agility', value=profile.stats.agility)
         embed.add_field(name='Defense', value=profile.stats.defense)
@@ -463,16 +481,6 @@ async def Post(msg):
         await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
                                       file=dis.File(fp=image,
                                       filename='image.png'), embed=embed)
-
-    elif msg['id'] == 'testgetid' or ((type(msg['id']) != str) and (msg['id'] < 10)):
-        #Maybe a future version will have a generic image to return and eliminate this clause.
-        embed = dis.Embed(title='Test GET successful:',
-                          description=f"Status code: {msg['status_code']} Reason: {msg['reason']}",
-                          color=0x008000)
-
-        await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
-                                      embed=embed)
-
     else:
         info_dict = json.loads(msg['info'])
         embed = dis.Embed()
@@ -547,6 +555,10 @@ def Startup():
         exit(-2)
 
     #Start manager tasks
+    disLog.info(f"Initializing name Randomizer.")
+    nr.init(params['profile_opts'])
+
+    #Start manager tasks
     disLog.debug(f"Starting Bot client")
 
     try:
@@ -562,13 +574,3 @@ if __name__ == '__main__':
 #/flush:   clear queue and kill active jobs (if possible).  Needs Owner/Admin to run.
 #/Restart: Flush + recreates the queue objects.  Effectively restarts the script.  Also requires Owner.
 #/Cancel:  Kills most recent request from the poster, if possible.
-
-#    try:
-        #Note the possibility of IO exceptions if /dev/urandom (or similar) is
-        #not initialized/empty on your machine.  Using less workers can help.
-#        random.seed(random.getrandbits(int(params['num_rand_bits'])) \
-#                    if (params['search_seed']) else os.urandom(8))
-#        w_log.debug(f"Using rand state: {random.getstate()}")
-#    except Exception as err:
-#        status = {False, err}
-#        w_log.error(f"Process {worker} encountered {err=}, {type(err)=}")

@@ -40,8 +40,8 @@ class RarityList(Enum):
         """
         #55% common 35% uncommon, 8.25% rare, 1.35% SR, .35% UR, .05% Legendary
         #Or, listed as summs from common to Legendary:
-        #[55.0, 90.0, 98.25, 99.60, 99.95, 100.0]
-        return [0.0005, 0.0035, 0.0135, 0.0825, 0.35, 0.55]
+        #[65.0, 90.0, 98.25, 99.60, 99.95, 100.0]
+        return [0.0005, 0.0035, 0.0135, 0.0825, 0.25, 0.65]
 
 
 #####  Rarity Class  #####

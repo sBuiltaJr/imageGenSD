@@ -83,6 +83,7 @@ class Profile:
                  #in a way to avoid key errors.
                  affinity : Optional[int]           = None,
                  battles  : Optional[int]           = None,
+                 desc     : Optional[str]           = None,
                  exp      : Optional[int]           = None,
                  losses   : Optional[int]           = None,
                  name     : Optional[str]           = None,
@@ -99,6 +100,7 @@ class Profile:
 
         self.affinity = affinity if affinity != None else 0
         self.battles  = battles if battles != None else 0
+        self.desc     = desc if desc != None else "A Poor, descriptionless character."
         self.creator  = id
         self.losses   = losses if losses != None else 0
         self.owner    = id if owner == None else owner

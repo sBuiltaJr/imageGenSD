@@ -372,7 +372,7 @@ async def testroll(interaction: dis.Interaction):
     disLog.debug(f"Posting test GET job {msg} to the queue.")
     result = job_queue.Add(msg)
 
-    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=30.0)
+    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 @IGSD_client.tree.command()
 @dac.describe(random=f"A flag to add between {params['queue_opts']['min_rand_tag_cnt']} and {params['queue_opts']['max_rand_tag_cnt']} random tags to the user prompt.  Does not count towards the maximum prompt length.",
@@ -496,7 +496,7 @@ async def Post(msg):
         embed.add_field(name='Endurance', value=profile.stats.endurance)
         embed.add_field(name='Luck', value=profile.stats.luck)
         embed.add_field(name='Strength', value=profile.stats.strength)
-        embed.add_field(name='Description', value="The weakest test gacha roll.")
+        embed.add_field(name='Description', value=profile.desc)
         embed.add_field(name='Range', value=profile.stats.range)
 
         for i in msg['images']:

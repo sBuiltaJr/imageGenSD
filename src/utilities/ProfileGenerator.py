@@ -12,6 +12,45 @@ from typing import Literal, Optional
 
 #####  Package Variables  #####
 
+#####  Profile Class  #####
+
+class Profile:
+
+    #Optional Name?  description?
+    def __init__(self,
+                 id       : int,
+                 info   : Optional[dict]            = None,
+                 #TODO: combine the options into the options dictionary
+                 #in a way to avoid key errors.
+                 affinity : Optional[int]           = None,
+                 battles  : Optional[int]           = None,
+                 desc     : Optional[str]           = None,
+                 exp      : Optional[int]           = None,
+                 losses   : Optional[int]           = None,
+                 name     : Optional[str]           = None,
+                 owner    : Optional[int]           = None,
+                 rarity   : Optional[rc.RarityList] = None,
+                 stats    : Optional[sc.Stats]      = None,
+                 wins     : Optional[int]           = None):
+        """Creates a profile intended to attaching to an IGSD-generated image.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: None - Throws exceptions on error.
+        """
+
+        self.affinity = affinity if affinity != None else 0
+        self.battles  = battles if battles != None else 0
+        self.desc     = desc if desc != None else "A Poor, descriptionless character."
+        self.creator  = id
+        self.losses   = losses if losses != None else 0
+        self.owner    = id if owner == None else owner
+        self.rarity   = rc.Rarity.GenerateRarity(self) if rarity == None else rarity
+        self.name     = nr.GetRandomName() if owner == None else owner
+        self.stats    = sc.Stats(self.rarity) if stats == None else stats
+        #self.info    = None #Get IGSD image info before profile?
+        self.battles  = wins if wins != None else 0
+
 #####  Package Functions  #####
 
 def GetDefaultJobData() -> dict:
@@ -69,44 +108,27 @@ def GetDefaultJobData() -> dict:
     'alwayson_scripts'    : {}
     }
 
+def GetDefaultProfile() -> Profile:
+    """Returns the default profile, intended for test functions.
+
+       Input: None.
+
+       Output: Profile - a profile with set defaults.
+    """
+    default = Profile(id=170331989436661760,
+                      info=None,
+                      affinity=0,
+                      battles=0,
+                      desc="A poor defenseless bot doing its best.",
+                      exp=0,
+                      losses=0,
+                      name="IGSD Mascot",
+                      owner=170331989436661760,
+                      rarity=rc.RarityList.CUSTOM,
+                      stats=sc.Stats(rc.RarityList.CUSTOM),
+                      wins=0)
+    
+    return default
 #####  Helper Classes  #####
 
-#####  Profile Class  #####
-
-class Profile:
-
-    #Optional Name?  description?
-    def __init__(self,
-                 id       : int,
-                 #info   : Optional[info],
-                 #TODO: combine the options into the options dictionary
-                 #in a way to avoid key errors.
-                 affinity : Optional[int]           = None,
-                 battles  : Optional[int]           = None,
-                 desc     : Optional[str]           = None,
-                 exp      : Optional[int]           = None,
-                 losses   : Optional[int]           = None,
-                 name     : Optional[str]           = None,
-                 owner    : Optional[int]           = None,
-                 rarity   : Optional[rc.RarityList] = None,
-                 stats    : Optional[sc.Stats]      = None,
-                 wins     : Optional[int]           = None):
-        """Creates a profile intended to attaching to an IGSD-generated image.
-
-           Input: self - Pointer to the current object instance.
-
-           Output: None - Throws exceptions on error.
-        """
-
-        self.affinity = affinity if affinity != None else 0
-        self.battles  = battles if battles != None else 0
-        self.desc     = desc if desc != None else "A Poor, descriptionless character."
-        self.creator  = id
-        self.losses   = losses if losses != None else 0
-        self.owner    = id if owner == None else owner
-        self.rarity   = rc.Rarity.GenerateRarity(self) if rarity == None else rarity
-        self.name     = nr.getRandomName() if owner == None else owner
-        self.stats    = sc.Stats(self.rarity) if stats == None else stats
-        #self.info    = None #Get IGSD image info before profile?
-        self.battles  = wins if wins != None else 0
 

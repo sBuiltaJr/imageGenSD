@@ -47,6 +47,7 @@ def GetStatRange(rarity : rc.RarityList) -> tuple:
 
 #####  Stats Class  #####
 
+#TODO: find a way to create the default profile without advancing the RNG
 class Stats:
 
     def __init__(self,

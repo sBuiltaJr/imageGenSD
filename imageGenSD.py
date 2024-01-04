@@ -222,7 +222,7 @@ async def on_ready():
                           daemon=True)
 
     queLog.debug(f"Creating DB Interface.")
-    db_ifc = mdb.mariadbIfc(options=params['db_opts'])
+    db_ifc = mdb.MariadbIfc(options=params['db_opts'])
 
     #Only start the job queue once all otehr tasks are ready.
     worker.start()
@@ -325,13 +325,13 @@ async def testpost(interaction: dis.Interaction):
            },
            'data' : {
                 #Requests are sorted by guild for rate-limiting
-                'guild'  : interaction.guild_id,
+                'guild'   : interaction.guild_id,
                 #This should really be metadata but the rest of the metadata
                 #can't be pickeled, so this must be passed with the work.
-                'id'     :  "testpostid",
-                'post'   : pg.GetDefaultJobData()},
-                'profile' : "",
-                'reply'  : ""
+                'id'      :  "testpostid",
+                'post'    : pg.GetDefaultJobData(),
+                'profile' : pic.dumps(pg.GetDefaultProfile())},
+                'reply'   : ""
             }
     disLog.debug(f"Posting test PUT job {msg} to the queue.")
     result = job_queue.Add(msg)
@@ -360,16 +360,16 @@ async def testroll(interaction: dis.Interaction):
                 #This should really be metadata but the rest of the metadata
                 #can't be pickeled, so this must be passed with the work.
                 'id'      : "testroll",
-                'post'    : pg.GetDefaultJobData()},
-                'profile' : "",
+                'post'    : pg.GetDefaultJobData(),
+                'profile' : pic.dumps(pg.GetDefaultProfile())},
                 'reply'   : ""
             }
 
-    disLog.debug(f"Creating a new profile.")
-    msg['data']['profile'] = pic.dumps(pg.Profile(id=interaction.user.id))
-    disLog.debug(f"Profile complete: {msg['data']['profile']}")
+    #disLog.debug(f"Creating a new profile.")
+    #msg['data']['profile'] = pic.dumps(pg.Profile(id=interaction.user.id))
+    #disLog.debug(f"Profile complete: {msg['data']['profile']}")
 
-    disLog.debug(f"Posting test GET job {msg} to the queue.")
+    disLog.debug(f"Posting test ROLL job {msg} to the queue.")
     result = job_queue.Add(msg)
 
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
@@ -427,13 +427,13 @@ async def generate(interaction: dis.Interaction,
                },
                'data' : {
                     #Requests are sorted by guild for rate-limiting
-                    'guild'  : interaction.guild_id,
+                    'guild'   : interaction.guild_id,
                     #This should really be metadata but the rest of the metadata
                     #can't be pickeled, so this must be passed with the work.
-                    'id'     :  interaction.user.id,
-                    'post'   : pg.GetDefaultJobData()},
-                    'profile' : "",
-                    'reply'  : ""
+                    'id'      : interaction.user.id,
+                    'post'    : pg.GetDefaultJobData(),
+                    'profile' : pic.dumps(pg.GetDefaultProfile())},
+                    'reply'   : ""
                 }
 
         #And probably blacklist people who try to bypass prompt filters X times.
@@ -485,6 +485,12 @@ async def Post(msg):
     elif msg['id'] == 'testroll':
 
         info_dict = json.loads(msg['info'])
+
+        #TODO: Move to a non-test function.  Users will always get their roll
+        #so it's always appropriate to save the output.  Other commands may
+        #differ.
+        db_ifc.SaveRoll(msg['profile'], info_dict)
+
         embed = dis.Embed()
         profile = pic.loads(msg['profile'])
         embed.add_field(name='Creator', value=f"<@{profile.creator}>")
@@ -507,6 +513,8 @@ async def Post(msg):
                                       filename='image.png'), embed=embed)
     else:
         info_dict = json.loads(msg['info'])
+        db_ifc.SaveRoll(msg['profile'], info_dict)
+        
         embed = dis.Embed()
         embed.add_field(name='Prompt', value=info_dict['prompt'])
         embed.add_field(name='Negative Prompt', value=info_dict['negative_prompt'])

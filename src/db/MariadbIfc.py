@@ -9,6 +9,7 @@ import logging.handlers as lh
 import mariadb
 import os
 import pathlib as pl
+import pickle as pic
 import sys
 
 #####  Package Variables  #####
@@ -16,7 +17,7 @@ import sys
 
 #####  Mariadb Interface Class  #####
 
-class mariadbIfc:
+class MariadbIfc:
     """Acts as the dabase interface for MariaDB SQL servers.  Also creates
         tables, users, and fields as needed.
     """
@@ -62,14 +63,14 @@ class mariadbIfc:
             self.db_log.error(f"Unable to get MariaDB commands: {e=}")
             raise  FileNotFoundError(f"Error opening the mariaDB config files: {e=}")
 
-        if not self.validateInstall() :
+        if not self.ValidateInstall() :
 
             self.db_log.error(f"Unable to access mariaDB server! {options['host']} {options['port']} {options['user_name']} {options['password']}")
             raise PermissionError(f"Unable to access mariaDB server!")
 
         self.db_log.info(f"Successfully connected to database: host: {options['host']} port: {options['port']} username: {options['user_name']} db: {options['database']}")
 
-    def validateInstall(self) -> bool:
+    def ValidateInstall(self) -> bool:
         """Validates all the database components are accessable and usable by the
             script.
 
@@ -83,7 +84,7 @@ class mariadbIfc:
         #of creating missing DBs was scrapped due to implementation complexity.
         #(The script would need to invoke mariadb as sudo with root).
         try:
-
+            #TODO: convert to a threadpool
             self.con = mariadb.connect(host=self.args['host'],
                                        port=int(self.args['port']),
                                        user=self.args['user_name'],
@@ -133,6 +134,18 @@ class mariadbIfc:
         all_ok = True;
 
         return all_ok
+
+    def SaveRoll(self,
+                 profile : str,
+                 info    : dict):
+        """Created a UUID for the given profile .
+
+            Input: self - Pointer to the current object instance.
+
+            Output: bool - True if install is valid and usable.
+        """
+        entry = pic.loads(profile)
+        entry.info = info
 
 #UUID added to profile when saved  HEX(UUID_TO_BIN(@uuid))
 #Randgen profiles save in DB and linked to owner later

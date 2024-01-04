@@ -18,6 +18,7 @@ import os
 import pathlib as pl
 import pickle as pic
 import requests as req
+import src.db.MariadbIfc as mdb
 import src.managers.QueueMgr as qm
 import src.utilities.NameRandomizer as nr
 import src.utilities.ProfileGenerator as pg
@@ -35,6 +36,7 @@ creds = {}
 default_params = {'cfg'       : 'src/config/config.json',
                   'cred'      : 'src/config/credentials.json',
                   'bot_token' : ''}
+db_ifc = None
 dict_path = ["","",""]
 IGSD_version = '0.3.5'
 #This will be modified in the future to accept user-supplied paths.
@@ -55,8 +57,8 @@ try:
 
     for dir in range(len(dict_path)):
         #This is just an access check and is done early to allow for an exit if
-        #the file has read/access issues.  The Tag Randomizer class will
-        #separately open a copy when needed with a more read-efficent module.
+        #the file has read/access issues.  The using classes will separately
+        #open a copy when needed with a more read-efficent module.
         if not dict_path[dir].is_file():
             raise FileNotFoundError
 
@@ -161,29 +163,54 @@ def BannedWordsFound(prompt: str, banned_words: str) -> bool:
 
 @IGSD_client.event
 async def on_ready():
+    """Performs post-login setup for the bot.
+
+       Input  : None.
+
+       Output : None.
+    """
+    global db_ifc
     global job_queue
     global profile_gen
     global worker
 
 
+    disLog = log.getLogger('discord')
+    disLog.setLevel(params['log_lvl'])
+    log_path = pl.Path(params['log_name'])
+
+    logHandler = lh.RotatingFileHandler(filename=log_path.absolute(),
+                                        encoding=params['log_encoding'],
+                                        maxBytes=int(params['max_bytes']),
+                                        backupCount=int(params['log_file_cnt'])
+    )
+
+    formatter = log.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}',
+                              params['date_fmt'],
+                              style='{'
+    )
+    logHandler.setFormatter(formatter)
+    disLog.addHandler(logHandler)
+    #TODO: get propagate to properly disable.
+    #disLog.propagate=False
+
     queLog = log.getLogger('queue')
     queLog.setLevel(params['log_lvl'])
     log_path = pl.Path(params['log_name_queue'])
 
-    logHandler = lh.RotatingFileHandler(
-        filename=log_path.absolute(),
-        encoding=params['log_encoding'],
-        maxBytes=int(params['max_bytes']),
-        backupCount=int(params['log_file_cnt']),
+    logHandler = lh.RotatingFileHandler(filename=log_path.absolute(),
+                                        encoding=params['log_encoding'],
+                                        maxBytes=int(params['max_bytes']),
+                                        backupCount=int(params['log_file_cnt'])
     )
 
-    formatter = log.Formatter(
-        '[{asctime}] [{levelname:<8}] {name}: {message}',
-        params['date_fmt'],
-        style='{'
+    formatter = log.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}',
+                              params['date_fmt'],
+                              style='{'
     )
     logHandler.setFormatter(formatter)
     queLog.addHandler(logHandler)
+    
     queLog.info(f'Logged in as {IGSD_client.user} (ID: {IGSD_client.user.id})')
 
     queLog.debug(f"Creating Queue Manager.")
@@ -193,6 +220,11 @@ async def on_ready():
     worker    = th.Thread(target=job_queue.PutRequest,
                           name="Queue mgr",
                           daemon=True)
+
+    queLog.debug(f"Creating DB Interface.")
+    db_ifc = mdb.mariadbIfc(options=params['db_opts'])
+
+    #Only start the job queue once all otehr tasks are ready.
     worker.start()
 
     print('------')
@@ -332,14 +364,6 @@ async def testroll(interaction: dis.Interaction):
                 'profile' : "",
                 'reply'   : ""
             }
-
-    #Waifu tracking:
-    #DB to track users and owned waifus (and image)
-    #Forge waifus via combination?
-    #
-    #Daily rolls measured on UTC for days
-    #Table to track?  Annoying in Mongo.  Internal dict okay?  Handling scale?
-    #Store all data to the DB post generation.
 
     disLog.debug(f"Creating a new profile.")
     msg['data']['profile'] = pic.dumps(pg.Profile(id=interaction.user.id))
@@ -518,29 +542,9 @@ def Startup():
     global creds
     global job_queue
 
-
-    disLog = log.getLogger('discord')
-    disLog.setLevel(params['log_lvl'])
-    log_path = pl.Path(params['log_name'])
-
-    logHandler = lh.RotatingFileHandler(
-        filename=log_path.absolute(),
-        encoding=params['log_encoding'],
-        maxBytes=int(params['max_bytes']),
-        backupCount=int(params['log_file_cnt']),
-    )
-
-    formatter = log.Formatter(
-        '[{asctime}] [{levelname:<8}] {name}: {message}',
-        params['date_fmt'],
-        style='{'
-    )
-    logHandler.setFormatter(formatter)
-    disLog.addHandler(logHandler)
-
     if int(params['options']['step_size']) <= 1:
 
-        disLog.error(f"Image dimension step size must be greater than 1!")
+        print(f"Image dimension step size must be greater than 1!")
         exit(-1)
 
     #This will be modified in the future to accept user-supplied paths.
@@ -551,20 +555,16 @@ def Startup():
             creds = json.load(json_file)
 
     except OSError as err:
-        disLog.critical(f"Can't load file from path {cred_path.absolute()}")
+        print(f"Can't load file from path {cred_path.absolute()}")
         exit(-2)
 
-    #Start manager tasks
-    disLog.info(f"Initializing name Randomizer.")
     nr.init(params['profile_opts'])
 
     #Start manager tasks
-    disLog.debug(f"Starting Bot client")
-
     try:
         IGSD_client.run(creds['bot_token'])
     except Exception as err:
-        disLog.error(f"Caught exception {err} when trying to run IGSD client!")
+        print(f"Caught exception {err} when trying to run IGSD client!")
 
 
 if __name__ == '__main__':

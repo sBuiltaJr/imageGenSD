@@ -1,0 +1,14 @@
+{
+    "create_bogus"     : "CREATE TABLE IF NOT EXISTS bogus(test int auto_increment, primary key (test));",
+    "create_db"        : "CREATE DATABASE IF NOT EXISTS %s;",
+    "create_table"     : "CREATE TABLE IF NOT EXISTS %s",
+    "create_user"      : "CREATE USER IF NOT EXISTS %s@%s IDENTIFIED BY '%s';",
+    "delete_bogus"     : "DELETE FROM bogus WHERE test='0';",
+    "drop_bogus"       : "DROP TABLE bogus;",
+    "drop_db"          : "DROP DATABASE IF EXISTS %s;",
+    "edit_event"       : "",
+    "insert_bogus"     : "INSERT INTO bogus (test) VALUES ('65536')",
+    "grant_db"         : "GRANT ALL PRIVILEGES ON %s.* TO %s@%s;",
+    "update_bogus"     : "UPDATE bogus SET test='0' WHERE test='65536';",
+    "using_IGSD"       : "USE %s"
+}

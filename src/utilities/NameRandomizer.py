@@ -74,8 +74,8 @@ def getRandomName() -> str:
 
     #Consider adding the ability for a variable length name string return.
 
-    first_name = lc.getline(fn_dict_path, rand.randint(0, fn_dict_size))
-    last_name  = lc.getline(ln_dict_path, rand.randint(0, ln_dict_size))
+    first_name = (lc.getline(fn_dict_path, rand.randint(0, fn_dict_size))).rstrip()
+    last_name  = (lc.getline(ln_dict_path, rand.randint(0, ln_dict_size))).rstrip()
 
     name_log.debug(f"Generated name {first_name + ' ' + last_name} from {fn_dict_path} {ln_dict_path}")
 

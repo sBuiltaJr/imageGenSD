@@ -230,6 +230,7 @@ async def on_ready():
     print('------')
 
 @IGSD_client.tree.command()
+@dac.checks.has_permissions(use_application_commands=True)
 async def hello(interaction: dis.Interaction):
     """A test echo command to verify basic discord functionality.
 
@@ -276,6 +277,7 @@ async def hello(interaction: dis.Interaction):
 #    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 @IGSD_client.tree.command()
+@dac.checks.has_permissions(manage_guild=True) #The closest to 'be a mod' Discord has.
 async def testget(interaction: dis.Interaction):
     """A test HTTP GET command to verify basic connection to the webui page.
        Also tests the internal data path.
@@ -308,6 +310,7 @@ async def testget(interaction: dis.Interaction):
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 @IGSD_client.tree.command()
+@dac.checks.has_permissions(manage_guild=True) #The closest to 'be a mod' Discord has.
 async def testpost(interaction: dis.Interaction):
     """A test HTTP PUT command to verify basic connection to the webui page.
 
@@ -339,6 +342,7 @@ async def testpost(interaction: dis.Interaction):
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 @IGSD_client.tree.command()
+@dac.checks.has_permissions(manage_guild=True) #The closest to 'be a mod' Discord has.
 async def testroll(interaction: dis.Interaction):
     """Verifies a profile can be added to a test image.
 
@@ -365,16 +369,13 @@ async def testroll(interaction: dis.Interaction):
                 'reply'   : ""
             }
 
-    #disLog.debug(f"Creating a new profile.")
-    #msg['data']['profile'] = pic.dumps(pg.Profile(id=interaction.user.id))
-    #disLog.debug(f"Profile complete: {msg['data']['profile']}")
-
     disLog.debug(f"Posting test ROLL job {msg} to the queue.")
     result = job_queue.Add(msg)
 
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 @IGSD_client.tree.command()
+@dac.checks.has_permissions(use_application_commands=True)
 @dac.describe(random=f"A flag to add between {params['queue_opts']['min_rand_tag_cnt']} and {params['queue_opts']['max_rand_tag_cnt']} random tags to the user prompt.  Does not count towards the maximum prompt length.",
               tag_cnt=f"If 'random' is enabled, an exact number of tags to add to the prompt, up to params['queue_opts']['max_rand_tag_cnt']",
               prompt=f"The prompt(s) for generating the image, up to {params['options']['max_prompt_len']} characters.",
@@ -486,10 +487,7 @@ async def Post(msg):
 
         info_dict = json.loads(msg['info'])
 
-        #TODO: Move to a non-test function.  Users will always get their roll
-        #so it's always appropriate to save the output.  Other commands may
-        #differ.
-        db_ifc.SaveRoll(msg['profile'], info_dict)
+        db_ifc.SaveRoll(info=info_dict, profile=msg['profile'])
 
         embed = dis.Embed()
         profile = pic.loads(msg['profile'])
@@ -503,7 +501,7 @@ async def Post(msg):
         embed.add_field(name='Luck', value=profile.stats.luck)
         embed.add_field(name='Strength', value=profile.stats.strength)
         embed.add_field(name='Description', value=profile.desc)
-        embed.add_field(name='Range', value=profile.stats.range)
+        embed.add_field(name='Favorite', value=f"<@{profile.favorite}>")
 
         for i in msg['images']:
             image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
@@ -513,7 +511,7 @@ async def Post(msg):
                                       filename='image.png'), embed=embed)
     else:
         info_dict = json.loads(msg['info'])
-        db_ifc.SaveRoll(msg['profile'], info_dict)
+        db_ifc.SaveRoll(id=msg['id'], info=info_dict, img=msg['images'][0], profile=msg['profile'])
         
         embed = dis.Embed()
         embed.add_field(name='Prompt', value=info_dict['prompt'])

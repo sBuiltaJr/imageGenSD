@@ -242,12 +242,12 @@ class Manager:
 
             self.queLog.debug(f"Request is: {request}")
             self.queLog.info(f"Result is: {result}")
-            jres['status_code']  = result.status_code
-            jres['reason']       = result.reason
-            jres['id']           = request['id'] #TODO this shouldn't be necessary
-            jres['profile']      = request['profile']
-            jres['random']       = request['post']['random']
-            jres['tags_added']   = request['post']['tags_added']
+            jres['status_code'] = result.status_code
+            jres['reason']      = result.reason
+            jres['id']          = request['id'] #TODO this shouldn't be necessary
+            jres['profile']     = request['profile']
+            jres['random']      = request['post']['random']
+            jres['tags_added']  = request['post']['tags_added']
             #Pop last to ensure a new request from the same ID can be added
             #only after their first request is completed.
             job     = (jobs[request['guild']]).pop(request['id'])

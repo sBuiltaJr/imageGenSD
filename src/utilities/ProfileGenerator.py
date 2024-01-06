@@ -14,19 +14,25 @@ from typing import Literal, Optional
 
 #####  Profile Class  #####
 
+#This definition must come before GetDefaultProfile so it can be referenced.
 class Profile:
 
     #Optional Name?  description?
     def __init__(self,
                  id       : int,
-                 info   : Optional[dict]            = None,
                  #TODO: combine the options into the options dictionary
                  #in a way to avoid key errors.
                  affinity : Optional[int]           = None,
                  battles  : Optional[int]           = None,
                  desc     : Optional[str]           = None,
                  exp      : Optional[int]           = None,
+                 favorite : Optional[int]           = None,
+                 history  : Optional[dict]          = None,
+                 img_id   : Optional[int]           = None,
+                 info     : Optional[dict]          = None,
+                 level    : Optional[int]           = None,
                  losses   : Optional[int]           = None,
+                 missions : Optional[int]           = None,
                  name     : Optional[str]           = None,
                  owner    : Optional[int]           = None,
                  rarity   : Optional[rc.RarityList] = None,
@@ -43,12 +49,18 @@ class Profile:
         self.battles  = battles if battles != None else 0
         self.desc     = desc if desc != None else "A Poor, descriptionless character."
         self.creator  = id
+        self.exp      = exp if exp != None else 0
+        self.favorite = favorite if favorite != None else 0
+        self.img_id   = img_id if img_id != None else None #Separate to prevent laoded profiles from eating memory
+        self.info     = info if info != None else None #Get IGSD image info before profile?
+        self.level    = level if level != None else 0
         self.losses   = losses if losses != None else 0
+        self.history  = history if history != None else None
+        self.missions = missions if missions != None else 0
+        self.name     = nr.GetRandomName() if name == None else name
         self.owner    = id if owner == None else owner
         self.rarity   = rc.Rarity.GenerateRarity(self) if rarity == None else rarity
-        self.name     = nr.GetRandomName() if owner == None else owner
         self.stats    = sc.Stats(self.rarity) if stats == None else stats
-        #self.info    = None #Get IGSD image info before profile?
         self.battles  = wins if wins != None else 0
 
 #####  Package Functions  #####
@@ -121,13 +133,19 @@ def GetDefaultProfile() -> Profile:
                       battles=0,
                       desc="A poor defenseless bot doing its best.",
                       exp=0,
+                      favorite=170331989436661760,
                       losses=0,
                       name="IGSD Mascot",
                       owner=170331989436661760,
                       rarity=rc.RarityList.CUSTOM,
-                      stats=sc.Stats(rc.RarityList.CUSTOM),
+                      stats=sc.Stats(rarity=rc.RarityList.CUSTOM,
+                                     agility=1,
+                                     defense=1,
+                                     endurance=1,
+                                     luck=1,
+                                     strength=1),
                       wins=0)
-    
+
     return default
 #####  Helper Classes  #####
 

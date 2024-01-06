@@ -1,0 +1,9 @@
+{
+    "del_default"  : "DELETE FROM IGSDUsers WHERE (u_ID = 0) LIMIT 1;",
+    "get_daily"    : "SELECT daily_dt FROM IGSDUsers WHERE u_ID = %s;",
+    "get_owned"    : "SELECT owned FROM IGSDUsers WHERE u_ID = %s;",
+    "get_user"     : "SELECT * FROM IGSDUsers WHERE u_ID = %s;",
+    "make_default" : "INSERT INTO IGSDUsers VALUES (0, SYSDATE(), 0, NULL, False, 0, SYSDATE(), 0, NULL, 0, 0, 0, 0, 1, 0, 0, NULL, 0, 0);",
+    "make_def_tst" : "INSERT INTO IGSDUsers VALUES (0, SYSDATE(), 0, NULL, False, 0, SYSDATE(), 0, NULL, 0, 0, 0, 0, 1, 0, 0, NULL, 0, 0);",
+    "table_fmt"    : " IGSDUsers (u_ID BIGINT UNSIGNED NOT NULL UNIQUE PRIMARY KEY, created DATETIME NOT NULL, cmd_ct BIGINT NOT NULL, owned JSON, daily BOOLEAN NOT NULL, daily_ct BIGINT NOT NULL, daily_dt DATETIME NOT NULL, dust BIGINT NOT NULL, favorite UUID, gems BIGINT NOT NULL, losses BIGINT NOT NULL, merged_ct BIGINT NOT NULL, mission_ct BIGINT NOT NULL, owned_ct BIGINT NOT NULL, points BIGINT NOT NULL, rank BIGINT NOT NULL, rivals JSON, supers BIGINT NOT NULL, wins BIGINT NOT NULL);"
+}

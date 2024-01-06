@@ -11,7 +11,7 @@
     "max_bytes"     : "33554432",
     "options"       :
     {
-        "banned_words"     : "sex,nipple,vagina,vaginal,dick,penis,orgasm,oral,cum,semen,slut,whore,cunt,bitch,poop,shit,piss,pee,orgy,loli,child,shota,kid,anal,intercourse",
+        "banned_words"     : "sex,nipple,vagina,vaginal,dick,penis,orgasm,oral,cum,semen,slut,whore,cunt,bitch,poop,shit,piss,pee,orgy,loli,child,shota,kid,anal,intercourse,NSFW",
         "banned_neg_words" : "clothed,adult,mature",
         "cfg"              : "18",
         "HDR"              : "false",
@@ -43,7 +43,7 @@
         "log_dir"        : "logs",
         "log_encoding"   : "utf-8",
         "log_file_cnt"   : "5",
-        "log_lvl"        : "DEBUG",
+        "log_lvl"        : "INFO",
         "log_name_db"    : "logs/IGSD_MariaDB.log",
         "log_mode"       : "w",
         "max_bytes"      : "33554432",

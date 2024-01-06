@@ -1,0 +1,11 @@
+{
+    "del_default"  : "DELETE FROM IGSDprofiles WHERE (pr_ID = x'fffffffffffffffffffffffffffffffe') LIMIT 1;",
+    "get_owner"    : "SELECT owner FROM IGSDprofiles WHERE pr_ID = %s;",
+    "get_image"    : "SELECT picture FROM IGSDpictures WHERE pi_ID = %s;",
+    "get_profile"  : "SELECT * FROM IGSDProfiles WHERE pr_ID = '%s';",
+    "put_new"      : "INSERT INTO IGSDprofiles VALUES (SYS_GUID(), %s, SYSDATE(), %s, 0, 0, '%s', 0, %s, 0, '%s', 0, 0, 0, '%s', %d, 0) RETURNING pr_ID, created;",
+    "update"       : "UPDATE IGSDprofiles SET (owner=%s, affinity=%s, bosses=%s, exp=%s, favorite=%s, history=%s, level=%s, losses=%s, missions=%s, wins=%s) WHERE pr_ID = %s",
+    "make_default" : "INSERT INTO IGSDprofiles VALUES (SYS_GUID(), %s, SYSDATE(), 0, 0, 0, 'default', 0, 0, 0, 'default', 0, 0, 0, 'default', 0, 0);",
+    "make_def_tst" : "INSERT INTO IGSDprofiles VALUES (x'fffffffffffffffffffffffffffffffe', x'fffffffffffffffffffffffffffffffe', SYSDATE(), 0, 0, 0, 'default', 0, 0, 0, 'default', 0, 0, 0, 'default', 0, 0);",
+    "table_fmt"    : " IGSDProfiles (pr_ID UUID NOT NULL UNIQUE PRIMARY KEY, image_id UUID, created DATETIME NOT NULL, owner BIGINT NOT NULL, affinity BIGINT NOT NULL, bosses BIGINT NOT NULL, description LONGTEXT NOT NULL, exp BIGINT NOT NULL, favorite BIGINT NOT NULL, history BIGINT NOT NULL, info LONGTEXT NOT NULL, level BIGINT NOT NULL, losses BIGINT NOT NULL, missions BIGINT NOT NULL, name LONGTEXT NOT NULL, rarity BIGINT NOT NULL, wins BIGINT NOT NULL);"
+}

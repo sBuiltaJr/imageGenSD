@@ -47,11 +47,17 @@ def GetStatRange(rarity : rc.RarityList) -> tuple:
 
 #####  Stats Class  #####
 
-#TODO: find a way to create the default profile without advancing the RNG
 class Stats:
 
     def __init__(self,
-                 rarity : rc.RarityList):
+                 rarity : rc.RarityList,
+                 #TODO: combine the options into the options dictionary
+                 #in a way to avoid key errors.
+                 agility   : Optional[int] = None,
+                 defense   : Optional[int] = None,
+                 endurance : Optional[int] = None,
+                 luck      : Optional[int] = None,
+                 strength  : Optional[int] = None):
         """Creates a  stats object based on rarity.
 
            Input: self - Pointer to the current object instance.
@@ -62,11 +68,11 @@ class Stats:
         #Starting simple for now, future versions should have luck influence stats?
         self.range     = GetStatRange(rarity)
 
-        self.agility   = rand.randint(self.range[0], self.range[1])
-        self.defense   = rand.randint(self.range[0], self.range[1])
-        self.endurance = rand.randint(self.range[0], self.range[1])
-        self.luck      = rand.randint(self.range[0], self.range[1])
-        self.strength  = rand.randint(self.range[0], self.range[1])
+        self.agility   = agility if agility != None else rand.randint(self.range[0], self.range[1])
+        self.defense   = defense if defense != None else rand.randint(self.range[0], self.range[1])
+        self.endurance = endurance if endurance != None else rand.randint(self.range[0], self.range[1])
+        self.luck      = luck if luck != None else rand.randint(self.range[0], self.range[1])
+        self.strength  = strength if strength != None else rand.randint(self.range[0], self.range[1])
 
     def GetStatsList(self) -> list:
         """Returns the object's stats as a list.

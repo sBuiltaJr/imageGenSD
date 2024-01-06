@@ -4,6 +4,7 @@
     "get_image"    : "SELECT picture FROM IGSDpictures WHERE pi_ID = %s;",
     "get_profile"  : "SELECT * FROM IGSDProfiles WHERE pr_ID = '%s';",
     "put_new"      : "INSERT INTO IGSDprofiles VALUES (SYS_GUID(), %s, SYSDATE(), %s, 0, 0, '%s', 0, %s, 0, '%s', 0, 0, 0, '%s', %d, 0) RETURNING pr_ID, created;",
+    "put_img_id"   : "UPDATE IGSDprofiles SET image_id='%s' WHERE pr_ID='%s';",
     "update"       : "UPDATE IGSDprofiles SET (owner=%s, affinity=%s, bosses=%s, exp=%s, favorite=%s, history=%s, level=%s, losses=%s, missions=%s, wins=%s) WHERE pr_ID = %s",
     "make_default" : "INSERT INTO IGSDprofiles VALUES (SYS_GUID(), %s, SYSDATE(), 0, 0, 0, 'default', 0, 0, 0, 'default', 0, 0, 0, 'default', 0, 0);",
     "make_def_tst" : "INSERT INTO IGSDprofiles VALUES (x'fffffffffffffffffffffffffffffffe', x'fffffffffffffffffffffffffffffffe', SYSDATE(), 0, 0, 0, 'default', 0, 0, 0, 'default', 0, 0, 0, 'default', 0, 0);",

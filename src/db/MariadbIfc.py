@@ -192,25 +192,33 @@ class MariadbIfc:
 
         else:
 
-            self.db_log.debug(f"Preparing to add profile: {(self.prof_cmds['put_new']) % (self.db_cmds['default_id'], id, entry.desc, entry.favorite, '{"0":"0"}', entry.name, entry.rarity.value)}")
-            #print(str(entry.info).replace("'",'"'))
-            cursor.execute((self.prof_cmds['put_new']) % (self.db_cmds['default_id'], id, entry.desc, entry.favorite, str(entry.info).replace("'",'"'), entry.name, entry.rarity.value))
+            self.db_log.debug(f"Preparing to add profile: {(self.prof_cmds['put_new']) % (self.db_cmds['default_id'], id, entry.desc, entry.favorite, json.dumps(entry.info), entry.name, entry.rarity.value)}")
+            #TODO: The "str(entry.info).replace("'",'"')" line is fragile and
+            #will break custom dictionaries with apostrophes.  Replace with
+            #something better?
+            cursor.execute((self.prof_cmds['put_new']) % (self.db_cmds['default_id'], id, entry.desc, entry.favorite, json.dumps(entry.info), entry.name, entry.rarity.value))
             #We don't actually know the guid until we get it back from the DB.
-            uid=cursor.fetchone()
-            self.db_log.info(f"Stored profile with UID {uid}")
+            pr_uid=cursor.fetchone()
+            self.db_log.info(f"Stored profile with UID {pr_uid}")
 
-            self.db_log.debug(f"Preparing to add picture: {(self.pict_cmds['put_new']) % ('0x' + str(uid[0]).replace('-',''), uid[1], str(entry.info).replace("'",'"'), img)}")
-            cursor.execute((self.pict_cmds['put_new']) % ('0x' + str(uid[0]).replace('-',''), uid[1], str(entry.info).replace("'",'"'), img))
-            uid=cursor.fetchone()
-            self.db_log.info(f"Stored picture with UID {uid}")
+            #TODO: The "str(entry.info).replace("'",'"')" line is fragile and
+            #will break custom dictionaries with apostrophes.  Replace with
+            #something better?
+            self.db_log.debug(f"Preparing to add picture: {(self.pict_cmds['put_new']) % ('0x' + str(pr_uid[0]).replace('-',''), pr_uid[1], json.dumps(entry.info), img)}")
+            cursor.execute((self.pict_cmds['put_new']) % ('0x' + str(pr_uid[0]).replace('-',''), pr_uid[1], json.dumps(entry.info), img))
+            pi_uid=cursor.fetchone()
+            self.db_log.info(f"Stored picture with UID {pi_uid}")
+            
+            #It's only possible to link the picture to the profile after its
+            #UUID is generated.
+            self.db_log.debug(f"Updating Profile to reference picture UUID: {(self.prof_cmds['put_img_id']) % (pi_uid[0], pr_uid[0])}")
+            cursor.execute((self.prof_cmds['put_img_id']) % (pi_uid[0], pr_uid[0]))
+            self.db_log.info(f"Linked picture id {pi_uid[0]} to profile {pr_uid[0]}")
 
-#Waifu tracking:
-#DB to track users and owned waifus (and image)
+
 #Forge waifus via combination?
 #
 #Daily rolls measured on UTC for days
-#Table to track?  Annoying in Mongo.  Internal dict okay?  Handling scale?
-#Store all data to the DB post generation.
 
 #TODO: define how a user is suppose to make the IGSD bot account and give access to the bogus and IGSD tables.
 #"CREATE USER IF NOT EXISTS 'IGSD_Bot'@'%' IDENTIFIED BY 'password';

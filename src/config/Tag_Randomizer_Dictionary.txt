@@ -331,7 +331,7 @@ bandages
 bare legs
 confetti
 crown braid
-jack-o'-lantern
+jack-o-lantern
 lollipop
 twins
 pink flower
@@ -651,7 +651,6 @@ headphones
 on head
 long dress
 bandeau
-puffy nipples
 black headwear
 blue hair
 holding flower

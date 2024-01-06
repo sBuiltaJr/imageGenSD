@@ -245,6 +245,7 @@ class Manager:
             jres['status_code'] = result.status_code
             jres['reason']      = result.reason
             jres['id']          = request['id'] #TODO this shouldn't be necessary
+            jres['cmd']         = request['cmd'] #TODO this shouldn't be necessary
             jres['profile']     = request['profile']
             jres['random']      = request['post']['random']
             jres['tags_added']  = request['post']['tags_added']

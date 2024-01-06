@@ -4,6 +4,6 @@
     "get_image"    : "SELECT picture FROM IGSDpictures WHERE pi_ID = %s;",
     "get_profile"  : "SELECT * FROM IGSDProfiles WHERE image_id = %s;",
     "put_new"      : "INSERT INTO IGSDpictures VALUES (SYS_GUID(), %s, '%s', '%s', '%s') RETURNING pi_ID;",
-    "make_def_tst" : "INSERT INTO IGSDpictures VALUES (x'fffffffffffffffffffffffffffffffe', x'fffffffffffffffffffffffffffffffe', SYSDATE(), '{}', 'default');",
+    "make_def_tst" : "INSERT INTO IGSDpictures VALUES (0xfffffffffffffffffffffffffffffffe, 0xfffffffffffffffffffffffffffffffe, SYSDATE(), '{}', 'default');",
     "table_fmt"    : " IGSDpictures (pi_ID UUID NOT NULL UNIQUE PRIMARY KEY, image_id UUID, created DATETIME NOT NULL, params LONGTEXT NOT NULL, picture LONGTEXT NOT NULL);"
 }

@@ -125,8 +125,9 @@ class IGSDClient(dis.Client):
         self.loop = asy.get_running_loop()
 
         self.disLog.debug(f"Syncing Guild Tree to Global.")
+        #self.tree.copy_global_to(guild=dis.Object(id=1084545432253894727))
 
-        await self.tree.sync()
+        await self.tree.sync()#self.tree.sync(guild=dis.Object(id=1084545432253894727))#
 
     def GetLoop(self):
         """Returns a reference to this client's asyncio event loop.
@@ -210,7 +211,7 @@ async def on_ready():
     )
     logHandler.setFormatter(formatter)
     queLog.addHandler(logHandler)
-    
+
     queLog.info(f'Logged in as {IGSD_client.user} (ID: {IGSD_client.user.id})')
 
     queLog.debug(f"Creating Queue Manager.")
@@ -295,13 +296,14 @@ async def testget(interaction: dis.Interaction):
            },
            'data' : {
                 #Requests are sorted by guild for rate-limiting
-                'guild'  : interaction.guild_id,
+                'guild'   : interaction.guild_id,
                 #This should really be metadata but the rest of the metadata
                 #can't be pickeled, so this must be passed with the work.
-                'id'     : "testgetid",
-                'post'   : {'random': False, 'tags_added':'', 'tag_cnt':0},
+                'id'      : "testgetid",
+                'cmd'     : 'testpost',
+                'post'    : {'random': False, 'tags_added':'', 'tag_cnt':0},
                 'profile' : "",
-                'reply'  : "test msg"
+                'reply'   : "test msg"
             }
         }
     disLog.debug(f"Posting test GET job {msg} to the queue.")
@@ -331,7 +333,8 @@ async def testpost(interaction: dis.Interaction):
                 'guild'   : interaction.guild_id,
                 #This should really be metadata but the rest of the metadata
                 #can't be pickeled, so this must be passed with the work.
-                'id'      :  "testpostid",
+                'id'      : "testpostid",
+                'cmd'     : 'testpost',
                 'post'    : pg.GetDefaultJobData(),
                 'profile' : pic.dumps(pg.GetDefaultProfile())},
                 'reply'   : ""
@@ -363,7 +366,8 @@ async def testroll(interaction: dis.Interaction):
                 'guild'   : interaction.guild_id,
                 #This should really be metadata but the rest of the metadata
                 #can't be pickeled, so this must be passed with the work.
-                'id'      : "testroll",
+                'id'      : "testrollid",
+                'cmd'     : 'testroll',
                 'post'    : pg.GetDefaultJobData(),
                 'profile' : pic.dumps(pg.GetDefaultProfile())},
                 'reply'   : ""
@@ -429,6 +433,7 @@ async def generate(interaction: dis.Interaction,
                'data' : {
                     #Requests are sorted by guild for rate-limiting
                     'guild'   : interaction.guild_id,
+                    'cmd'     : 'generate',
                     #This should really be metadata but the rest of the metadata
                     #can't be pickeled, so this must be passed with the work.
                     'id'      : interaction.user.id,
@@ -454,6 +459,45 @@ async def generate(interaction: dis.Interaction,
         result = job_queue.Add(msg)
 
     await interaction.response.send_message(f'{result}', ephemeral=True)
+
+@IGSD_client.tree.command()
+@dac.checks.has_permissions(use_application_commands=True)
+async def roll(interaction: dis.Interaction):
+    """Generates a new character and saves them to the caller's character list.
+
+       Input  : None.
+
+       Output : None.
+
+       Note: All slash commands *MUST* respond in 3 seconds or be terminated.
+    """
+    disLog = log.getLogger('discord')
+    msg = { 'metadata' : {
+                'ctx'     : interaction,
+                'loop'    : IGSD_client.GetLoop(),
+                'poster'  : Post
+           },
+           'data' : {
+                #Requests are sorted by guild for rate-limiting
+                'guild'   : interaction.guild_id,
+                'cmd'     : 'roll',
+                #This should really be metadata but the rest of the metadata
+                #can't be pickeled, so this must be passed with the work.
+                'id'      : interaction.user.id,
+                'post'    : pg.GetDefaultJobData(),
+                'profile' : pic.dumps(pg.Profile(id=interaction.user.id))},
+                'reply'   : ""
+            }
+
+    msg['data']['post']['random'] = True
+    msg['data']['post']['prompt'] = params['options']['prompts']
+    msg['data']['post']['seed']   = -1
+
+    #Check for daily limits?
+    disLog.debug(f"Posting ROLL job {msg} to the queue.")
+    result = job_queue.Add(msg)
+
+    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 async def Post(msg):
     """Posts the query's result to Discord.  Runs in the main asyncio loop so
@@ -483,11 +527,9 @@ async def Post(msg):
         await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
                                       embed=embed)
 
-    elif msg['id'] == 'testroll':
+    elif msg['id'] == 'testrollid':
 
         info_dict = json.loads(msg['info'])
-
-        db_ifc.SaveRoll(info=info_dict, profile=msg['profile'])
 
         embed = dis.Embed()
         profile = pic.loads(msg['profile'])
@@ -510,29 +552,58 @@ async def Post(msg):
                                       file=dis.File(fp=image,
                                       filename='image.png'), embed=embed)
     else:
+
         info_dict = json.loads(msg['info'])
-        db_ifc.SaveRoll(id=msg['id'], info=info_dict, img=msg['images'][0], profile=msg['profile'])
-        
-        embed = dis.Embed()
-        embed.add_field(name='Prompt', value=info_dict['prompt'])
-        embed.add_field(name='Negative Prompt', value=info_dict['negative_prompt'])
-        embed.add_field(name='Steps', value=info_dict['steps'])
-        embed.add_field(name='Height', value=info_dict['height'])
-        embed.add_field(name='Width', value=info_dict['width'])
-        embed.add_field(name='Sampler', value=info_dict['sampler_name'])
-        embed.add_field(name='Seed', value=info_dict['seed'])
-        embed.add_field(name='Subseed', value=info_dict['subseed'])
-        embed.add_field(name='CFG Scale', value=info_dict['cfg_scale'])
-        #Randomized and co are special because they're not a parameter sent to SD.
-        embed.add_field(name='Randomized', value=msg['random'])
-        embed.add_field(name='Tags Added to Prompt', value=msg['tags_added'])
 
-        for i in msg['images']:
-            image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
+        if msg['cmd'] == 'roll':
 
-        await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
-                                      file=dis.File(fp=image,
-                                      filename='image.png'), embed=embed)
+            db_ifc.SaveRoll(id=msg['id'], info=info_dict, profile=msg['profile'])
+
+            embed = dis.Embed()
+            profile = pic.loads(msg['profile'])
+            embed.add_field(name='Creator', value=f"<@{profile.creator}>")
+            embed.add_field(name='Owner', value=f"<@{profile.owner}>")
+            embed.add_field(name='Name', value=profile.name)
+            embed.add_field(name='Rarity', value=profile.rarity.name)
+            embed.add_field(name='Agility', value=profile.stats.agility)
+            embed.add_field(name='Defense', value=profile.stats.defense)
+            embed.add_field(name='Endurance', value=profile.stats.endurance)
+            embed.add_field(name='Luck', value=profile.stats.luck)
+            embed.add_field(name='Strength', value=profile.stats.strength)
+            embed.add_field(name='Description', value=profile.desc)
+            embed.add_field(name='Favorite', value=f"<@{profile.favorite}>")
+
+            for i in msg['images']:
+                image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
+
+            await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
+                                          file=dis.File(fp=image,
+                                          filename='image.png'), embed=embed)
+
+        elif msg['cmd'] == 'generate' or msg['cmd'] == 'testpost':
+
+            #db_ifc.SaveRoll(id=msg['id'], info=info_dict, img=msg['images'][0], profile=msg['profile'])
+
+            embed = dis.Embed()
+            embed.add_field(name='Prompt', value=info_dict['prompt'])
+            embed.add_field(name='Negative Prompt', value=info_dict['negative_prompt'])
+            embed.add_field(name='Steps', value=info_dict['steps'])
+            embed.add_field(name='Height', value=info_dict['height'])
+            embed.add_field(name='Width', value=info_dict['width'])
+            embed.add_field(name='Sampler', value=info_dict['sampler_name'])
+            embed.add_field(name='Seed', value=info_dict['seed'])
+            embed.add_field(name='Subseed', value=info_dict['subseed'])
+            embed.add_field(name='CFG Scale', value=info_dict['cfg_scale'])
+            #Randomized and co are special because they're not a parameter sent to SD.
+            embed.add_field(name='Randomized', value=msg['random'])
+            embed.add_field(name='Tags Added to Prompt', value=msg['tags_added'])
+
+            for i in msg['images']:
+                image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
+
+            await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
+                                          file=dis.File(fp=image,
+                                          filename='image.png'), embed=embed)
 
 #####  main  #####
 

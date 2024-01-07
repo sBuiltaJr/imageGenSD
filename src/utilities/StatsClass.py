@@ -43,6 +43,41 @@ def GetStatRange(rarity : rc.RarityList) -> tuple:
         case _:
             return ( 0,   1)
 
+
+def GetDescription(rarity : rc.RarityList = rc.RarityList.COMMON) -> str:
+    """Generates a random rarity level for the profile.
+
+       Input: self - Pointer to the current object instance.
+
+       Output: enum - A randomly selected rarity from the distribution.
+    """
+
+    match rarity:
+
+        case rc.RarityList.LEGENDARY:
+            return "The highest tier, rarest, and best kind of character!  Take that!"
+
+        case rc.RarityList.ULTRA_RARE:
+            return "The second-highest tier of character!  So close!"
+
+        case rc.RarityList.SUPER_RARE:
+            return "The thrid-higest tier of character!  Able to trounce their lessers."
+
+        case rc.RarityList.RARE:
+            return "The fourth-higest tier of character!  What a rare find!"
+
+        case rc.RarityList.UNCOMMON:
+            return "The fifth-highest tier of character!  Better than the lowest, but not by much."
+
+        case rc.RarityList.COMMON:
+            return "The most common kind of character.  It is the thought that counts, right?"
+
+        case rc.RarityList.CUSTOM:
+            return "A custom kind of character not bound by the rules of this world!"
+
+        case _:
+            return "A description so bland it shouldn't exist!"
+
 #####  Helper Classes  #####
 
 #####  Stats Class  #####

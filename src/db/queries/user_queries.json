@@ -3,7 +3,10 @@
     "get_daily"    : "SELECT daily_dt FROM IGSDUsers WHERE u_ID = %s;",
     "get_owned"    : "SELECT owned FROM IGSDUsers WHERE u_ID = %s;",
     "get_user"     : "SELECT * FROM IGSDUsers WHERE u_ID = %s;",
+	"inc_cmd_ct"   : "UPDATE IGSDUsers SET cmd_ct=cmd_ct+1 WHERE u_ID='%s';",
     "make_default" : "INSERT INTO IGSDUsers VALUES (0, SYSDATE(), 0, NULL, False, 0, SYSDATE(), 0, NULL, 0, 0, 0, 0, 1, 0, 0, NULL, 0, 0);",
     "make_def_tst" : "INSERT INTO IGSDUsers VALUES (0, SYSDATE(), 0, NULL, False, 0, SYSDATE(), 0, NULL, 0, 0, 0, 0, 1, 0, 0, NULL, 0, 0);",
+    "put_new"      : "INSERT INTO IGSDUsers VALUES ('%s', SYSDATE(), 1, NULL, False, 0, 0, 0, '%s', 0, 0, 0, 0, 0, 0, 0, NULL, 0, 0);",
+    "put_owned"    : "UPDATE IGSDUsers SET owned = '%s' WHERE u_ID = %s;",
     "table_fmt"    : " IGSDUsers (u_ID BIGINT UNSIGNED NOT NULL UNIQUE PRIMARY KEY, created DATETIME NOT NULL, cmd_ct BIGINT NOT NULL, owned JSON, daily BOOLEAN NOT NULL, daily_ct BIGINT NOT NULL, daily_dt DATETIME NOT NULL, dust BIGINT NOT NULL, favorite UUID, gems BIGINT NOT NULL, losses BIGINT NOT NULL, merged_ct BIGINT NOT NULL, mission_ct BIGINT NOT NULL, owned_ct BIGINT NOT NULL, points BIGINT NOT NULL, rank BIGINT NOT NULL, rivals JSON, supers BIGINT NOT NULL, wins BIGINT NOT NULL);"
 }

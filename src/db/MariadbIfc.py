@@ -154,20 +154,26 @@ class MariadbIfc:
 
         return all_ok
 
+
     def SaveRoll(self,
                  id      : Optional[str] = '0xfffffffffffffffffffffffffffffffe',
                  img     : Optional[str] = None,
                  info    : dict          = None,
                  profile : str           = None):
-        """Created a UUID for the given profile .
+        """Created a UUID for the given profile.
 
             Input: self - Pointer to the current object instance.
+                   id - user ID to link the profile to.
+                   info - the picture metadata to store.
+                   profile - The profile to link the image to.
 
-            Output: bool - True if install is valid and usable.
+            Output: N/A.
         """
         cursor     = self.con.cursor()
+        cmd        = ""
         entry      = pic.loads(profile)
         entry.info = info
+        owned      = None
         result     = None
 
         cursor.execute((self.prof_cmds['get_profile']) % id)
@@ -192,28 +198,79 @@ class MariadbIfc:
 
         else:
 
-            self.db_log.debug(f"Preparing to add profile: {(self.prof_cmds['put_new']) % (self.db_cmds['default_id'], id, entry.desc, entry.favorite, json.dumps(entry.info), entry.name, entry.rarity.value)}")
-            #TODO: The "str(entry.info).replace("'",'"')" line is fragile and
-            #will break custom dictionaries with apostrophes.  Replace with
-            #something better?
-            cursor.execute((self.prof_cmds['put_new']) % (self.db_cmds['default_id'], id, entry.desc, entry.favorite, json.dumps(entry.info), entry.name, entry.rarity.value))
+            #TODO: find a better way of updating user properties; right now
+            #both caller and here have to know the state parameters to update
+            #something.  Maybe a dict of only the keys to update, with
+            #f-strings on the commands to update without parsing names?  Has
+            #issues with knowing how to update (e.g. increment a count).  Maybe
+            #a dict of commands instead of values?
+            result = None
+
+            for x in cursor:
+
+                result = x
+                self.db_log.debug(f"User entry found: {x}")
+
+            if (result != None):
+
+                cmd = (self.user_cmds['put_new']) % (id, id)
+                self.db_log.debug(f"Preparing to create user: {cmd}")
+                cursor.execute(cmd)
+                self.db_log.info(f"Created user")
+
+            else:
+
+                cmd = (self.user_cmds['inc_cmd_ct']) % (id)
+                self.db_log.debug(f"Preparing to update user cmd count {cmd}")
+                cursor.execute(cmd)
+                self.db_log.info(f"Incremented user {id}'s command count.")
+
+            cmd = (self.prof_cmds['put_new']) % (self.db_cmds['default_id'], id, entry.desc, entry.favorite, json.dumps(entry.info), entry.name, entry.rarity.value)
+            self.db_log.debug(f"Preparing to add profile: {cmd}")
+            cursor.execute(cmd)
             #We don't actually know the guid until we get it back from the DB.
             pr_uid=cursor.fetchone()
             self.db_log.info(f"Stored profile with UID {pr_uid}")
 
-            #TODO: The "str(entry.info).replace("'",'"')" line is fragile and
-            #will break custom dictionaries with apostrophes.  Replace with
-            #something better?
-            self.db_log.debug(f"Preparing to add picture: {(self.pict_cmds['put_new']) % ('0x' + str(pr_uid[0]).replace('-',''), pr_uid[1], json.dumps(entry.info), img)}")
-            cursor.execute((self.pict_cmds['put_new']) % ('0x' + str(pr_uid[0]).replace('-',''), pr_uid[1], json.dumps(entry.info), img))
+            cmd = (self.pict_cmds['put_new']) % ('0x' + str(pr_uid[0]).replace('-',''), pr_uid[1], json.dumps(entry.info), img)
+            self.db_log.debug(f"Preparing to add picture: {cmd}")
+            cursor.execute(cmd)
             pi_uid=cursor.fetchone()
             self.db_log.info(f"Stored picture with UID {pi_uid}")
-            
+
             #It's only possible to link the picture to the profile after its
             #UUID is generated.
-            self.db_log.debug(f"Updating Profile to reference picture UUID: {(self.prof_cmds['put_img_id']) % (pi_uid[0], pr_uid[0])}")
-            cursor.execute((self.prof_cmds['put_img_id']) % (pi_uid[0], pr_uid[0]))
+            cmd = (self.prof_cmds['put_img_id']) % (pi_uid[0], pr_uid[0])
+            self.db_log.debug(f"Updating Profile to reference picture UUID: {cmd}")
+            cursor.execute(cmd)
             self.db_log.info(f"Linked picture id {pi_uid[0]} to profile {pr_uid[0]}")
+
+            #This needs to be last to get both UIDs.
+            cmd = (self.user_cmds['get_owned']) % (id)
+            self.db_log.debug(f"Getting user {id}'s owned dict: {cmd}")
+            cursor.execute(cmd)
+            str_owned = cursor.fetchone()
+
+            if str_owned != None:
+
+                self.db_log.debug(f"Got user {id}'s owned dict: {str_owned}")
+                owned=json.loads(str_owned[0])
+
+            else:
+
+                #This is a user's first roll, or they wiped all their characters.
+                owned= {}
+
+            self.db_log.info(f"Got user {id}'s owned dict")
+
+            #This allows for easy looping over (keys) to get all profiles.
+            owned['{pr_uid[0]}'] = pi_uid[0]
+            self.db_log.debug(f"Associated profile {pr_uid[0]} with user {id} as: {owned['{pr_uid[0]}']}")
+
+            cmd = (self.user_cmds['put_owned']) % (json.dumps(owned), id)
+            self.db_log.debug(f"Updating user {id} owned dict: {cmd}")
+            cursor.execute(cmd)
+            self.db_log.info(f"Updated user {id}'s owned dict")
 
 
 #Forge waifus via combination?
@@ -221,6 +278,6 @@ class MariadbIfc:
 #Daily rolls measured on UTC for days
 
 #TODO: define how a user is suppose to make the IGSD bot account and give access to the bogus and IGSD tables.
-#"CREATE USER IF NOT EXISTS 'IGSD_Bot'@'%' IDENTIFIED BY 'password';
-#"GRANT ALL PRIVILEGES ON IGSD.* TO 'IGSD_Bot'@'%'";
+#CREATE USER IF NOT EXISTS 'IGSD_Bot'@'%' IDENTIFIED BY 'password';
+#GRANT ALL PRIVILEGES ON IGSD.* TO 'IGSD_Bot'@'%'";
 #Set the max_allowed_packet=4G in my.ini or ~/.my.cnf

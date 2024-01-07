@@ -47,7 +47,6 @@ class Profile:
 
         self.affinity = affinity if affinity != None else 0
         self.battles  = battles if battles != None else 0
-        self.desc     = desc if desc != None else "A Poor, descriptionless character."
         self.creator  = id
         self.exp      = exp if exp != None else 0
         self.favorite = favorite if favorite != None else 0
@@ -61,7 +60,9 @@ class Profile:
         self.owner    = id if owner == None else owner
         self.rarity   = rc.Rarity.GenerateRarity(self) if rarity == None else rarity
         self.stats    = sc.Stats(self.rarity) if stats == None else stats
-        self.battles  = wins if wins != None else 0
+        self.wins     = wins if wins != None else 0
+        #The items below rely on items above.
+        self.desc     = desc if desc != None else sc.GetDescription(self.rarity)
 
 #####  Package Functions  #####
 
@@ -147,6 +148,5 @@ def GetDefaultProfile() -> Profile:
                       wins=0)
 
     return default
-#####  Helper Classes  #####
 
 

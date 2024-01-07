@@ -571,7 +571,7 @@ async def Post(msg):
             embed.add_field(name='Luck', value=profile.stats.luck)
             embed.add_field(name='Strength', value=profile.stats.strength)
             embed.add_field(name='Description', value=profile.desc)
-            embed.add_field(name='Favorite', value=f"<@{profile.favorite}>")
+            embed.add_field(name='Favorite', value=f"<@{profile.favorite}>" if profile.favorite != 0 else "None. You could be here!")
 
             for i in msg['images']:
                 image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
@@ -581,8 +581,6 @@ async def Post(msg):
                                           filename='image.png'), embed=embed)
 
         elif msg['cmd'] == 'generate' or msg['cmd'] == 'testpost':
-
-            #db_ifc.SaveRoll(id=msg['id'], info=info_dict, img=msg['images'][0], profile=msg['profile'])
 
             embed = dis.Embed()
             embed.add_field(name='Prompt', value=info_dict['prompt'])

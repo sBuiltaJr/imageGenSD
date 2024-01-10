@@ -14,6 +14,9 @@ import mariadb
 import os
 import pathlib as pl
 import pickle as pic
+import src.utilities.ProfileGenerator as pg
+import src.utilities.RarityClass as rc
+import src.utilities.StatsClass as sc
 import sys
 from typing import Literal, Optional
 
@@ -154,9 +157,118 @@ class MariadbIfc:
 
         return all_ok
 
+    def GetImage(self,
+                 picture_id : Optional[str] = 'ffffffff-ffff-ffff-ffff-fffffffffffe',
+                 profile_id : Optional[str] = 'ffffffff-ffff-ffff-ffff-fffffffffffe') -> str:
+        """Returns a given profile for a given user.
+
+            Input: self - Pointer to the current object instance.
+                   id - user ID to link the profile to.
+                   info - the picture metadata to store.
+                   profile - The profile to link the image to.
+
+            Output: N/A.
+        """
+        cursor     = self.con.cursor()
+        cmd        = ""
+        result     = None
+        pic_id     = 0
+        
+        self.db_log.info(f"Getting picture ID")
+        
+        cmd = (self.prof_cmds['get_profile']) % (profile_id)
+        self.db_log.debug(f"Executing get profile command {cmd}")
+        cursor.execute(cmd)
+        
+        profile = cursor.fetchone()
+        
+        if profile == None:
+
+            self.db_log.error(f"Could not find default profile in the DB!")
+            return ""
+        
+        self.db_log.info(f"Getting picture.")
+        cmd = (self.pict_cmds['get_image']) % (profile[int(self.prof_cmds['pic_id_index'])])
+        self.db_log.debug(f"Executing get picture command {cmd}")
+        cursor.execute(cmd)
+        #The cursor object doesn't appear to actually provide a better way
+        #to determine if the cursor has a result.
+        img = cursor.fetchone()
+
+        if (img == None):
+
+            self.db_log.warn(f"Picture not found!")
+            return ""
+        
+        else:
+        
+            self.db_log.debug(f"Got picture: {img[0]}")
+            return img[0]
+
+    def GetProfile(self,
+                 id         : Optional[str] = 'ffffffff-ffff-ffff-ffff-fffffffffffe',
+                 profile_id : Optional[str] = 'ffffffff-ffff-ffff-ffff-fffffffffffe') -> str:
+        """Returns a given profile for a given user.
+
+            Input: self - Pointer to the current object instance.
+                   id - user ID to link the profile to.
+                   info - the picture metadata to store.
+                   profile - The profile to link the image to.
+
+            Output: N/A.
+        """
+        cursor     = self.con.cursor()
+        cmd        = ""
+        result     = None
+
+        self.db_log.info(f"Getting profile")
+        cursor.execute((self.prof_cmds['get_profile']) % id)
+        #The cursor object doesn't appear to actually provide a better way
+        #to determine if the cursor has a result.
+        result = cursor.fetchone()
+
+        if (result == None):
+
+            self.db_log.warn(f"Profile not found!: {id}")
+        
+        else:
+        
+            self.db_log.debug(f"Got profile: {result}")
+            #Since profiles are stored as individual elements in the DB for
+            #statistical analysis, the actual profile object needs to be
+            #re-created before it can be returned (since the rest of the code
+            #expects to interact with an object).
+            stats=sc.Stats(rarity=rc.RarityList(int(result[21])),
+                           agility=result[5],
+                           defense=result[6],
+                           endurance=result[7],
+                           luck=result[8],
+                           strength=result[9])
+            self.db_log.debug(f"Made stats: {pic.dumps(stats)}")
+             #TODO: find a way to better map these.  Blah blah factory.
+            profile=pg.Profile(id=result[0],
+                              img_id=result[1],
+                              creator=result[3],
+                              owner=result[4],
+                              affinity=result[10],
+                              battles=result[11],
+                              desc=result[12],
+                              exp=result[13],
+                              favorite=result[14],
+                              history=result[15],
+                              info=result[16],
+                              level=result[17],
+                              losses=result[18],
+                              missions=result[19],
+                              name=result[20],
+                              rarity=rc.RarityList(int(result[21])),
+                              stats=stats,
+                              wins=result[22])
+            self.db_log.debug(f"Made profile: {pic.dumps(profile)}")
+            return profile
 
     def SaveRoll(self,
-                 id      : Optional[str] = '0xfffffffffffffffffffffffffffffffe',
+                 id      : Optional[str] = 'ffffffff-ffff-ffff-ffff-fffffffffffe',
                  img     : Optional[str] = None,
                  info    : dict          = None,
                  profile : str           = None):
@@ -189,7 +301,7 @@ class MariadbIfc:
             #Is this is a test command?
             if (x[0] == self.db_cmds['default_id']):
 
-                self.db_log.warn(f"Rolled the test profile: {x}")
+                self.db_log.warning(f"Rolled the test profile: {x}")
 
             #Somehow the the roll is linked to an existing, non-test profile?
             else:
@@ -225,7 +337,7 @@ class MariadbIfc:
                 cursor.execute(cmd)
                 self.db_log.info(f"Incremented user {id}'s command count.")
 
-            cmd = (self.prof_cmds['put_new']) % (self.db_cmds['default_id'], id, entry.desc, entry.favorite, json.dumps(entry.info), entry.name, entry.rarity.value)
+            cmd = (self.prof_cmds['put_new']) % (self.db_cmds['default_id'], id, entry.creator, entry.stats.agility, entry.stats.defense, entry.stats.endurance, entry.stats.luck, entry.stats.strength, entry.desc, entry.favorite, json.dumps(entry.info), entry.name, entry.rarity.value)
             self.db_log.debug(f"Preparing to add profile: {cmd}")
             cursor.execute(cmd)
             #We don't actually know the guid until we get it back from the DB.
@@ -278,6 +390,7 @@ class MariadbIfc:
 #Daily rolls measured on UTC for days
 
 #TODO: define how a user is suppose to make the IGSD bot account and give access to the bogus and IGSD tables.
+#CREATE DATABASE IGSD;
 #CREATE USER IF NOT EXISTS 'IGSD_Bot'@'%' IDENTIFIED BY 'password';
-#GRANT ALL PRIVILEGES ON IGSD.* TO 'IGSD_Bot'@'%'";
+#GRANT ALL PRIVILEGES ON IGSD.* TO 'IGSD_Bot'@'%';
 #Set the max_allowed_packet=4G in my.ini or ~/.my.cnf

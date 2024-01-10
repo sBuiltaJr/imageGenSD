@@ -85,7 +85,7 @@ def GetDescription(rarity : rc.RarityList = rc.RarityList.COMMON) -> str:
 class Stats:
 
     def __init__(self,
-                 rarity : rc.RarityList,
+                 rarity    : rc.RarityList,
                  #TODO: combine the options into the options dictionary
                  #in a way to avoid key errors.
                  agility   : Optional[int] = None,

@@ -379,6 +379,41 @@ async def testroll(interaction: dis.Interaction):
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 @IGSD_client.tree.command()
+@dac.checks.has_permissions(manage_guild=True) #The closest to 'be a mod' Discord has.
+async def testshowprofile(interaction: dis.Interaction):
+    """Verifies a profile can be added to a test image.
+
+       Input  : None.
+
+       Output : None.
+
+       Note: All slash commands *MUST* respond in 3 seconds or be terminated.
+    """
+    msg = {'cmd'         : 'testroll',
+           'ctx'         : interaction,
+           'guild'       : interaction.guild_id,
+           'id'          : "testrollid",
+           'loop'        : IGSD_client.GetLoop(),
+           'images'      : db_ifc.GetImage(),
+           'poster'      : Post,
+           'post'        : pg.GetDefaultJobData(),
+           'profile'     : pic.dumps(db_ifc.GetProfile()),
+           'reply'       : "",
+           'status_code' : 200
+            }
+
+    disLog = log.getLogger('discord')
+    #TODO This should probably be its own queue to avoid the 3s timeout?
+
+    if msg['images'] == None or msg['profile'] == None:
+
+        await interaction.response.send_message(f'Error, test profile/pic do not exist!')
+
+    else:
+
+        await Post(msg);#interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
+
+@IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
 @dac.describe(random=f"A flag to add between {params['queue_opts']['min_rand_tag_cnt']} and {params['queue_opts']['max_rand_tag_cnt']} random tags to the user prompt.  Does not count towards the maximum prompt length.",
               tag_cnt=f"If 'random' is enabled, an exact number of tags to add to the prompt, up to params['queue_opts']['max_rand_tag_cnt']",
@@ -485,7 +520,7 @@ async def roll(interaction: dis.Interaction):
                 #can't be pickeled, so this must be passed with the work.
                 'id'      : interaction.user.id,
                 'post'    : pg.GetDefaultJobData(),
-                'profile' : pic.dumps(pg.Profile(id=interaction.user.id))},
+                'profile' : pic.dumps(pg.Profile(owmer=interaction.user.id))},
                 'reply'   : ""
             }
 
@@ -507,6 +542,7 @@ async def Post(msg):
 
         Output : N/A.
     """
+    disLog = log.getLogger('discord')
     embed = None
     image = None
 
@@ -529,10 +565,10 @@ async def Post(msg):
 
     elif msg['id'] == 'testrollid':
 
-        info_dict = json.loads(msg['info'])
-
         embed = dis.Embed()
         profile = pic.loads(msg['profile'])
+        disLog.debug(f"Testroll profile: {profile}.")
+
         embed.add_field(name='Creator', value=f"<@{profile.creator}>")
         embed.add_field(name='Owner', value=f"<@{profile.owner}>")
         embed.add_field(name='Name', value=profile.name)
@@ -545,8 +581,7 @@ async def Post(msg):
         embed.add_field(name='Description', value=profile.desc)
         embed.add_field(name='Favorite', value=f"<@{profile.favorite}>")
 
-        for i in msg['images']:
-            image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
+        image = io.BytesIO(b64.b64decode(msg['images']))
 
         await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
                                       file=dis.File(fp=image,
@@ -580,7 +615,7 @@ async def Post(msg):
                                           file=dis.File(fp=image,
                                           filename='image.png'), embed=embed)
 
-        elif msg['cmd'] == 'generate' or msg['cmd'] == 'testpost':
+        elif msg['cmd'] == 'generate' or msg['cmd'] == 'testshowprofile':
 
             embed = dis.Embed()
             embed.add_field(name='Prompt', value=info_dict['prompt'])

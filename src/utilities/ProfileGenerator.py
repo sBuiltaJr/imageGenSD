@@ -19,22 +19,23 @@ class Profile:
 
     #Optional Name?  description?
     def __init__(self,
-                 id       : int,
+                 owner    : int,
                  #TODO: combine the options into the options dictionary
                  #in a way to avoid key errors.
                  affinity : Optional[int]           = None,
                  battles  : Optional[int]           = None,
+                 creator  : Optional[int]           = None,
                  desc     : Optional[str]           = None,
                  exp      : Optional[int]           = None,
                  favorite : Optional[int]           = None,
                  history  : Optional[dict]          = None,
+                 id       : Optional[int]           = None,
                  img_id   : Optional[int]           = None,
                  info     : Optional[dict]          = None,
                  level    : Optional[int]           = None,
                  losses   : Optional[int]           = None,
                  missions : Optional[int]           = None,
                  name     : Optional[str]           = None,
-                 owner    : Optional[int]           = None,
                  rarity   : Optional[rc.RarityList] = None,
                  stats    : Optional[sc.Stats]      = None,
                  wins     : Optional[int]           = None):
@@ -47,9 +48,10 @@ class Profile:
 
         self.affinity = affinity if affinity != None else 0
         self.battles  = battles if battles != None else 0
-        self.creator  = id
+        self.creator  = creator if creator != None else owner
         self.exp      = exp if exp != None else 0
         self.favorite = favorite if favorite != None else 0
+        self.id       = id if id != None else "ffffffff-ffff-ffff-ffff-fffffffffffe"
         self.img_id   = img_id if img_id != None else None #Separate to prevent laoded profiles from eating memory
         self.info     = info if info != None else None #Get IGSD image info before profile?
         self.level    = level if level != None else 0
@@ -57,7 +59,7 @@ class Profile:
         self.history  = history if history != None else None
         self.missions = missions if missions != None else 0
         self.name     = nr.GetRandomName() if name == None else name
-        self.owner    = id if owner == None else owner
+        self.owner    = owner
         self.rarity   = rc.Rarity.GenerateRarity(self) if rarity == None else rarity
         self.stats    = sc.Stats(self.rarity) if stats == None else stats
         self.wins     = wins if wins != None else 0
@@ -132,6 +134,7 @@ def GetDefaultProfile() -> Profile:
                       info=None,
                       affinity=0,
                       battles=0,
+                      creator=170331989436661760,
                       desc="A poor defenseless bot doing its best.",
                       exp=0,
                       favorite=170331989436661760,

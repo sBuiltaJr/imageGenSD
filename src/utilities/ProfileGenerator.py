@@ -130,17 +130,17 @@ def GetDefaultProfile() -> Profile:
 
        Output: Profile - a profile with set defaults.
     """
-    default = Profile(id=170331989436661760,
-                      info=None,
+    default = Profile(owner=170331989436661760,
                       affinity=0,
                       battles=0,
                       creator=170331989436661760,
                       desc="A poor defenseless bot doing its best.",
                       exp=0,
                       favorite=170331989436661760,
+                      id=170331989436661760,
+                      info=None,
                       losses=0,
                       name="IGSD Mascot",
-                      owner=170331989436661760,
                       rarity=rc.RarityList.CUSTOM,
                       stats=sc.Stats(rarity=rc.RarityList.CUSTOM,
                                      agility=1,

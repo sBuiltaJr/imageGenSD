@@ -173,20 +173,20 @@ class MariadbIfc:
         cmd        = ""
         result     = None
         pic_id     = 0
-        
+
         self.db_log.info(f"Getting picture ID")
-        
+
         cmd = (self.prof_cmds['get_profile']) % (profile_id)
         self.db_log.debug(f"Executing get profile command {cmd}")
         cursor.execute(cmd)
-        
+
         profile = cursor.fetchone()
-        
+
         if profile == None:
 
             self.db_log.error(f"Could not find default profile in the DB!")
             return ""
-        
+
         self.db_log.info(f"Getting picture.")
         cmd = (self.pict_cmds['get_image']) % (profile[int(self.prof_cmds['pic_id_index'])])
         self.db_log.debug(f"Executing get picture command {cmd}")
@@ -199,15 +199,15 @@ class MariadbIfc:
 
             self.db_log.warn(f"Picture not found!")
             return ""
-        
+
         else:
-        
+
             self.db_log.debug(f"Got picture: {img[0]}")
             return img[0]
 
     def GetProfile(self,
-                 id         : Optional[str] = 'ffffffff-ffff-ffff-ffff-fffffffffffe',
-                 profile_id : Optional[str] = 'ffffffff-ffff-ffff-ffff-fffffffffffe') -> str:
+                   id         : Optional[str] = 'ffffffff-ffff-ffff-ffff-fffffffffffe',
+                   profile_id : Optional[str] = 'ffffffff-ffff-ffff-ffff-fffffffffffe') -> str:
         """Returns a given profile for a given user.
 
             Input: self - Pointer to the current object instance.
@@ -230,9 +230,9 @@ class MariadbIfc:
         if (result == None):
 
             self.db_log.warn(f"Profile not found!: {id}")
-        
+
         else:
-        
+
             self.db_log.debug(f"Got profile: {result}")
             #Since profiles are stored as individual elements in the DB for
             #statistical analysis, the actual profile object needs to be

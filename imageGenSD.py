@@ -303,7 +303,7 @@ async def testget(interaction: dis.Interaction):
                 'cmd'     : 'testpost',
                 'post'    : {'random': False, 'tags_added':'', 'tag_cnt':0},
                 'profile' : "",
-                'reply'   : "test msg"
+            'reply' : "test msg"
             }
         }
     disLog.debug(f"Posting test GET job {msg} to the queue.")
@@ -337,7 +337,7 @@ async def testpost(interaction: dis.Interaction):
                 'cmd'     : 'testpost',
                 'post'    : pg.GetDefaultJobData(),
                 'profile' : pic.dumps(pg.GetDefaultProfile())},
-                'reply'   : ""
+            'reply' : ""
             }
     disLog.debug(f"Posting test PUT job {msg} to the queue.")
     result = job_queue.Add(msg)
@@ -370,7 +370,7 @@ async def testroll(interaction: dis.Interaction):
                 'cmd'     : 'testroll',
                 'post'    : pg.GetDefaultJobData(),
                 'profile' : pic.dumps(pg.GetDefaultProfile())},
-                'reply'   : ""
+            'reply' : ""
             }
 
     disLog.debug(f"Posting test ROLL job {msg} to the queue.")
@@ -389,10 +389,10 @@ async def testshowprofile(interaction: dis.Interaction):
 
        Note: All slash commands *MUST* respond in 3 seconds or be terminated.
     """
-    msg = {'cmd'         : 'testroll',
+    msg = {'cmd'         : 'testshowprofile',
            'ctx'         : interaction,
            'guild'       : interaction.guild_id,
-           'id'          : "testrollid",
+           'id'          : "testshowprofileid",
            'loop'        : IGSD_client.GetLoop(),
            'images'      : db_ifc.GetImage(),
            'poster'      : Post,
@@ -474,7 +474,7 @@ async def generate(interaction: dis.Interaction,
                     'id'      : interaction.user.id,
                     'post'    : pg.GetDefaultJobData(),
                     'profile' : pic.dumps(pg.GetDefaultProfile())},
-                    'reply'   : ""
+                'reply'   : ""
                 }
 
         #And probably blacklist people who try to bypass prompt filters X times.
@@ -520,8 +520,8 @@ async def roll(interaction: dis.Interaction):
                 #can't be pickeled, so this must be passed with the work.
                 'id'      : interaction.user.id,
                 'post'    : pg.GetDefaultJobData(),
-                'profile' : pic.dumps(pg.Profile(owmer=interaction.user.id))},
-                'reply'   : ""
+                'profile' : pic.dumps(pg.Profile(interaction.user.id))},
+            'reply' : ""
             }
 
     msg['data']['post']['random'] = True
@@ -563,7 +563,7 @@ async def Post(msg):
         await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
                                       embed=embed)
 
-    elif msg['id'] == 'testrollid':
+    elif msg['id'] == 'testrollid' or msg['id'] == 'testshowprofileid':
 
         embed = dis.Embed()
         profile = pic.loads(msg['profile'])
@@ -581,7 +581,15 @@ async def Post(msg):
         embed.add_field(name='Description', value=profile.desc)
         embed.add_field(name='Favorite', value=f"<@{profile.favorite}>")
 
-        image = io.BytesIO(b64.b64decode(msg['images']))
+        if msg['id'] == 'testshowprofileid':
+
+            image = io.BytesIO(b64.b64decode(msg['images']))
+
+        else:
+
+            for i in msg['images']:
+
+                image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
 
         await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
                                       file=dis.File(fp=image,
@@ -609,13 +617,14 @@ async def Post(msg):
             embed.add_field(name='Favorite', value=f"<@{profile.favorite}>" if profile.favorite != 0 else "None. You could be here!")
 
             for i in msg['images']:
+
                 image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
 
             await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
                                           file=dis.File(fp=image,
                                           filename='image.png'), embed=embed)
 
-        elif msg['cmd'] == 'generate' or msg['cmd'] == 'testshowprofile':
+        else:
 
             embed = dis.Embed()
             embed.add_field(name='Prompt', value=info_dict['prompt'])

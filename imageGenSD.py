@@ -21,6 +21,7 @@ import requests as req
 import src.db.MariadbIfc as mdb
 import src.managers.QueueMgr as qm
 import src.utilities.NameRandomizer as nr
+import src.utilities.MenuPagination as mp
 import src.utilities.ProfileGenerator as pg
 import threading as th
 import time
@@ -235,7 +236,7 @@ async def on_ready():
 async def hello(interaction: dis.Interaction):
     """A test echo command to verify basic discord functionality.
 
-       Input  : None.
+       Input  : interaction - the interaction context from Discord.
 
        Output : None.
     """
@@ -283,7 +284,7 @@ async def testget(interaction: dis.Interaction):
     """A test HTTP GET command to verify basic connection to the webui page.
        Also tests the internal data path.
 
-       Input  : None.
+       Input  : interaction - the interaction context from Discord.
 
        Output : None.
     """
@@ -316,7 +317,7 @@ async def testget(interaction: dis.Interaction):
 async def testpost(interaction: dis.Interaction):
     """A test HTTP PUT command to verify basic connection to the webui page.
 
-       Input  : None.
+       Input  : interaction - the interaction context from Discord.
 
        Output : None.
 
@@ -349,7 +350,7 @@ async def testpost(interaction: dis.Interaction):
 async def testroll(interaction: dis.Interaction):
     """Verifies a profile can be added to a test image.
 
-       Input  : None.
+       Input  : interaction - the interaction context from Discord.
 
        Output : None.
 
@@ -381,9 +382,9 @@ async def testroll(interaction: dis.Interaction):
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(manage_guild=True) #The closest to 'be a mod' Discord has.
 async def testshowprofile(interaction: dis.Interaction):
-    """Verifies a profile can be added to a test image.
+    """Verifies a profile can be retrieved and shown to the user.
 
-       Input  : None.
+       Input  : interaction - the interaction context from Discord.
 
        Output : None.
 
@@ -411,7 +412,8 @@ async def testshowprofile(interaction: dis.Interaction):
 
     else:
 
-        await Post(msg);#interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
+        await interaction.response.send_message(f'Added test message to the post queue', ephemeral=True, delete_after=9.0)
+        await Post(msg)
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
@@ -495,44 +497,43 @@ async def generate(interaction: dis.Interaction,
 
     await interaction.response.send_message(f'{result}', ephemeral=True)
 
+
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
-async def roll(interaction: dis.Interaction):
-    """Generates a new character and saves them to the caller's character list.
+async def listprofiles(interaction: dis.Interaction):
+    """Returns a pagenated list of profile names and IDs owned by the caller.
 
-       Input  : None.
+        Input  : interaction - the interaction context from Discord.
 
-       Output : None.
-
-       Note: All slash commands *MUST* respond in 3 seconds or be terminated.
+        Output : N/A.
     """
-    disLog = log.getLogger('discord')
-    msg = { 'metadata' : {
-                'ctx'     : interaction,
-                'loop'    : IGSD_client.GetLoop(),
-                'poster'  : Post
-           },
-           'data' : {
-                #Requests are sorted by guild for rate-limiting
-                'guild'   : interaction.guild_id,
-                'cmd'     : 'roll',
-                #This should really be metadata but the rest of the metadata
-                #can't be pickeled, so this must be passed with the work.
-                'id'      : interaction.user.id,
-                'post'    : pg.GetDefaultJobData(),
-                'profile' : pic.dumps(pg.Profile(interaction.user.id))},
-            'reply' : ""
-            }
 
-    msg['data']['post']['random'] = True
-    msg['data']['post']['prompt'] = params['options']['prompts']
-    msg['data']['post']['seed']   = -1
+    profiles = db_ifc.GetProfiles(interaction.user.id)
 
-    #Check for daily limits?
-    disLog.debug(f"Posting ROLL job {msg} to the queue.")
-    result = job_queue.Add(msg)
+    if not profiles:
+    
+        embed = dis.Embed(title="Owned characters",
+                          description=f"User <@{interaction.user.id}> does not own any characters!  Use the `/roll` command to create one!",
+                          color=0xec1802)
+        await interaction.response.send_message(content=f"<@{interaction.user.id}>", embed=embed)
+    
+    else:
+    
+        async def GetPage(page: int):
+            page_size = 10
+            embed     = dis.Embed(title="Owned characters", description="")
+            offset    = (page-1) * page_size
 
-    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
+            for profile in profiles[offset:offset+page_size]:
+
+                embed.description += f"Name: `{profile[0]}` ID: `{profile[1]}`\n"
+
+            embed.set_author(name=f"Characters owned by {interaction.user.display_name}.")
+            pages = mp.MenuPagination.GetTotalPages(len(profile), page_size)
+            embed.set_footer(text=f"Page {page} of {pages}")
+            return embed, pages
+
+        await mp.MenuPagination(interaction, GetPage).Navigate()
 
 async def Post(msg):
     """Posts the query's result to Discord.  Runs in the main asyncio loop so
@@ -569,7 +570,6 @@ async def Post(msg):
         profile = pic.loads(msg['profile'])
         disLog.debug(f"Testroll profile: {profile}.")
 
-        embed.add_field(name='Creator', value=f"<@{profile.creator}>")
         embed.add_field(name='Owner', value=f"<@{profile.owner}>")
         embed.add_field(name='Name', value=profile.name)
         embed.add_field(name='Rarity', value=profile.rarity.name)
@@ -593,7 +593,8 @@ async def Post(msg):
 
         await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
                                       file=dis.File(fp=image,
-                                      filename='image.png'), embed=embed)
+                                      filename='image.png'),
+                                      embed=embed)
     else:
 
         info_dict = json.loads(msg['info'])
@@ -622,7 +623,8 @@ async def Post(msg):
 
             await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
                                           file=dis.File(fp=image,
-                                          filename='image.png'), embed=embed)
+                                          filename='image.png'),
+                                          embed=embed)
 
         else:
 
@@ -645,7 +647,47 @@ async def Post(msg):
 
             await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
                                           file=dis.File(fp=image,
-                                          filename='image.png'), embed=embed)
+                                          filename='image.png'),
+                                          embed=embed)
+
+@IGSD_client.tree.command()
+@dac.checks.has_permissions(use_application_commands=True)
+async def roll(interaction: dis.Interaction):
+    """Generates a new character and saves them to the caller's character list.
+
+       Input  : interaction - the interaction context from Discord.
+
+       Output : None.
+
+       Note: All slash commands *MUST* respond in 3 seconds or be terminated.
+    """
+    disLog = log.getLogger('discord')
+    msg = { 'metadata' : {
+                'ctx'     : interaction,
+                'loop'    : IGSD_client.GetLoop(),
+                'poster'  : Post
+           },
+           'data' : {
+                #Requests are sorted by guild for rate-limiting
+                'guild'   : interaction.guild_id,
+                'cmd'     : 'roll',
+                #This should really be metadata but the rest of the metadata
+                #can't be pickeled, so this must be passed with the work.
+                'id'      : interaction.user.id,
+                'post'    : pg.GetDefaultJobData(),
+                'profile' : pic.dumps(pg.Profile(interaction.user.id))},
+            'reply' : ""
+            }
+
+    msg['data']['post']['random'] = True
+    msg['data']['post']['prompt'] = params['options']['prompts']
+    msg['data']['post']['seed']   = -1
+
+    #Check for daily limits?
+    disLog.debug(f"Posting ROLL job {msg} to the queue.")
+    result = job_queue.Add(msg)
+
+    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 #####  main  #####
 
@@ -693,3 +735,8 @@ if __name__ == '__main__':
 #/flush:   clear queue and kill active jobs (if possible).  Needs Owner/Admin to run.
 #/Restart: Flush + recreates the queue objects.  Effectively restarts the script.  Also requires Owner.
 #/Cancel:  Kills most recent request from the poster, if possible.
+
+#Display command to show off profile to a server
+#list command in DMs to scroll through owned (needs filters to make managable)
+#Show command in DMs to show individual profiles (move to hash?  need better option than UUID)
+#List can update as user moves through list?

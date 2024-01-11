@@ -74,6 +74,7 @@ class MariadbIfc:
             self.prof_cmds = json.load(json_file)
             json_file      = open(pl.Path("src/db/queries/user_queries.json").absolute())
             self.user_cmds = json.load(json_file)
+
         #Sure, it's more pythonic to use with and only catch limited exceptions,
         #but making a case here for every possible exception type is dumb.
         except Exception as e:
@@ -169,7 +170,7 @@ class MariadbIfc:
 
             Output: N/A.
         """
-        cursor     = self.con.cursor()
+        cursor     = self.con.cursor(buffered=False)
         cmd        = ""
         result     = None
         pic_id     = 0
@@ -217,7 +218,7 @@ class MariadbIfc:
 
             Output: N/A.
         """
-        cursor     = self.con.cursor()
+        cursor     = self.con.cursor(buffered=False)
         cmd        = ""
         result     = None
 
@@ -267,6 +268,38 @@ class MariadbIfc:
             self.db_log.debug(f"Made profile: {pic.dumps(profile)}")
             return profile
 
+    def GetProfiles(self,
+                    user_id : int) -> list:
+        """Returns a given profile for a given user.
+
+            Input: self - Pointer to the current object instance.
+                   id - user ID to link the profile to.
+                   info - the picture metadata to store.
+                   profile - The profile to link the image to.
+
+            Output: N/A.
+        """
+        cursor     = self.con.cursor(buffered=False)
+        cmd        = ""
+        results    = []
+
+        self.db_log.info(f"Getting profiles for user {user_id}")
+        cmd = (self.prof_cmds['get_owned_profs']) % (user_id)
+        self.db_log.debug(f"Executing command: {cmd}")
+        cursor.execute(cmd)
+
+        for x in cursor:
+
+            self.db_log.debug(f"Adding result: {x}")
+            results.append((x[1],x[0]))
+            
+        self.db_log.debug(f"Got results: {results}")
+
+        return results
+
+
+        #cursor.execute((self.prof_cmds['get_profile']) % id)
+
     def SaveRoll(self,
                  id      : Optional[str] = 'ffffffff-ffff-ffff-ffff-fffffffffffe',
                  img     : Optional[str] = None,
@@ -281,7 +314,7 @@ class MariadbIfc:
 
             Output: N/A.
         """
-        cursor     = self.con.cursor()
+        cursor     = self.con.cursor(buffered=False)
         cmd        = ""
         entry      = pic.loads(profile)
         entry.info = info

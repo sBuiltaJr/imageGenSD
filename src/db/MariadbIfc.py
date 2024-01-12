@@ -65,7 +65,7 @@ class MariadbIfc:
 
         try:
 
-            self.db_log.debug(f"paths are: {pl.Path("src/db/db_commands.json").absolute()} {pl.Path("src/db/queries/picture_queries.json").absolute()} {pl.Path("src/db/queries/profile_queries.json").absolute()} {pl.Path("src/db/queries/user_queries.json").absolute()}")
+            self.db_log.debug(f"paths are: {pl.Path('src/db/db_commands.json').absolute()} {pl.Path('src/db/queries/picture_queries.json').absolute()} {pl.Path('src/db/queries/profile_queries.json').absolute()} {pl.Path('src/db/queries/user_queries.json').absolute()}")
             json_file      = open(pl.Path("src/db/db_commands.json").absolute())
             self.db_cmds   = json.load(json_file)
             json_file      = open(pl.Path("src/db/queries/picture_queries.json").absolute())
@@ -108,7 +108,8 @@ class MariadbIfc:
             self.con = mariadb.connect(host=self.args['host'],
                                        port=int(self.args['port']),
                                        user=self.args['user_name'],
-                                       password=self.args['password'])
+                                       password=self.args['password'],
+                                       autocommit=True)
 
             self.con.auto_reconnect = bool(self.args['auto_reconnect'])
 
@@ -427,3 +428,4 @@ class MariadbIfc:
 #CREATE USER IF NOT EXISTS 'IGSD_Bot'@'%' IDENTIFIED BY 'password';
 #GRANT ALL PRIVILEGES ON IGSD.* TO 'IGSD_Bot'@'%';
 #Set the max_allowed_packet=4G in my.ini or ~/.my.cnf
+#extra install on linux

@@ -19,6 +19,7 @@ import pathlib as pl
 import pickle as pic
 import requests as req
 import src.db.MariadbIfc as mdb
+import src.managers.DailyEventMgr as dem
 import src.managers.QueueMgr as qm
 import src.utilities.NameRandomizer as nr
 import src.utilities.MenuPagination as mp
@@ -492,32 +493,38 @@ async def roll(interaction: dis.Interaction):
        Note: All slash commands *MUST* respond in 3 seconds or be terminated.
     """
     disLog = log.getLogger('discord')
-    msg = { 'metadata' : {
-                'ctx'     : interaction,
-                'loop'    : IGSD_client.GetLoop(),
-                'poster'  : Post
-           },
-           'data' : {
-                #Requests are sorted by guild for rate-limiting
-                'guild'   : interaction.guild_id,
-                'cmd'     : 'roll',
-                #This should really be metadata but the rest of the metadata
-                #can't be pickeled, so this must be passed with the work.
-                'id'      : interaction.user.id,
-                'post'    : pg.GetDefaultJobData(),
-                'profile' : pic.dumps(pg.Profile(interaction.user.id))},
-            'reply' : ""
-            }
+    
+    if db_ifc.DailyDone(interaction.user.id) :
+    
+        await interaction.response.send_message(f"You have already claimed a daily character, please wait until the daily reset to claim another.", ephemeral=True, delete_after=30.0)
 
-    msg['data']['post']['random'] = True
-    msg['data']['post']['prompt'] = params['options']['prompts']
-    msg['data']['post']['seed']   = -1
+    else :
+        msg = { 'metadata' : {
+                    'ctx'     : interaction,
+                    'loop'    : IGSD_client.GetLoop(),
+                    'poster'  : Post
+               },
+               'data' : {
+                    #Requests are sorted by guild for rate-limiting
+                    'guild'   : interaction.guild_id,
+                    'cmd'     : 'roll',
+                    #This should really be metadata but the rest of the metadata
+                    #can't be pickeled, so this must be passed with the work.
+                    'id'      : interaction.user.id,
+                    'post'    : pg.GetDefaultJobData(),
+                    'profile' : pic.dumps(pg.Profile(interaction.user.id))},
+                'reply' : ""
+                }
 
-    #Check for daily limits?
-    disLog.debug(f"Posting ROLL job {msg} to the queue.")
-    result = job_queue.Add(msg)
+        msg['data']['post']['random'] = True
+        msg['data']['post']['prompt'] = params['options']['prompts']
+        msg['data']['post']['seed']   = -1
 
-    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
+        #Check for daily limits?
+        disLog.debug(f"Posting ROLL job {msg} to the queue.")
+        result = job_queue.Add(msg)
+
+        await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)

@@ -90,6 +90,309 @@ class MariadbIfc:
         self.db_log.info(f"Successfully connected to database: host: {options['host']} port: {options['port']} username: {options['user_name']} db: {options['database']}")
         self.db_log.debug(f"Loaded commands: {self.db_cmds} {self.pict_cmds} {self.prof_cmds} {self.user_cmds}")
 
+    def DailyDone(self,
+                   id         : Optional[str] = "x'fffffffffffffffffffffffffffffffe'") -> bool:
+        """Returns whether a user has already completed their daily actions.
+
+            Input: self - Pointer to the current object instance.
+                   id - The user to look-up, defailts to the test user.
+
+            Output: bool - True if the user has already done their dailies.
+        """
+        cursor = self.con.cursor(buffered=False)
+        cmd    = ""
+        result = False
+
+        #TODO: Better user/profile management.
+        self.db_log.info(f"Checking if user {id} exists")
+        cmd = (self.user_cmds['get_user']) % (id)
+        self.db_log.debug(f"Executing get user command: {cmd}")
+        cursor.execute(cmd)
+        user_profile = cursor.fetchone()
+
+        if user_profile == None:
+
+            cmd = (self.user_cmds['put_new']) % (id)
+            self.db_log.debug(f"Preparing to create user: {cmd}")
+            cursor.execute(cmd)
+            self.db_log.info(f"Created user")
+
+        else:
+
+            result = bool(user_profile[int(self.user_cmds['daily_index'])])
+            self.db_log.debug(f"User's daily value: {result}")
+
+        return result
+
+    def GetImage(self,
+                 picture_id : Optional[str] = None,
+                 profile_id : Optional[str] = "x'fffffffffffffffffffffffffffffffe'") -> str:
+        """Returns a given profile for a given user.
+
+            Input: self - Pointer to the current object instance.
+                   picture_id - optional picture ID to find, defaults to the ID
+                                linked to the profile_id provided.
+                   profile_id - optional profile ID for the picture, defaults
+                                to the test image.
+
+            Output: The image associated with the profile, if any.
+        """
+        cursor     = self.con.cursor(buffered=False)
+        cmd        = ""
+        result     = None
+        pic_id     = 0
+
+        if picture_id == None:
+
+            self.db_log.info(f"Getting picture ID")
+
+            cmd = (self.prof_cmds['get_profile']) % (profile_id)
+            self.db_log.debug(f"Executing get profile command {cmd}")
+            cursor.execute(cmd)
+
+            profile = cursor.fetchone()
+
+            if profile == None:
+
+                self.db_log.warn(f"Could not find the profile {profile_id} in the DB!")
+                return ""
+
+        self.db_log.info(f"Getting picture.")
+        cmd = (self.pict_cmds['get_image']) % (picture_id if picture_id != None else profile[int(self.prof_cmds['pic_id_index'])])
+        self.db_log.debug(f"Executing get picture command {cmd}")
+        cursor.execute(cmd)
+        #The cursor object doesn't appear to actually provide a better way
+        #to determine if the cursor has a result.
+        img = cursor.fetchone()
+
+        if (img == None):
+
+            self.db_log.warning(f"Picture ID {profile[int(self.prof_cmds['pic_id_index'])]} not found!")
+            return ""
+
+        else:
+
+            self.db_log.debug(f"Got picture: {img[0]}")
+            return img[0]
+
+    def GetProfile(self,
+                   id         : Optional[str] = "x'fffffffffffffffffffffffffffffffe'") -> Optional[pg.Profile]:
+        """Returns a given profile for a given user.
+
+            Input: self - Pointer to the current object instance.
+                   id - The profile to get, defaults to the test profile.
+
+            Output: str - The profile object found by the search, if any.
+        """
+        cursor     = self.con.cursor(buffered=False)
+        cmd        = ""
+        profile    = None
+        result     = None
+
+        self.db_log.info(f"Getting profile")
+        cursor.execute((self.prof_cmds['get_profile']) % id)
+        #The cursor object doesn't appear to actually provide a better way
+        #to determine if the cursor has a result.
+        result = cursor.fetchone()
+
+        if (result == None):
+
+            self.db_log.warning(f"Profile not found!: {id}")
+
+        else:
+
+            self.db_log.debug(f"Got profile: {result}")
+            #Since profiles are stored as individual elements in the DB for
+            #statistical analysis, the actual profile object needs to be
+            #re-created before it can be returned (since the rest of the code
+            #expects to interact with an object).
+            stats=sc.Stats(rarity=rc.RarityList(int(result[21])),
+                           agility=result[5],
+                           defense=result[6],
+                           endurance=result[7],
+                           luck=result[8],
+                           strength=result[9])
+            self.db_log.debug(f"Made stats: {pic.dumps(stats)}")
+             #TODO: find a way to better map these.  Blah blah factory.
+            profile=pg.Profile(id=result[0],
+                              img_id=result[1],
+                              creator=result[3],
+                              owner=result[4],
+                              affinity=result[10],
+                              battles=result[11],
+                              desc=result[12],
+                              exp=result[13],
+                              favorite=result[14],
+                              history=result[15],
+                              info=result[16],
+                              level=result[17],
+                              losses=result[18],
+                              missions=result[19],
+                              name=result[20],
+                              rarity=rc.RarityList(int(result[21])),
+                              stats=stats,
+                              wins=result[22])
+            self.db_log.debug(f"Made profile: {pic.dumps(profile)}")
+
+        return profile
+
+    def GetProfiles(self,
+                    user_id : int) -> list:
+        """Returns a given profile for a given user.
+
+            Input: self - Pointer to the current object instance.
+                   id - user ID to link the profile to.
+                   info - the picture metadata to store.
+                   profile - The profile to link the image to.
+
+            Output: N/A.
+        """
+        cursor     = self.con.cursor(buffered=False)
+        cmd        = ""
+        results    = []
+
+        self.db_log.info(f"Getting profiles for user {user_id}")
+        cmd = (self.prof_cmds['get_owned_profs']) % (user_id)
+        self.db_log.debug(f"Executing command: {cmd}")
+        cursor.execute(cmd)
+
+        for x in cursor:
+
+            self.db_log.debug(f"Adding result: {x}")
+            results.append((x[1],x[0]))
+
+        self.db_log.debug(f"Got results: {results}")
+
+        return results
+
+
+        #cursor.execute((self.prof_cmds['get_profile']) % id)
+
+    def SaveRoll(self,
+                 id      : Optional[str] = "x'fffffffffffffffffffffffffffffffe'",
+                 img     : Optional[str] = None,
+                 info    : dict          = None,
+                 profile : str           = None):
+        """Created a UUID for the given profile.  Assumes daily limits have
+           already been verified before calling.
+
+            Input: self - Pointer to the current object instance.
+                   id - user ID to link the profile to.
+                   info - the picture metadata to store.
+                   profile - The profile to link the image to.
+
+            Output: N/A.
+        """
+        cursor     = self.con.cursor(buffered=False)
+        cmd        = ""
+        entry      = pic.loads(profile)
+        entry.info = info
+        owned      = None
+        result     = None
+
+
+        cursor.execute((self.prof_cmds['get_profile']) % id)
+        #The cursor object doesn't appear to actually provide a better way
+        #to determine if the cursor has a result.
+        for x in cursor:
+
+            result = x
+            self.db_log.debug(f"Cursor Response in loop: {x}")
+
+        if (result != None):
+
+            #Is this is a test command?
+            if (x[0] == self.db_cmds['default_id']):
+
+                self.db_log.warning(f"Rolled the test profile: {x}")
+
+            #Somehow the the roll is linked to an existing, non-test profile?
+            else:
+
+                #TODO: post an error message to the user to try again.
+                self.db_log.warning(f"Found an existing non-test profile: {x}  For roll {info}")
+
+        else:
+
+            #TODO: Better user/profile management.
+#            self.db_log.info(f"Checking if user {id} exists")
+#            cmd = (self.user_cmds['get_user']) % (id)
+#            self.db_log.debug(f"Executing get user command: {cmd}")
+#            cursor.execute(cmd)
+#            user_profile = cursor.fetchone()
+#
+#           # if user_profile == None:
+#
+#                cmd = (self.user_cmds['put_new']) % (id)
+#                self.db_log.debug(f"Preparing to create user: {cmd}")
+#                cursor.execute(cmd)
+#                self.db_log.info(f"Created user")
+#
+#            else:
+#
+#                self.db_log.debug(f"User entry found: {user_profile}")
+#                cmd = (self.user_cmds['inc_cmd_ct']) % (id)
+#                self.db_log.debug(f"Preparing to update user cmd count {cmd}")
+#                cursor.execute(cmd)
+#                self.db_log.info(f"Incremented user {id}'s command count.")
+
+            cmd = (self.prof_cmds['put_new']) % (self.db_cmds['default_id'], id, entry.creator, entry.stats.agility, entry.stats.defense, entry.stats.endurance, entry.stats.luck, entry.stats.strength, entry.desc, entry.favorite, json.dumps(entry.info), entry.name, entry.rarity.value)
+            self.db_log.debug(f"Preparing to add profile: {cmd}")
+            cursor.execute(cmd)
+            #We don't actually know the GUID until we get it back from the DB.
+            pr_uid=cursor.fetchone()
+            self.db_log.info(f"Stored profile with UID {pr_uid}")
+
+            cmd = (self.pict_cmds['put_new']) % ('0x' + str(pr_uid[0]).replace('-',''), pr_uid[1], json.dumps(entry.info), img)
+            self.db_log.debug(f"Preparing to add picture: {cmd}")
+            cursor.execute(cmd)
+            pi_uid=cursor.fetchone()
+            self.db_log.info(f"Stored picture with UID {pi_uid}")
+
+            #It's only possible to link the picture to the profile after its
+            #UUID is generated.
+            cmd = (self.prof_cmds['put_img_id']) % (pi_uid[0], pr_uid[0])
+            self.db_log.debug(f"Updating Profile to reference picture UUID: {cmd}")
+            cursor.execute(cmd)
+            self.db_log.info(f"Linked picture id {pi_uid[0]} to profile {pr_uid[0]}")
+
+            #This needs to be last to get both UIDs.
+            cmd = (self.user_cmds['get_owned']) % (id)
+            self.db_log.debug(f"Getting user {id}'s owned dict: {cmd}")
+            cursor.execute(cmd)
+            str_owned = cursor.fetchone()
+
+            try:
+
+                self.db_log.debug(f"Got user {id}'s owned dict: {str_owned}")
+                owned=json.loads(str_owned[0])
+
+            except Exception as err:
+
+                self.db_log.debug(f"User {id}'s had no valid owned profiles: {str_owned}")
+                #This is a user's first roll, or they wiped all their characters.
+                owned= {}
+
+            self.db_log.info(f"Got user {id}'s owned dict")
+
+            #This allows for easy looping over (keys) to get all profiles.
+            key = f"{pr_uid[0]}"
+            owned[key] = pi_uid[0]
+            self.db_log.debug(f"Associated profile {pr_uid[0]} with user {id} as: {owned[key]}")
+
+            cmd = (self.user_cmds['set_owned']) % (json.dumps(owned), id)
+            self.db_log.debug(f"Updating user {id} owned dict: {cmd}")
+            cursor.execute(cmd)
+            self.db_log.info(f"Updated user {id}'s owned dict")
+
+            #Finally, now that the roll has been fully saved and connected to
+            #the user's profile, mark their daily roll as complete.
+            cmd = (self.user_cmds['set_daily_roll']) % (id)
+            self.db_log.debug(f"Updating user {id} owned dict: {cmd}")
+            cursor.execute(cmd)
+            self.db_log.info(f"Updated user {id}'s owned dict")
+
+
     def ValidateInstall(self) -> bool:
         """Validates all the database components are accessable and usable by
            the script.
@@ -159,267 +462,6 @@ class MariadbIfc:
         all_ok = True;
 
         return all_ok
-
-    def GetImage(self,
-                 picture_id : Optional[str] = None,
-                 profile_id : Optional[str] = 'ffffffff-ffff-ffff-ffff-fffffffffffe') -> str:
-        """Returns a given profile for a given user.
-
-            Input: self - Pointer to the current object instance.
-                   picture_id - optional picture ID to find, defaults to the ID
-                                linked to the profile_id provided.
-                   profile_id - optional profile ID for the picture, defaults
-                                to the test image.
-
-            Output: N/A.
-        """
-        cursor     = self.con.cursor(buffered=False)
-        cmd        = ""
-        result     = None
-        pic_id     = 0
-
-        if picture_id == None:
-
-            self.db_log.info(f"Getting picture ID")
-
-            cmd = (self.prof_cmds['get_profile']) % (profile_id)
-            self.db_log.debug(f"Executing get profile command {cmd}")
-            cursor.execute(cmd)
-
-            profile = cursor.fetchone()
-
-            if profile == None:
-
-                self.db_log.warn(f"Could not find the profile {profile_id} in the DB!")
-                return ""
-
-        self.db_log.info(f"Getting picture.")
-        cmd = (self.pict_cmds['get_image']) % (picture_id if picture_id != None else profile[int(self.prof_cmds['pic_id_index'])])
-        self.db_log.debug(f"Executing get picture command {cmd}")
-        cursor.execute(cmd)
-        #The cursor object doesn't appear to actually provide a better way
-        #to determine if the cursor has a result.
-        img = cursor.fetchone()
-
-        if (img == None):
-
-            self.db_log.warning(f"Picture ID {profile[int(self.prof_cmds['pic_id_index'])]} not found!")
-            return ""
-
-        else:
-
-            self.db_log.debug(f"Got picture: {img[0]}")
-            return img[0]
-
-    def GetProfile(self,
-                   id         : Optional[str] = 'ffffffff-ffff-ffff-ffff-fffffffffffe') -> str:
-        """Returns a given profile for a given user.
-
-            Input: self - Pointer to the current object instance.
-                   id - The profile to get, defaults to the test profile.
-
-            Output: N/A.
-        """
-        cursor     = self.con.cursor(buffered=False)
-        cmd        = ""
-        profile    = None
-        result     = None
-
-        self.db_log.info(f"Getting profile")
-        cursor.execute((self.prof_cmds['get_profile']) % id)
-        #The cursor object doesn't appear to actually provide a better way
-        #to determine if the cursor has a result.
-        result = cursor.fetchone()
-
-        if (result == None):
-
-            self.db_log.warning(f"Profile not found!: {id}")
-
-        else:
-
-            self.db_log.debug(f"Got profile: {result}")
-            #Since profiles are stored as individual elements in the DB for
-            #statistical analysis, the actual profile object needs to be
-            #re-created before it can be returned (since the rest of the code
-            #expects to interact with an object).
-            stats=sc.Stats(rarity=rc.RarityList(int(result[21])),
-                           agility=result[5],
-                           defense=result[6],
-                           endurance=result[7],
-                           luck=result[8],
-                           strength=result[9])
-            self.db_log.debug(f"Made stats: {pic.dumps(stats)}")
-             #TODO: find a way to better map these.  Blah blah factory.
-            profile=pg.Profile(id=result[0],
-                              img_id=result[1],
-                              creator=result[3],
-                              owner=result[4],
-                              affinity=result[10],
-                              battles=result[11],
-                              desc=result[12],
-                              exp=result[13],
-                              favorite=result[14],
-                              history=result[15],
-                              info=result[16],
-                              level=result[17],
-                              losses=result[18],
-                              missions=result[19],
-                              name=result[20],
-                              rarity=rc.RarityList(int(result[21])),
-                              stats=stats,
-                              wins=result[22])
-            self.db_log.debug(f"Made profile: {pic.dumps(profile)}")
-        return profile
-
-    def GetProfiles(self,
-                    user_id : int) -> list:
-        """Returns a given profile for a given user.
-
-            Input: self - Pointer to the current object instance.
-                   id - user ID to link the profile to.
-                   info - the picture metadata to store.
-                   profile - The profile to link the image to.
-
-            Output: N/A.
-        """
-        cursor     = self.con.cursor(buffered=False)
-        cmd        = ""
-        results    = []
-
-        self.db_log.info(f"Getting profiles for user {user_id}")
-        cmd = (self.prof_cmds['get_owned_profs']) % (user_id)
-        self.db_log.debug(f"Executing command: {cmd}")
-        cursor.execute(cmd)
-
-        for x in cursor:
-
-            self.db_log.debug(f"Adding result: {x}")
-            results.append((x[1],x[0]))
-            
-        self.db_log.debug(f"Got results: {results}")
-
-        return results
-
-
-        #cursor.execute((self.prof_cmds['get_profile']) % id)
-
-    def SaveRoll(self,
-                 id      : Optional[str] = 'ffffffff-ffff-ffff-ffff-fffffffffffe',
-                 img     : Optional[str] = None,
-                 info    : dict          = None,
-                 profile : str           = None):
-        """Created a UUID for the given profile.
-
-            Input: self - Pointer to the current object instance.
-                   id - user ID to link the profile to.
-                   info - the picture metadata to store.
-                   profile - The profile to link the image to.
-
-            Output: N/A.
-        """
-        cursor     = self.con.cursor(buffered=False)
-        cmd        = ""
-        entry      = pic.loads(profile)
-        entry.info = info
-        owned      = None
-        result     = None
-
-        cursor.execute((self.prof_cmds['get_profile']) % id)
-        #The cursor object doesn't appear to actually provide a better way
-        #to determine if the cursor has a result.
-        for x in cursor:
-
-            result = x
-            self.db_log.debug(f"Cursor Response in loop: {x}")
-
-        if (result != None):
-
-            #Is this is a test command?
-            if (x[0] == self.db_cmds['default_id']):
-
-                self.db_log.warning(f"Rolled the test profile: {x}")
-
-            #Somehow the the roll is linked to an existing, non-test profile?
-            else:
-
-                self.db_log.warning(f"Found an existing non-test profile: {x}  For roll {info}")
-
-        else:
-
-            #TODO: find a better way of updating user properties; right now
-            #both caller and here have to know the state parameters to update
-            #something.  Maybe a dict of only the keys to update, with
-            #f-strings on the commands to update without parsing names?  Has
-            #issues with knowing how to update (e.g. increment a count).  Maybe
-            #a dict of commands instead of values?
-            result = None
-
-            for x in cursor:
-
-                result = x
-                self.db_log.debug(f"User entry found: {x}")
-
-            if (result != None):
-
-                cmd = (self.user_cmds['put_new']) % (id, id)
-                self.db_log.debug(f"Preparing to create user: {cmd}")
-                cursor.execute(cmd)
-                self.db_log.info(f"Created user")
-
-            else:
-
-                cmd = (self.user_cmds['inc_cmd_ct']) % (id)
-                self.db_log.debug(f"Preparing to update user cmd count {cmd}")
-                cursor.execute(cmd)
-                self.db_log.info(f"Incremented user {id}'s command count.")
-
-            cmd = (self.prof_cmds['put_new']) % (self.db_cmds['default_id'], id, entry.creator, entry.stats.agility, entry.stats.defense, entry.stats.endurance, entry.stats.luck, entry.stats.strength, entry.desc, entry.favorite, json.dumps(entry.info), entry.name, entry.rarity.value)
-            self.db_log.debug(f"Preparing to add profile: {cmd}")
-            cursor.execute(cmd)
-            #We don't actually know the GUID until we get it back from the DB.
-            pr_uid=cursor.fetchone()
-            self.db_log.info(f"Stored profile with UID {pr_uid}")
-
-            cmd = (self.pict_cmds['put_new']) % ('0x' + str(pr_uid[0]).replace('-',''), pr_uid[1], json.dumps(entry.info), img)
-            self.db_log.debug(f"Preparing to add picture: {cmd}")
-            cursor.execute(cmd)
-            pi_uid=cursor.fetchone()
-            self.db_log.info(f"Stored picture with UID {pi_uid}")
-
-            #It's only possible to link the picture to the profile after its
-            #UUID is generated.
-            cmd = (self.prof_cmds['put_img_id']) % (pi_uid[0], pr_uid[0])
-            self.db_log.debug(f"Updating Profile to reference picture UUID: {cmd}")
-            cursor.execute(cmd)
-            self.db_log.info(f"Linked picture id {pi_uid[0]} to profile {pr_uid[0]}")
-
-            #This needs to be last to get both UIDs.
-            cmd = (self.user_cmds['get_owned']) % (id)
-            self.db_log.debug(f"Getting user {id}'s owned dict: {cmd}")
-            cursor.execute(cmd)
-            str_owned = cursor.fetchone()
-
-            if str_owned != None:
-
-                self.db_log.debug(f"Got user {id}'s owned dict: {str_owned}")
-                owned=json.loads(str_owned[0])
-
-            else:
-
-                #This is a user's first roll, or they wiped all their characters.
-                owned= {}
-
-            self.db_log.info(f"Got user {id}'s owned dict")
-
-            #This allows for easy looping over (keys) to get all profiles.
-            owned['{pr_uid[0]}'] = pi_uid[0]
-            self.db_log.debug(f"Associated profile {pr_uid[0]} with user {id} as: {owned['{pr_uid[0]}']}")
-
-            cmd = (self.user_cmds['put_owned']) % (json.dumps(owned), id)
-            self.db_log.debug(f"Updating user {id} owned dict: {cmd}")
-            cursor.execute(cmd)
-            self.db_log.info(f"Updated user {id}'s owned dict")
-
 
 #Forge characters via combination?
 

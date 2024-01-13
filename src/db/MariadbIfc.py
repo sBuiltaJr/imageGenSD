@@ -22,7 +22,6 @@ from typing import Literal, Optional
 
 #####  Package Variables  #####
 
-
 #####  Mariadb Interface Class  #####
 
 class MariadbIfc:
@@ -30,12 +29,14 @@ class MariadbIfc:
         tables, users, and fields as needed.
     """
 
-    def __init__(self, options : dict):
+    def __init__(self,
+                 options : dict):
         """Reads the included json config for db parameters, like username and
             login information.  Verification is handled in a different function.
             Also instantiates a logger specifically for this class.
 
             Input: self - Pointer to the current object instance.
+                   options - a dict of options for this class.
 
             Output: None - Throws exceptions on error.
         """
@@ -91,11 +92,11 @@ class MariadbIfc:
         self.db_log.debug(f"Loaded commands: {self.db_cmds} {self.pict_cmds} {self.prof_cmds} {self.user_cmds}")
 
     def DailyDone(self,
-                   id         : Optional[str] = "x'fffffffffffffffffffffffffffffffe'") -> bool:
+                   id  : Optional[str] = "x'fffffffffffffffffffffffffffffffe'") -> bool:
         """Returns whether a user has already completed their daily actions.
 
             Input: self - Pointer to the current object instance.
-                   id - The user to look-up, defailts to the test user.
+                   id - The user to look-up, defaults to the test user.
 
             Output: bool - True if the user has already done their dailies.
         """
@@ -314,28 +315,6 @@ class MariadbIfc:
 
         else:
 
-            #TODO: Better user/profile management.
-#            self.db_log.info(f"Checking if user {id} exists")
-#            cmd = (self.user_cmds['get_user']) % (id)
-#            self.db_log.debug(f"Executing get user command: {cmd}")
-#            cursor.execute(cmd)
-#            user_profile = cursor.fetchone()
-#
-#           # if user_profile == None:
-#
-#                cmd = (self.user_cmds['put_new']) % (id)
-#                self.db_log.debug(f"Preparing to create user: {cmd}")
-#                cursor.execute(cmd)
-#                self.db_log.info(f"Created user")
-#
-#            else:
-#
-#                self.db_log.debug(f"User entry found: {user_profile}")
-#                cmd = (self.user_cmds['inc_cmd_ct']) % (id)
-#                self.db_log.debug(f"Preparing to update user cmd count {cmd}")
-#                cursor.execute(cmd)
-#                self.db_log.info(f"Incremented user {id}'s command count.")
-
             cmd = (self.prof_cmds['put_new']) % (self.db_cmds['default_id'], id, entry.creator, entry.stats.agility, entry.stats.defense, entry.stats.endurance, entry.stats.luck, entry.stats.strength, entry.desc, entry.favorite, json.dumps(entry.info), entry.name, entry.rarity.value)
             self.db_log.debug(f"Preparing to add profile: {cmd}")
             cursor.execute(cmd)
@@ -391,7 +370,6 @@ class MariadbIfc:
             self.db_log.debug(f"Updating user {id} owned dict: {cmd}")
             cursor.execute(cmd)
             self.db_log.info(f"Updated user {id}'s owned dict")
-
 
     def ValidateInstall(self) -> bool:
         """Validates all the database components are accessable and usable by

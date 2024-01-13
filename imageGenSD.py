@@ -19,7 +19,7 @@ import pathlib as pl
 import pickle as pic
 import requests as req
 import src.db.MariadbIfc as mdb
-import src.managers.DailyEventMgr as dem
+#import src.managers.DailyEventMgr as dem
 import src.managers.QueueMgr as qm
 import src.utilities.NameRandomizer as nr
 import src.utilities.MenuPagination as mp
@@ -38,8 +38,9 @@ creds = {}
 default_params = {'cfg'       : 'src/config/config.json',
                   'cred'      : 'src/config/credentials.json',
                   'bot_token' : ''}
-db_ifc = None
-dict_path = ["","",""]
+daily_mgr    = None
+dict_path    = ["","",""]
+dem_ifc      = None
 IGSD_version = '0.3.5'
 #This will be modified in the future to accept user-supplied paths.
 #This file must be loaded prior to the logger to allow for user-provided
@@ -172,6 +173,7 @@ async def on_ready():
 
        Output : None.
     """
+    global daily_mgr
     global db_ifc
     global job_queue
     global profile_gen
@@ -197,26 +199,9 @@ async def on_ready():
     #TODO: get propagate to properly disable.
     #disLog.propagate=False
 
-    queLog = log.getLogger('queue')
-    queLog.setLevel(params['log_lvl'])
-    log_path = pl.Path(params['log_name_queue'])
+    disLog.info(f'Logged in as {IGSD_client.user} (ID: {IGSD_client.user.id})')
 
-    logHandler = lh.RotatingFileHandler(filename=log_path.absolute(),
-                                        encoding=params['log_encoding'],
-                                        maxBytes=int(params['max_bytes']),
-                                        backupCount=int(params['log_file_cnt'])
-    )
-
-    formatter = log.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}',
-                              params['date_fmt'],
-                              style='{'
-    )
-    logHandler.setFormatter(formatter)
-    queLog.addHandler(logHandler)
-
-    queLog.info(f'Logged in as {IGSD_client.user} (ID: {IGSD_client.user.id})')
-
-    queLog.debug(f"Creating Queue Manager.")
+    disLog.debug(f"Creating Queue Manager.")
     job_queue = qm.Manager(loop=IGSD_client.GetLoop(),
                            manager_id=1,
                            opts=params['queue_opts'])
@@ -224,7 +209,7 @@ async def on_ready():
                           name="Queue mgr",
                           daemon=True)
 
-    queLog.debug(f"Creating DB Interface.")
+    disLog.debug(f"Creating DB Interface.")
     db_ifc = mdb.MariadbIfc(options=params['db_opts'])
 
     #Only start the job queue once all otehr tasks are ready.
@@ -338,14 +323,14 @@ async def listprofiles(interaction: dis.Interaction):
     profiles = db_ifc.GetProfiles(interaction.user.id)
 
     if not profiles:
-    
+
         embed = dis.Embed(title="Owned characters",
                           description=f"User <@{interaction.user.id}> does not own any characters!  Use the `/roll` command to create one!",
                           color=0xec1802)
         await interaction.response.send_message(content=f"<@{interaction.user.id}>", embed=embed)
-    
+
     else:
-    
+
         async def GetPage(page: int):
             page_size = 10
             embed     = dis.Embed(title="Owned characters", description="")
@@ -429,7 +414,7 @@ async def Post(msg):
 
         if msg['cmd'] == 'roll':
 
-            db_ifc.SaveRoll(id=msg['id'], 
+            db_ifc.SaveRoll(id=msg['id'],
                             img=msg['images'][0],
                             info=info_dict,
                             profile=msg['profile'])
@@ -493,9 +478,9 @@ async def roll(interaction: dis.Interaction):
        Note: All slash commands *MUST* respond in 3 seconds or be terminated.
     """
     disLog = log.getLogger('discord')
-    
+
     if db_ifc.DailyDone(interaction.user.id) :
-    
+
         await interaction.response.send_message(f"You have already claimed a daily character, please wait until the daily reset to claim another.", ephemeral=True, delete_after=30.0)
 
     else :
@@ -553,12 +538,12 @@ async def showprofile(interaction: dis.Interaction,
     msg['profile'] = db_ifc.GetProfile(id)
 
     if not msg['profile']:
-    
+
         embed = dis.Embed(title="Error",
                           description=f"User A character with the ID `{id}` does not exist!",
                           color=0xec1802)
         await interaction.response.send_message(content=f"<@{interaction.user.id}>", embed=embed)
-    
+
     else:
 
         msg['images'] = db_ifc.GetImage(profile_id=id),

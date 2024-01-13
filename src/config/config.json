@@ -5,7 +5,6 @@
     "log_file_cnt"  : "5",
     "log_lvl"       : "INFO",
     "log_name"      : "logs/IGSD_Main.log",
-    "log_name_queue": "logs\\IGSD_Queue.log",
     "log_mode"      : "w",
     "managers"      : "1",
     "max_bytes"     : "33554432",
@@ -35,10 +34,9 @@
     "db_opts":
     {
         "auto_reconnect" : "True",
-        "date_fmt"      : "%Y-%m-%d %H:%M:%S",
+        "date_fmt"       : "%Y-%m-%d %H:%M:%S",
         "database"       : "IGSD",
         "db_cmds"        : "src/db/db_commands.json",
-        "date_fmt"       : "%Y-%m-%d %H:%M:%S",
         "host"           : "localhost",
         "log_dir"        : "logs",
         "log_encoding"   : "utf-8",
@@ -46,7 +44,7 @@
         "log_lvl"        : "INFO",
         "log_name_db"    : "logs/IGSD_MariaDB.log",
         "log_mode"       : "w",
-        "max_bytes"      : "33554432",
+        "max_bytes"      : "268435456",
         "password"       : "password",
         "port"           : "3306",
         "tables"         :
@@ -59,6 +57,17 @@
         "templates"      : "templates",
         "user_name"      : "IGSD_Bot"
     },
+    "daily_opts":
+    {
+        "date_fmt"       : "%Y-%m-%d %H:%M:%S",
+        "log_dir"        : "logs",
+        "log_encoding"   : "utf-8",
+        "log_file_cnt"   : "5",
+        "log_lvl"        : "INFO",
+        "log_name_daily" : "logs/daily_event_mgr.log",
+        "log_mode"       : "w",
+        "max_bytes"      : "33554432"
+    },
     "profile_opts":
     {
         "fn_dict_path"   : "src/config/first_names.txt",
@@ -66,9 +75,17 @@
     },
     "queue_opts":
     {
+        "date_fmt"         : "%Y-%m-%d %H:%M:%S",
         "depth"            : "100",
         "job_cooldown"     : "0.25",
         "job_count"        : "1",
+        "log_dir"          : "logs",
+        "log_encoding"     : "utf-8",
+        "log_file_cnt"     : "5",
+        "log_lvl"          : "INFO",
+        "log_name_queue"   : "logs\\IGSD_Queue.log",
+        "log_mode"         : "w",
+        "max_bytes"        : "16777216",
         "max_guilds"       : "10",
         "max_guild_reqs"   : "10",
         "max_rand_tag_cnt" : "35",

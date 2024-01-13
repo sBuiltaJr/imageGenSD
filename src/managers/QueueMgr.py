@@ -8,9 +8,11 @@
 #####  Imports  #####
 
 import logging as log
+import logging.handlers as lh
 import multiprocessing as mp
 #from multiprocessing.queues import Queue
 #from multiprocessing import get_context
+import pathlib as pl
 import queue
 import requests as req
 from urllib.parse import urljoin
@@ -57,7 +59,10 @@ jobs = {}
 
 class Manager:
 
-    def __init__(self, loop, manager_id: int, opts: dict):
+    def __init__(self,
+                 loop,
+                 manager_id : int,
+                 opts       : dict):
         """Manages job request queueing and tracks relevant discord context,
            such as poster, Guild, channel, etc.  The Manager gets this from the
            caller so different Managers could have different settings.
@@ -69,12 +74,29 @@ class Manager:
 
            Output: None - Throws exceptions on error.
         """
+
+        self.queLog = log.getLogger('queue')
+        self.queLog.setLevel(opts['log_lvl'])
+        log_path = pl.Path(opts['log_name_queue'])
+
+        logHandler = lh.RotatingFileHandler(filename=log_path.absolute(),
+                                            encoding=opts['log_encoding'],
+                                            maxBytes=int(opts['max_bytes']),
+                                            backupCount=int(opts['log_file_cnt'])
+        )
+
+        formatter = log.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}',
+                                  opts['date_fmt'],
+                                  style='{'
+        )
+        logHandler.setFormatter(formatter)
+        self.queLog.addHandler(logHandler)
+
         self.flush      = False
         self.id         = manager_id
         self.keep_going = True
         self.flush      = False
         self.post_loop  = loop
-        self.queLog     = log.getLogger('queue')
         #It's possible all opts are provided directly from config.json,
         #requiring them to be cast appropriately for the manager.  This also
         #allows the caller to never have to worry about casting the types

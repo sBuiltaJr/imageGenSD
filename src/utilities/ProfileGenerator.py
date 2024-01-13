@@ -76,6 +76,7 @@ def GetDefaultJobData() -> dict:
 
        Output: opts - a dictionary of the default queue arguments.
     """
+
     return {
     'enable_hr'           : True,
     'denoising_strength'  : 0.35,
@@ -130,6 +131,7 @@ def GetDefaultProfile() -> Profile:
 
        Output: Profile - a profile with set defaults.
     """
+
     default = Profile(owner=170331989436661760,
                       affinity=0,
                       battles=0,

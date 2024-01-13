@@ -3,7 +3,7 @@
 ## A Stable-Diffusion driven Image Generator Bot for Discord
 
 imageGenSD is a multi-purpose Discord bot.  It creates character images and
-profiles in a Gacha-like manner for users to interact with and enjoy.
+profiles in a gacha-like manner for users to interact with and enjoy.
 
 imageGenSD also contains a Stable-Diffusion wrapper written in Python.  It uses
 [Discord.py](https://discordpy.readthedocs.io/en/stable/index.html) to listen
@@ -53,7 +53,7 @@ Note: setup varies by OS.
 
 1. Install Stable Diffusion.
     1. Download any models, VAEs, and other extensions you want to use.
-    2. Modify `webui-user.sh ` or `webui-user.bat` to include the command line argument `--api`.
+    2. Modify `webui-user.sh` or `webui-user.bat` to include the command line argument `--api`.
 2. Install MariaDB (This must be done first on some OS's).
     1. Perform any initial MariaDB setup, if required (e.g. `mysql_secure_installation`).
     2. Ensure your MariaDB is initialized to acecpt large packets, i.e.:
@@ -61,7 +61,7 @@ Note: setup varies by OS.
 3. Install all pip modules (in a venv if using modern versions of Python).
     1. Note that some OS's require manual install of additional elements, such as:
         1. `libmariadb3 libmariadb-dev` on Linux.
-        2. `Applications/Python <ver> Profile.command` on MacOS.
+        2. `Applications/Python <version> Profile.command` on MacOS.
 4. Initialize the MariaDB database with the commands:
     1. `CREATE DATABASE IGSD;`
     2. `CREATE USER IF NOT EXISTS 'IGSD_Bot'@'%' IDENTIFIED BY 'password';`
@@ -71,7 +71,7 @@ Note: setup varies by OS.
 
 ## To run
 
-`<path to venv bin folder>python iamgeGenSD.py`
+`<path to venv bin folder>python imageGenSD.py`
 
 The bot will run in the terminal until killed with a `Ctrl+C` or similar.
 
@@ -79,9 +79,9 @@ The bot will run in the terminal until killed with a `Ctrl+C` or similar.
 
 Note: All command require a user to have at least slash command privileges.
 
-- Generate an image
-
 `/generate {randomize} {tag_cnt} {prompt} {negative_prompt} {height} {width} {steps} {seed} {cfg_scale} {sampler}`
+
+- Generate an image
 
 Provides a user-supplied job to the webui back-end.  All parameters
 are optional and defaults are provided.  All inputs are limited to reasonable
@@ -91,15 +91,15 @@ Setting Randomize to 'true' causes the system to select a random number of tags
 to append to the prompt (or a specific number if 'tag_cnt' is specified).  This
 can be combined with a user-supplied prompt.
 
-- Hello
-
 `/hello`
+
+- Hello
 
 Confirms the bot has the bare minimum capability for interacting in the Guild.
 
-- Show all profiles associated your Discord account
-
 `/listprofiles`
+
+- Show all profiles associated your Discord account
 
 Provides a paginated menu of profile names and IDs associated with the user's
 Discord account (and stored in the database).  If none, it encourages the user
@@ -110,34 +110,34 @@ disabled after a timeout.
 
 Only the user requesting the list is allowed to use the navigation buttons.
 
-- Roll a daily profile
-
 `/roll`
+
+- Roll a daily profile
 
 Generates a brand-new character and profile once daily.  Daily reset occurs at
 midnight UTC.  The character and profile are saved to the user profile that
 initiated the command and will appear in the `/listprofiles` command.
 
-- Display a given profile linked to an ID
-
 `/showprofile {profile ID}`
+
+- Display a given profile linked to an ID
 
 Displays the request profile, if it exists.  The can include profiles linked to
 other users if the author knows the profile ID.  Profile Names cannot be used,
 only the unique identifier for a profile (ID) like provided by `/listprofiles`.
 
-- Test GET
-
 `/testget`
+
+- Test GET
 
 Makes a basic HTTP get to the webui back-end to verify it's there and works.
 Also verifies the internal data path works (i.e. posting a job to the queue).
 
 This command is limited to Guild (server) managers only.
 
-- Test POST
-
 `/testpost`
+
+- Test POST
 
 Runs a pre-defined job through the webui interface, verifying that the SD
 server is able to provide data to a known request.  Meant for verifying the
@@ -145,9 +145,9 @@ server's ability to actually supply data.
 
 This command is limited to Guild (server) managers only.
 
-- Test Roll
-
 `/testroll`
+
+- Test Roll
 
 Performs a test version of the `/roll` command using known data.  Useful as a
 test/diagnostic tool to confirm the bot has access to all necessary resources
@@ -155,9 +155,9 @@ test/diagnostic tool to confirm the bot has access to all necessary resources
 
 This command is limited to Guild (server) managers only.
 
-- Test Show Profile
-
 `/testshowprofile`
+
+- Test Show Profile
 
 This command displays a test profile in the same manner as the `/showprofile`
 command.  It is useful as a debugging/diagnostic feature to ensure that data

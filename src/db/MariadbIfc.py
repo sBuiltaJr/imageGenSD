@@ -160,7 +160,7 @@ class MariadbIfc:
         return all_ok
 
     def GetImage(self,
-                 picture_id : Optional[str] = 'ffffffff-ffff-ffff-ffff-fffffffffffe',
+                 picture_id : Optional[str] = None,
                  profile_id : Optional[str] = 'ffffffff-ffff-ffff-ffff-fffffffffffe') -> str:
         """Returns a given profile for a given user.
 
@@ -176,21 +176,23 @@ class MariadbIfc:
         result     = None
         pic_id     = 0
 
-        self.db_log.info(f"Getting picture ID")
+        if picture_id == None:
 
-        cmd = (self.prof_cmds['get_profile']) % (profile_id)
-        self.db_log.debug(f"Executing get profile command {cmd}")
-        cursor.execute(cmd)
+            self.db_log.info(f"Getting picture ID")
 
-        profile = cursor.fetchone()
+            cmd = (self.prof_cmds['get_profile']) % (profile_id)
+            self.db_log.debug(f"Executing get profile command {cmd}")
+            cursor.execute(cmd)
 
-        if profile == None:
+            profile = cursor.fetchone()
 
-            self.db_log.error(f"Could not find default profile in the DB!")
-            return ""
+            if profile == None:
+
+                self.db_log.warn(f"Could not find the profile {profile_id} in the DB!")
+                return ""
 
         self.db_log.info(f"Getting picture.")
-        cmd = (self.pict_cmds['get_image']) % (profile[int(self.prof_cmds['pic_id_index'])])
+        cmd = (self.pict_cmds['get_image']) % (picture_id if picture_id != None else profile[int(self.prof_cmds['pic_id_index'])])
         self.db_log.debug(f"Executing get picture command {cmd}")
         cursor.execute(cmd)
         #The cursor object doesn't appear to actually provide a better way
@@ -199,7 +201,7 @@ class MariadbIfc:
 
         if (img == None):
 
-            self.db_log.warn(f"Picture not found!")
+            self.db_log.warn(f"Picture ID {profile[int(self.prof_cmds['pic_id_index'])]} not found!")
             return ""
 
         else:
@@ -221,6 +223,7 @@ class MariadbIfc:
         """
         cursor     = self.con.cursor(buffered=False)
         cmd        = ""
+        profile    = None
         result     = None
 
         self.db_log.info(f"Getting profile")
@@ -267,7 +270,7 @@ class MariadbIfc:
                               stats=stats,
                               wins=result[22])
             self.db_log.debug(f"Made profile: {pic.dumps(profile)}")
-            return profile
+        return profile
 
     def GetProfiles(self,
                     user_id : int) -> list:
@@ -428,4 +431,4 @@ class MariadbIfc:
 #CREATE USER IF NOT EXISTS 'IGSD_Bot'@'%' IDENTIFIED BY 'password';
 #GRANT ALL PRIVILEGES ON IGSD.* TO 'IGSD_Bot'@'%';
 #Set the max_allowed_packet=4G in my.ini or ~/.my.cnf
-#extra install on linux
+#extra install steps on linux (C library) and mac (install certs)

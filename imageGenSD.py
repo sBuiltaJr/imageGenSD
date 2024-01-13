@@ -233,6 +233,88 @@ async def on_ready():
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
+@dac.describe(random=f"A flag to add between {params['queue_opts']['min_rand_tag_cnt']} and {params['queue_opts']['max_rand_tag_cnt']} random tags to the user prompt.  Does not count towards the maximum prompt length.",
+              tag_cnt=f"If 'random' is enabled, an exact number of tags to add to the prompt, up to params['queue_opts']['max_rand_tag_cnt']",
+              prompt=f"The prompt(s) for generating the image, up to {params['options']['max_prompt_len']} characters.",
+              negative_prompt=f"Prompts to filter out of results, up to {params['options']['max_prompt_len']} characters.",
+              height=f"Image height, rounded down to a {params['options']['step_size']} pixel size.",
+              width=f"Image width, rounded down to a {params['options']['step_size']} pixel size.",
+              steps=f"Number of steps, from {params['options']['min_steps']} to {params['options']['max_steps']}.",
+              seed="Use a seed for more repeatable results on a given image.",
+              cfg_scale="how much weight to give your prompts.",
+              sampler="Sampling method (like 'Euler').")
+async def generate(interaction: dis.Interaction,
+                   random          : Optional[bool]                                                                                        = False,
+                   tag_cnt         : Optional[dac.Range[int, 0, int(params['queue_opts']['max_rand_tag_cnt'])]]                            = 0,
+                   prompt          : Optional[dac.Range[str, 0, int(params['options']['max_prompt_len'])]]                                 = params['options']['prompts'],
+                   negative_prompt : Optional[dac.Range[str, 0, int(params['options']['max_prompt_len'])]]                                 = params['options']['negatives'],
+                   height          : Optional[dac.Range[int, int(params['options']['min_height']), int(params['options']['max_height'])]]  = int(params['options']['height']),
+                   width           : Optional[dac.Range[int, int(params['options']['min_width']), int(params['options']['max_width'])]]    = int(params['options']['width']),
+                   steps           : Optional[dac.Range[int, int(params['options']['min_steps']), int(params['options']['max_steps'])]]    = int(params['options']['steps']),
+                   seed            : Optional[dac.Range[int, -(pow(2,53) - 1), (pow(2,53) - 1)]]                                           = int(params['options']['seed']), #These are limits imposed by Discord.
+                   cfg_scale       : Optional[dac.Range[float, 0.0, 30.0]]                                                                 = float(params['options']['cfg']),
+                   sampler         : Optional[Literal["Euler a","Euler","LMS","Heun","DPM2","DM2 a","DPM++ 2S a","DPM++ 2M","DPM++ SDE","DPM fast","DPM adaptive","LMS Karras","DPM2 Karras","DPM2 a Karras","DPM++ 2M Karras","DPM++ SDE Karras","DDIM","PLMS"]]  = params['options']['sampler']):
+                   #Yes, I am disappointed I can't wrangle the sampler list into a config parameter.  Thanks PEP 586.
+    """Generates a image based on user-supplied prompts, if provided.  Provides
+       defaults if not.  Enforces any parameter limits, including an optional
+       banned word filter.
+
+        Input  : random - Adds a random number of random tags to the prompt input if True.
+                 tag_cnt - A specific number of random tags to add to a prompt.
+                 prompt - What the user wants to append to the default prompt.
+                 negative_prompt - What the user wants to append to the default.
+                 height - How tall to make the pre-scaled image.
+                 width - How wide to make the pre-scaled image.
+                 steps - How many steps to itterate in the SD process.
+                 seed - What seed value to use (-1 is random).
+                 cfg_scale - How much weight to give prompts in generation.
+                 sampler - Which algorithm to use.
+
+        Output : N/A.
+    """
+    disLog = log.getLogger('discord')
+    error = False;
+
+    if BannedWordsFound(prompt, params['options']['banned_words']) or BannedWordsFound(negative_prompt, params['options']['banned_neg_words']):
+        result = f"Job ignored.  Please do not use words containing: {params['options']['banned_words']} in the positive prompt or {params['options']['banned_neg_words']} in the negative prompt."
+    else:
+        msg = { 'metadata' : {
+                    'ctx'    : interaction,
+                    'loop'   : IGSD_client.GetLoop(),
+                    'poster' : Post
+               },
+               'data' : {
+                    #Requests are sorted by guild for rate-limiting
+                    'guild'   : interaction.guild_id,
+                    'cmd'     : 'generate',
+                    #This should really be metadata but the rest of the metadata
+                    #can't be pickeled, so this must be passed with the work.
+                    'id'      : interaction.user.id,
+                    'post'    : pg.GetDefaultJobData(),
+                    'profile' : pic.dumps(pg.GetDefaultProfile())},
+                'reply'   : ""
+                }
+
+        #And probably blacklist people who try to bypass prompt filters X times.
+        #Also nearly all input sanitization is done by the function call.
+        msg['data']['post']['random']          = random
+        msg['data']['post']['tag_cnt']         = tag_cnt
+        msg['data']['post']['prompt']          = prompt
+        msg['data']['post']['negative_prompt'] = negative_prompt
+        msg['data']['post']['height']          = (height - (height % int(params['options']['step_size'])))
+        msg['data']['post']['width']           = (width  - (width  % int(params['options']['step_size'])))
+        msg['data']['post']['steps']           = steps
+        msg['data']['post']['seed']            = seed
+        msg['data']['post']['cfg_scale']       = cfg_scale
+        msg['data']['post']['sampler']         = sampler
+
+        disLog.debug(f"Posting user job {msg} to the queue.")
+        result = job_queue.Add(msg)
+
+    await interaction.response.send_message(f'{result}', ephemeral=True)
+
+@IGSD_client.tree.command()
+@dac.checks.has_permissions(use_application_commands=True)
 async def hello(interaction: dis.Interaction):
     """A test echo command to verify basic discord functionality.
 
@@ -241,6 +323,241 @@ async def hello(interaction: dis.Interaction):
        Output : None.
     """
     await interaction.response.send_message(f'Hi, {interaction.user.mention}', ephemeral=True, delete_after=9.0)
+
+@IGSD_client.tree.command()
+@dac.checks.has_permissions(use_application_commands=True)
+async def listprofiles(interaction: dis.Interaction):
+    """Returns a pagenated list of profile names and IDs owned by the caller.
+
+        Input  : interaction - the interaction context from Discord.
+
+        Output : N/A.
+    """
+    disLog = log.getLogger('discord')
+    profiles = db_ifc.GetProfiles(interaction.user.id)
+
+    if not profiles:
+    
+        embed = dis.Embed(title="Owned characters",
+                          description=f"User <@{interaction.user.id}> does not own any characters!  Use the `/roll` command to create one!",
+                          color=0xec1802)
+        await interaction.response.send_message(content=f"<@{interaction.user.id}>", embed=embed)
+    
+    else:
+    
+        async def GetPage(page: int):
+            page_size = 10
+            embed     = dis.Embed(title="Owned characters", description="")
+            offset    = (page-1) * page_size
+
+            for profile in profiles[offset:offset+page_size]:
+
+                embed.description += f"Name: `{profile[0]}` ID: `{profile[1]}`\n"
+
+            embed.set_author(name=f"Characters owned by {interaction.user.display_name}.")
+            pages = mp.MenuPagination.GetTotalPages(len(profiles), page_size)
+            embed.set_footer(text=f"Page {page} of {pages}")
+            return embed, pages
+
+        await mp.MenuPagination(interaction, GetPage).Navigate()
+
+async def Post(msg):
+    """Posts the query's result to Discord.  Runs in the main asyncio loop so
+       the manager can start the next job concurrently.
+
+        Input  : msg - a reference to the completed job.
+
+        Output : N/A.
+    """
+    disLog = log.getLogger('discord')
+    embed = None
+    image = None
+
+    if msg['status_code'] != 200:
+        embed = dis.Embed(title='Job Error:',
+                          description=f"Status code: {msg['status_code']} Reason: {msg['reason']}",
+                          color=0xec1802)
+
+        await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
+                                      embed=embed)
+
+    elif msg['id'] == 'testgetid' or ((type(msg['id']) != str) and (msg['id'] < 10)):
+        #Maybe a future version will have a generic image to return and eliminate this clause.
+        embed = dis.Embed(title='Test GET successful:',
+                          description=f"Status code: {msg['status_code']} Reason: {msg['reason']}",
+                          color=0x008000)
+
+        await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
+                                      embed=embed)
+
+    #TODO: Better post formatting based on command type.
+    elif msg['id'] == 'testrollid' or msg['id'] == 'testshowprofileid'  or msg['id'] == 'showprofileid':
+
+        embed = dis.Embed()
+        disLog.debug(f"Test/show profile: {pic.dumps(msg['profile'])}.")
+        favorite = "<@{msg['profile'].favorite}>" if msg['profile'].favorite != 0 else 'None. You could be here!'
+
+        embed.add_field(name='Owner', value=f"<@{msg['profile'].owner}>")
+        embed.add_field(name='Name', value=msg['profile'].name)
+        embed.add_field(name='Rarity', value=msg['profile'].rarity.name)
+        embed.add_field(name='Agility', value=msg['profile'].stats.agility)
+        embed.add_field(name='Defense', value=msg['profile'].stats.defense)
+        embed.add_field(name='Endurance', value=msg['profile'].stats.endurance)
+        embed.add_field(name='Luck', value=msg['profile'].stats.luck)
+        embed.add_field(name='Strength', value=msg['profile'].stats.strength)
+        embed.add_field(name='Description', value=msg['profile'].desc)
+        embed.add_field(name='Favorite', value=f"{favorite}")
+
+        if msg['id'] == 'testshowprofileid': #!= 'testrollid':
+
+            image = io.BytesIO(b64.b64decode(msg['images']))
+
+        else:
+
+            for i in msg['images']:
+
+                image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
+
+        await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
+                                      file=dis.File(fp=image,
+                                      filename='image.png'),
+                                      embed=embed)
+    else:
+
+        info_dict = json.loads(msg['info'])
+
+        if msg['cmd'] == 'roll':
+
+            db_ifc.SaveRoll(id=msg['id'], 
+                            img=msg['images'][0],
+                            info=info_dict,
+                            profile=msg['profile'])
+
+            embed = dis.Embed()
+            profile = pic.loads(msg['profile'])
+            embed.add_field(name='Creator', value=f"<@{profile.creator}>")
+            embed.add_field(name='Owner', value=f"<@{profile.owner}>")
+            embed.add_field(name='Name', value=profile.name)
+            embed.add_field(name='Rarity', value=profile.rarity.name)
+            embed.add_field(name='Agility', value=profile.stats.agility)
+            embed.add_field(name='Defense', value=profile.stats.defense)
+            embed.add_field(name='Endurance', value=profile.stats.endurance)
+            embed.add_field(name='Luck', value=profile.stats.luck)
+            embed.add_field(name='Strength', value=profile.stats.strength)
+            embed.add_field(name='Description', value=profile.desc)
+            embed.add_field(name='Favorite', value=f"<@{profile.favorite}>" if profile.favorite != 0 else "None. You could be here!")
+
+            for i in msg['images']:
+
+                image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
+
+            await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
+                                          file=dis.File(fp=image,
+                                          filename='image.png'),
+                                          embed=embed)
+
+        else:
+
+            embed = dis.Embed()
+            embed.add_field(name='Prompt', value=info_dict['prompt'])
+            embed.add_field(name='Negative Prompt', value=info_dict['negative_prompt'])
+            embed.add_field(name='Steps', value=info_dict['steps'])
+            embed.add_field(name='Height', value=info_dict['height'])
+            embed.add_field(name='Width', value=info_dict['width'])
+            embed.add_field(name='Sampler', value=info_dict['sampler_name'])
+            embed.add_field(name='Seed', value=info_dict['seed'])
+            embed.add_field(name='Subseed', value=info_dict['subseed'])
+            embed.add_field(name='CFG Scale', value=info_dict['cfg_scale'])
+            #Randomized and co are special because they're not a parameter sent to SD.
+            embed.add_field(name='Randomized', value=msg['random'])
+            embed.add_field(name='Tags Added to Prompt', value=msg['tags_added'])
+
+            for i in msg['images']:
+                image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
+
+            await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
+                                          file=dis.File(fp=image,
+                                          filename='image.png'),
+                                          embed=embed)
+
+@IGSD_client.tree.command()
+@dac.checks.has_permissions(use_application_commands=True)
+async def roll(interaction: dis.Interaction):
+    """Generates a new character and saves them to the caller's character list.
+
+       Input  : interaction - the interaction context from Discord.
+
+       Output : None.
+
+       Note: All slash commands *MUST* respond in 3 seconds or be terminated.
+    """
+    disLog = log.getLogger('discord')
+    msg = { 'metadata' : {
+                'ctx'     : interaction,
+                'loop'    : IGSD_client.GetLoop(),
+                'poster'  : Post
+           },
+           'data' : {
+                #Requests are sorted by guild for rate-limiting
+                'guild'   : interaction.guild_id,
+                'cmd'     : 'roll',
+                #This should really be metadata but the rest of the metadata
+                #can't be pickeled, so this must be passed with the work.
+                'id'      : interaction.user.id,
+                'post'    : pg.GetDefaultJobData(),
+                'profile' : pic.dumps(pg.Profile(interaction.user.id))},
+            'reply' : ""
+            }
+
+    msg['data']['post']['random'] = True
+    msg['data']['post']['prompt'] = params['options']['prompts']
+    msg['data']['post']['seed']   = -1
+
+    #Check for daily limits?
+    disLog.debug(f"Posting ROLL job {msg} to the queue.")
+    result = job_queue.Add(msg)
+
+    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
+
+@IGSD_client.tree.command()
+@dac.checks.has_permissions(use_application_commands=True)
+@dac.describe(id="The profile of the character you'd like to view.  Use /listprofiles to see the name and ID of profiles you own!")
+async def showprofile(interaction: dis.Interaction,
+                      id         : str):
+    """Displays the profile associated with the provided ID.
+
+        Input  : interaction - the interaction context from Discord.
+
+        Output : N/A.
+    """
+    disLog = log.getLogger('discord')
+    msg = {'cmd'         : 'showprofile',
+           'ctx'         : interaction,
+           'guild'       : interaction.guild_id,
+           'id'          : "showprofileid",
+           'loop'        : IGSD_client.GetLoop(),
+           'poster'      : Post,
+           'post'        : pg.GetDefaultJobData(),
+           'reply'       : "",
+           'status_code' : 200
+            }
+
+    msg['profile'] = db_ifc.GetProfile(id)
+
+    if not msg['profile']:
+    
+        embed = dis.Embed(title="Error",
+                          description=f"User A character with the ID `{id}` does not exist!",
+                          color=0xec1802)
+        await interaction.response.send_message(content=f"<@{interaction.user.id}>", embed=embed)
+    
+    else:
+
+        msg['images']= db_ifc.GetImage(profile_id=id),
+
+        await interaction.response.send_message(f"Added {msg['profile'].name}'s profile to the post queue.", ephemeral=True, delete_after=9.0)
+        await Post(msg)
+
 
 #This is commented until the failed inheritance issue can be resolved.
 #@IGSD_client.tree.command()
@@ -398,7 +715,7 @@ async def testshowprofile(interaction: dis.Interaction):
            'images'      : db_ifc.GetImage(),
            'poster'      : Post,
            'post'        : pg.GetDefaultJobData(),
-           'profile'     : pic.dumps(db_ifc.GetProfile()),
+           'profile'     : db_ifc.GetProfile(),
            'reply'       : "",
            'status_code' : 200
             }
@@ -414,280 +731,6 @@ async def testshowprofile(interaction: dis.Interaction):
 
         await interaction.response.send_message(f'Added test message to the post queue', ephemeral=True, delete_after=9.0)
         await Post(msg)
-
-@IGSD_client.tree.command()
-@dac.checks.has_permissions(use_application_commands=True)
-@dac.describe(random=f"A flag to add between {params['queue_opts']['min_rand_tag_cnt']} and {params['queue_opts']['max_rand_tag_cnt']} random tags to the user prompt.  Does not count towards the maximum prompt length.",
-              tag_cnt=f"If 'random' is enabled, an exact number of tags to add to the prompt, up to params['queue_opts']['max_rand_tag_cnt']",
-              prompt=f"The prompt(s) for generating the image, up to {params['options']['max_prompt_len']} characters.",
-              negative_prompt=f"Prompts to filter out of results, up to {params['options']['max_prompt_len']} characters.",
-              height=f"Image height, rounded down to a {params['options']['step_size']} pixel size.",
-              width=f"Image width, rounded down to a {params['options']['step_size']} pixel size.",
-              steps=f"Number of steps, from {params['options']['min_steps']} to {params['options']['max_steps']}.",
-              seed="Use a seed for more repeatable results on a given image.",
-              cfg_scale="how much weight to give your prompts.",
-              sampler="Sampling method (like 'Euler').")
-async def generate(interaction: dis.Interaction,
-                   random          : Optional[bool]                                                                                        = False,
-                   tag_cnt         : Optional[dac.Range[int, 0, int(params['queue_opts']['max_rand_tag_cnt'])]]                            = 0,
-                   prompt          : Optional[dac.Range[str, 0, int(params['options']['max_prompt_len'])]]                                 = params['options']['prompts'],
-                   negative_prompt : Optional[dac.Range[str, 0, int(params['options']['max_prompt_len'])]]                                 = params['options']['negatives'],
-                   height          : Optional[dac.Range[int, int(params['options']['min_height']), int(params['options']['max_height'])]]  = int(params['options']['height']),
-                   width           : Optional[dac.Range[int, int(params['options']['min_width']), int(params['options']['max_width'])]]    = int(params['options']['width']),
-                   steps           : Optional[dac.Range[int, int(params['options']['min_steps']), int(params['options']['max_steps'])]]    = int(params['options']['steps']),
-                   seed            : Optional[dac.Range[int, -(pow(2,53) - 1), (pow(2,53) - 1)]]                                           = int(params['options']['seed']), #These are limits imposed by Discord.
-                   cfg_scale       : Optional[dac.Range[float, 0.0, 30.0]]                                                                 = float(params['options']['cfg']),
-                   sampler         : Optional[Literal["Euler a","Euler","LMS","Heun","DPM2","DM2 a","DPM++ 2S a","DPM++ 2M","DPM++ SDE","DPM fast","DPM adaptive","LMS Karras","DPM2 Karras","DPM2 a Karras","DPM++ 2M Karras","DPM++ SDE Karras","DDIM","PLMS"]]  = params['options']['sampler']):
-                   #Yes, I am disappointed I can't wrangle the sampler list into a config parameter.  Thanks PEP 586.
-    """Generates a image based on user-supplied prompts, if provided.  Provides
-       defaults if not.  Enforces any parameter limits, including an optional
-       banned word filter.
-
-        Input  : random - Adds a random number of random tags to the prompt input if True.
-                 tag_cnt - A specific number of random tags to add to a prompt.
-                 prompt - What the user wants to append to the default prompt.
-                 negative_prompt - What the user wants to append to the default.
-                 height - How tall to make the pre-scaled image.
-                 width - How wide to make the pre-scaled image.
-                 steps - How many steps to itterate in the SD process.
-                 seed - What seed value to use (-1 is random).
-                 cfg_scale - How much weight to give prompts in generation.
-                 sampler - Which algorithm to use.
-
-        Output : N/A.
-    """
-    disLog = log.getLogger('discord')
-    error = False;
-
-    if BannedWordsFound(prompt, params['options']['banned_words']) or BannedWordsFound(negative_prompt, params['options']['banned_neg_words']):
-        result = f"Job ignored.  Please do not use words containing: {params['options']['banned_words']} in the positive prompt or {params['options']['banned_neg_words']} in the negative prompt."
-    else:
-        msg = { 'metadata' : {
-                    'ctx'    : interaction,
-                    'loop'   : IGSD_client.GetLoop(),
-                    'poster' : Post
-               },
-               'data' : {
-                    #Requests are sorted by guild for rate-limiting
-                    'guild'   : interaction.guild_id,
-                    'cmd'     : 'generate',
-                    #This should really be metadata but the rest of the metadata
-                    #can't be pickeled, so this must be passed with the work.
-                    'id'      : interaction.user.id,
-                    'post'    : pg.GetDefaultJobData(),
-                    'profile' : pic.dumps(pg.GetDefaultProfile())},
-                'reply'   : ""
-                }
-
-        #And probably blacklist people who try to bypass prompt filters X times.
-        #Also nearly all input sanitization is done by the function call.
-        msg['data']['post']['random']          = random
-        msg['data']['post']['tag_cnt']         = tag_cnt
-        msg['data']['post']['prompt']          = prompt
-        msg['data']['post']['negative_prompt'] = negative_prompt
-        msg['data']['post']['height']          = (height - (height % int(params['options']['step_size'])))
-        msg['data']['post']['width']           = (width  - (width  % int(params['options']['step_size'])))
-        msg['data']['post']['steps']           = steps
-        msg['data']['post']['seed']            = seed
-        msg['data']['post']['cfg_scale']       = cfg_scale
-        msg['data']['post']['sampler']         = sampler
-
-        disLog.debug(f"Posting user job {msg} to the queue.")
-        result = job_queue.Add(msg)
-
-    await interaction.response.send_message(f'{result}', ephemeral=True)
-
-
-@IGSD_client.tree.command()
-@dac.checks.has_permissions(use_application_commands=True)
-async def listprofiles(interaction: dis.Interaction):
-    """Returns a pagenated list of profile names and IDs owned by the caller.
-
-        Input  : interaction - the interaction context from Discord.
-
-        Output : N/A.
-    """
-
-    profiles = db_ifc.GetProfiles(interaction.user.id)
-
-    if not profiles:
-    
-        embed = dis.Embed(title="Owned characters",
-                          description=f"User <@{interaction.user.id}> does not own any characters!  Use the `/roll` command to create one!",
-                          color=0xec1802)
-        await interaction.response.send_message(content=f"<@{interaction.user.id}>", embed=embed)
-    
-    else:
-    
-        async def GetPage(page: int):
-            page_size = 10
-            embed     = dis.Embed(title="Owned characters", description="")
-            offset    = (page-1) * page_size
-
-            for profile in profiles[offset:offset+page_size]:
-
-                embed.description += f"Name: `{profile[0]}` ID: `{profile[1]}`\n"
-
-            embed.set_author(name=f"Characters owned by {interaction.user.display_name}.")
-            pages = mp.MenuPagination.GetTotalPages(len(profile), page_size)
-            embed.set_footer(text=f"Page {page} of {pages}")
-            return embed, pages
-
-        await mp.MenuPagination(interaction, GetPage).Navigate()
-
-async def Post(msg):
-    """Posts the query's result to Discord.  Runs in the main asyncio loop so
-       the manager can start the next job concurrently.
-
-        Input  : msg - a reference to the completed job.
-
-        Output : N/A.
-    """
-    disLog = log.getLogger('discord')
-    embed = None
-    image = None
-
-    if msg['status_code'] != 200:
-        embed = dis.Embed(title='Job Error:',
-                          description=f"Status code: {msg['status_code']} Reason: {msg['reason']}",
-                          color=0xec1802)
-
-        await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
-                                      embed=embed)
-
-    elif msg['id'] == 'testgetid' or ((type(msg['id']) != str) and (msg['id'] < 10)):
-        #Maybe a future version will have a generic image to return and eliminate this clause.
-        embed = dis.Embed(title='Test GET successful:',
-                          description=f"Status code: {msg['status_code']} Reason: {msg['reason']}",
-                          color=0x008000)
-
-        await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
-                                      embed=embed)
-
-    elif msg['id'] == 'testrollid' or msg['id'] == 'testshowprofileid':
-
-        embed = dis.Embed()
-        profile = pic.loads(msg['profile'])
-        disLog.debug(f"Testroll profile: {profile}.")
-
-        embed.add_field(name='Owner', value=f"<@{profile.owner}>")
-        embed.add_field(name='Name', value=profile.name)
-        embed.add_field(name='Rarity', value=profile.rarity.name)
-        embed.add_field(name='Agility', value=profile.stats.agility)
-        embed.add_field(name='Defense', value=profile.stats.defense)
-        embed.add_field(name='Endurance', value=profile.stats.endurance)
-        embed.add_field(name='Luck', value=profile.stats.luck)
-        embed.add_field(name='Strength', value=profile.stats.strength)
-        embed.add_field(name='Description', value=profile.desc)
-        embed.add_field(name='Favorite', value=f"<@{profile.favorite}>")
-
-        if msg['id'] == 'testshowprofileid':
-
-            image = io.BytesIO(b64.b64decode(msg['images']))
-
-        else:
-
-            for i in msg['images']:
-
-                image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
-
-        await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
-                                      file=dis.File(fp=image,
-                                      filename='image.png'),
-                                      embed=embed)
-    else:
-
-        info_dict = json.loads(msg['info'])
-
-        if msg['cmd'] == 'roll':
-
-            db_ifc.SaveRoll(id=msg['id'], info=info_dict, profile=msg['profile'])
-
-            embed = dis.Embed()
-            profile = pic.loads(msg['profile'])
-            embed.add_field(name='Creator', value=f"<@{profile.creator}>")
-            embed.add_field(name='Owner', value=f"<@{profile.owner}>")
-            embed.add_field(name='Name', value=profile.name)
-            embed.add_field(name='Rarity', value=profile.rarity.name)
-            embed.add_field(name='Agility', value=profile.stats.agility)
-            embed.add_field(name='Defense', value=profile.stats.defense)
-            embed.add_field(name='Endurance', value=profile.stats.endurance)
-            embed.add_field(name='Luck', value=profile.stats.luck)
-            embed.add_field(name='Strength', value=profile.stats.strength)
-            embed.add_field(name='Description', value=profile.desc)
-            embed.add_field(name='Favorite', value=f"<@{profile.favorite}>" if profile.favorite != 0 else "None. You could be here!")
-
-            for i in msg['images']:
-
-                image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
-
-            await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
-                                          file=dis.File(fp=image,
-                                          filename='image.png'),
-                                          embed=embed)
-
-        else:
-
-            embed = dis.Embed()
-            embed.add_field(name='Prompt', value=info_dict['prompt'])
-            embed.add_field(name='Negative Prompt', value=info_dict['negative_prompt'])
-            embed.add_field(name='Steps', value=info_dict['steps'])
-            embed.add_field(name='Height', value=info_dict['height'])
-            embed.add_field(name='Width', value=info_dict['width'])
-            embed.add_field(name='Sampler', value=info_dict['sampler_name'])
-            embed.add_field(name='Seed', value=info_dict['seed'])
-            embed.add_field(name='Subseed', value=info_dict['subseed'])
-            embed.add_field(name='CFG Scale', value=info_dict['cfg_scale'])
-            #Randomized and co are special because they're not a parameter sent to SD.
-            embed.add_field(name='Randomized', value=msg['random'])
-            embed.add_field(name='Tags Added to Prompt', value=msg['tags_added'])
-
-            for i in msg['images']:
-                image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
-
-            await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
-                                          file=dis.File(fp=image,
-                                          filename='image.png'),
-                                          embed=embed)
-
-@IGSD_client.tree.command()
-@dac.checks.has_permissions(use_application_commands=True)
-async def roll(interaction: dis.Interaction):
-    """Generates a new character and saves them to the caller's character list.
-
-       Input  : interaction - the interaction context from Discord.
-
-       Output : None.
-
-       Note: All slash commands *MUST* respond in 3 seconds or be terminated.
-    """
-    disLog = log.getLogger('discord')
-    msg = { 'metadata' : {
-                'ctx'     : interaction,
-                'loop'    : IGSD_client.GetLoop(),
-                'poster'  : Post
-           },
-           'data' : {
-                #Requests are sorted by guild for rate-limiting
-                'guild'   : interaction.guild_id,
-                'cmd'     : 'roll',
-                #This should really be metadata but the rest of the metadata
-                #can't be pickeled, so this must be passed with the work.
-                'id'      : interaction.user.id,
-                'post'    : pg.GetDefaultJobData(),
-                'profile' : pic.dumps(pg.Profile(interaction.user.id))},
-            'reply' : ""
-            }
-
-    msg['data']['post']['random'] = True
-    msg['data']['post']['prompt'] = params['options']['prompts']
-    msg['data']['post']['seed']   = -1
-
-    #Check for daily limits?
-    disLog.debug(f"Posting ROLL job {msg} to the queue.")
-    result = job_queue.Add(msg)
-
-    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 #####  main  #####
 

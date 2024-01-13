@@ -3552,10 +3552,6 @@ Okon
 Okou
 Oku
 Okui
-Olga
-Olive
-Olivia
-Olympia
 Omako
 Omayu
 Omi
@@ -3647,9 +3643,7 @@ Patora
 Paulin
 Paulina
 Pechika
-Peggy
 Peko
-Pepe
 Petsuko
 Pia
 Pian
@@ -3745,7 +3739,6 @@ Rauru
 Rausa
 Razuri
 Rea
-Rean
 Reari
 Rechiko
 Reda
@@ -3941,7 +3934,6 @@ Roran
 Rorie
 Roroa
 Rosa
-Rosanna
 Rosaria
 Rosette
 Rosu

@@ -9,7 +9,7 @@ import logging.handlers as lh
 import pathlib as pl
 import sched
 import src.db.MariadbIfc as mdb
-import threading as th
+#import threading as th
 import time
 
 
@@ -26,8 +26,8 @@ class DailyEventManager:
 
            Output: None - Throws exceptions on error.
         """
-        self.db_log = log.getLogger('daily')
-        self.db_log.setLevel(opts['log_lvl'])
+        self.dem_log = log.getLogger('daily')
+        self.dem_log.setLevel(opts['log_lvl'])
         log_path = pl.Path(opts['log_name_daily'])
 
         logHandler = lh.RotatingFileHandler(filename=log_path.absolute(),
@@ -40,13 +40,12 @@ class DailyEventManager:
                                   style='{'
         )
         logHandler.setFormatter(formatter)
-        self.db_log.addHandler(logHandler)
+        self.dem_log.addHandler(logHandler)
         
-        self.db_log.info(f"Creating Daily Reset thread.")
-        self.daily_reset_thread = th.Thread(target=DailyEventManager.DailyRollReset,
-                                            name="Daily Reset Thread",
-                                            daemon=True)
-        
+        self.dem_log.debug(f"Creating DB Interface.")
+        #The options are empty because the itnerface is a singleton and should
+        #alraedy be initialized properly by the main thread.
+        self.db_ifc = mdb.MariadbIfc.GetInstance(options={})
         self.sch = sched.scheduler(time.monotonic, time.sleep)
 
     #TODO: manage persistent state information.
@@ -57,13 +56,15 @@ class DailyEventManager:
 
            Output: None - Throws exceptions on error.
         """
-        self.daily_reset_thread.start()
+        #TODO: each reset event should probably be its own thread with
+        #independent timers.
+        self.DailyRollReset()
         
-    def DailyRollReset():
+    def DailyRollReset(self):
         """Resets the daily roll tracker for all users.
 
            Input: self - Pointer to the current object instance.
 
            Output: None.
         """
-        pass
+        self.db_ifc.ResetDailyRoll()

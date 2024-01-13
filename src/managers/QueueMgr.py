@@ -134,7 +134,8 @@ class Manager:
         """
         self.flush = True
 
-    def Add(self, request : dict) -> str:
+    def Add(self,
+            request : dict) -> str:
         """Passes queued jobs to the worker tasks.  Is effectively the 'main'
            of the class.  Workers return the image prompt and queue object id
            when complete.  The Manager should post the result to the main thread
@@ -223,7 +224,7 @@ class Manager:
            main IGSD thread via the supplied event loop.  Has no knowledge of
            Guilds or how to post the provided image to the requestor.
 
-            Input: pipe - where to return the SD image gen result.
+            Input: self - Pointer to the current object instance.
 
             Output: None - Throws exceptions on error.
         """
@@ -262,8 +263,9 @@ class Manager:
                 except Exception as err:
                     self.queLog.error(f"Exception trying to PUT: {err}.")
 
+            self.queLog.info(f"Got a result from the queue for user {request['id']}.")
             self.queLog.debug(f"Request is: {request}")
-            self.queLog.info(f"Result is: {result}")
+            self.queLog.debug(f"Result is: {result}")
             jres['status_code'] = result.status_code
             jres['reason']      = result.reason
             jres['id']          = request['id'] #TODO this shouldn't be necessary

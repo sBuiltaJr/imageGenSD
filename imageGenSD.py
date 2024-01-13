@@ -40,8 +40,8 @@ default_params = {'cfg'       : 'src/config/config.json',
                   'bot_token' : ''}
 daily_mgr    = None
 daily_mgr_th = None
+db_ifc       = None
 dict_path    = ["","",""]
-dem_ifc      = None
 IGSD_version = '0.3.5'
 #This will be modified in the future to accept user-supplied paths.
 #This file must be loaded prior to the logger to allow for user-provided
@@ -343,7 +343,7 @@ async def Post(msg):
         embed.add_field(name='Description', value=msg['profile'].desc)
         embed.add_field(name='Favorite', value=f"{favorite}")
 
-        if msg['id'] == 'testshowprofileid': #!= 'testrollid':
+        if msg['id'] == 'testshowprofileid':
 
             image = io.BytesIO(b64.b64decode(msg['images']))
 

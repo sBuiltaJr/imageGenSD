@@ -29,93 +29,102 @@ class MariadbIfc:
     """Acts as the dabase interface for MariaDB SQL servers.  Also creates
         tables, users, and fields as needed.
     """
-    _instance = None
-    _lock = th.Lock()
+    __instance = None
+    __lock = th.Lock()
 
-    def __new__(cls,
-                options : dict):
-        """Ensures that the interface acts as a singleton.
+    @staticmethod
+    def GetInstance(options : dict) -> MariadbIfc:
+        """Returns an instance of the singletion, or makes a new instance if
+           one doesn't exist, using the provided options parameter.
 
-            Input: cls - Pointer to the current class instance.
-                   options - the options passed to the initial instance.
+           Input: self - Pointer to the current object instance.
+                  options - a dict of options for this class.
 
-            Output: None - Throws exceptions on error.
+           Output: MariadbIfc - an instance of the interface.
         """
 
-        if cls._instance is None:
+        if MariadbIfc.__instance == None:
 
-            with cls._lock:
+            with MariadbIfc.__lock :
 
-                if not cls._instance:
+                if MariadbIfc.__instance == None:
 
-                    cls._instance = super().__new__(cls)
+                    MariadbIfc(options)
 
-        return cls._instance
+        return MariadbIfc.__instance
 
     def __init__(self,
                  options : dict):
         """Reads the included json config for db parameters, like username and
-            login information.  Verification is handled in a different function.
-            Also instantiates a logger specifically for this class.
+           login information.  Verification is handled in a different function.
+           Also instantiates a logger specifically for this class.
 
-            Input: self - Pointer to the current object instance.
-                   options - a dict of options for this class.
+           Input: self - Pointer to the current object instance.
+                  options - a dict of options for this class.
 
-            Output: None - Throws exceptions on error.
+           Output: None - Throws exceptions on error.
         """
 
-        self.args      = options
-        self.db_cmds   = {}
-        self.con       = None
-        self.pict_cmds = {}
-        self.prof_cmds = {}
-        self.user_cmds = {}
+        if MariadbIfc.__instance != None:
 
-        self.db_log = log.getLogger('mariadb')
-        self.db_log.setLevel(options['log_lvl'])
-        log_path = pl.Path(options['log_name_db'])
+            return  MariadbIfc.__instance
 
-        logHandler = lh.RotatingFileHandler(filename=log_path.absolute(),
-                                            encoding=options['log_encoding'],
-                                            maxBytes=int(options['max_bytes']),
-                                            backupCount=int(options['log_file_cnt']),
-        )
-        formatter = log.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}',
-                                  options['date_fmt'],
-                                  style='{'
-        )
-        logHandler.setFormatter(formatter)
-        self.db_log.addHandler(logHandler)
+        else:
 
-        try:
+            MariadbIfc.__instance = self
 
-            self.db_log.debug(f"paths are: {pl.Path('src/db/db_commands.json').absolute()} {pl.Path('src/db/queries/picture_queries.json').absolute()} {pl.Path('src/db/queries/profile_queries.json').absolute()} {pl.Path('src/db/queries/user_queries.json').absolute()}")
-            json_file      = open(pl.Path("src/db/db_commands.json").absolute())
-            self.db_cmds   = json.load(json_file)
-            json_file      = open(pl.Path("src/db/queries/picture_queries.json").absolute())
-            self.pict_cmds = json.load(json_file)
-            json_file      = open(pl.Path("src/db/queries/profile_queries.json").absolute())
-            self.prof_cmds = json.load(json_file)
-            json_file      = open(pl.Path("src/db/queries/user_queries.json").absolute())
-            self.user_cmds = json.load(json_file)
+            self.args      = options
+            self.db_cmds   = {}
+            self.con       = None
+            self.pict_cmds = {}
+            self.prof_cmds = {}
+            self.user_cmds = {}
 
-        #Sure, it's more pythonic to use with and only catch limited exceptions,
-        #but making a case here for every possible exception type is dumb.
-        except Exception as e:
+            self.db_log = log.getLogger('mariadb')
+            self.db_log.setLevel(options['log_lvl'])
+            log_path = pl.Path(options['log_name_db'])
 
-            self.db_log.error(f"Unable to get MariaDB commands: {e=}")
-            raise  FileNotFoundError(f"Error opening the mariaDB command files: {e=}")
+            logHandler = lh.RotatingFileHandler(filename=log_path.absolute(),
+                                                encoding=options['log_encoding'],
+                                                maxBytes=int(options['max_bytes']),
+                                                backupCount=int(options['log_file_cnt']),
+            )
+            formatter = log.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}',
+                                      options['date_fmt'],
+                                      style='{'
+            )
+            logHandler.setFormatter(formatter)
+            self.db_log.addHandler(logHandler)
 
-        if not self.ValidateInstall() :
+            try:
 
-            self.db_log.error(f"Unable to access mariaDB server! {options['host']} {options['port']} {options['user_name']} {options['password']}")
-            raise PermissionError(f"Unable to access mariaDB server!")
+                self.db_log.debug(f"paths are: {pl.Path('src/db/db_commands.json').absolute()} {pl.Path('src/db/queries/picture_queries.json').absolute()} {pl.Path('src/db/queries/profile_queries.json').absolute()} {pl.Path('src/db/queries/user_queries.json').absolute()}")
+                json_file      = open(pl.Path("src/db/db_commands.json").absolute())
+                self.db_cmds   = json.load(json_file)
+                json_file      = open(pl.Path("src/db/queries/picture_queries.json").absolute())
+                self.pict_cmds = json.load(json_file)
+                json_file      = open(pl.Path("src/db/queries/profile_queries.json").absolute())
+                self.prof_cmds = json.load(json_file)
+                json_file      = open(pl.Path("src/db/queries/user_queries.json").absolute())
+                self.user_cmds = json.load(json_file)
 
-        self.db_log.info(f"Successfully connected to database: host: {options['host']} port: {options['port']} username: {options['user_name']} db: {options['database']}")
-        self.db_log.debug(f"Loaded commands: {self.db_cmds} {self.pict_cmds} {self.prof_cmds} {self.user_cmds}")
+            #Sure, it's more pythonic to use with and limit exceptions cases,
+            #but making a case here for every possible exception type is dumb.
+            except Exception as err:
+
+                self.db_log.error(f"Unable to get MariaDB commands: {err=}")
+                raise  FileNotFoundError(f"Error opening the mariaDB command files: {err=}")
+
+            if not self.ValidateInstall() :
+
+                self.db_log.error(f"Unable to access mariaDB server! {options['host']} {options['port']} {options['user_name']} {options['password']}")
+                raise PermissionError(f"Unable to access mariaDB server!")
+
+            self.db_log.info(f"Successfully connected to database: host: {options['host']} port: {options['port']} username: {options['user_name']} db: {options['database']}")
+            self.db_log.debug(f"Loaded commands: {self.db_cmds} {self.pict_cmds} {self.prof_cmds} {self.user_cmds}")
 
     def DailyDone(self,
-                   id  : Optional[str] = "x'fffffffffffffffffffffffffffffffe'") -> bool:
+                  id  : Optional[str] = "x'fffffffffffffffffffffffffffffffe'") -> bool:
         """Returns whether a user has already completed their daily actions.
 
             Input: self - Pointer to the current object instance.
@@ -289,8 +298,29 @@ class MariadbIfc:
 
         return results
 
+    def ResetDailyRoll(self):
+        """Resets the 'daily' boolean for all user profiles, allowing them to
+           perform another round of daily actions.
 
-        #cursor.execute((self.prof_cmds['get_profile']) % id)
+            Input: N/A
+
+            Output: N/A.
+        """
+        cursor     = self.con.cursor(buffered=False)
+        cmd        = ""
+        result     = None
+
+        self.db_log.warning(f"Preparing to reset daily rolls.")
+        cmd = (self.user_cmds['reset_daily'])
+        self.db_log.debug(f"Executing daily roll reset command: {cmd}")
+
+        try:
+
+            cursor.execute(cmd)
+
+        except Exception as err:
+
+            self.db_log.error(f"Failed to reset daily value!: {err=}")
 
     def SaveRoll(self,
                  id      : Optional[str] = "x'fffffffffffffffffffffffffffffffe'",

@@ -2,18 +2,11 @@
 This page describes the current project plan as it exists between revisions.
 This plan should be pulling features from the [improvements list](IMPROVEMENTS_LIST.md) page.
 
-# Version 0.6.5
-- Implement a method for allowing user input to feed the description generator prompt.
-
-# Version 0.6.0
-- Implement a description generator that can run in parallel with the image generator.
-- Have the description generator use StableLM to generate a character description based on the image.
-
-# Version 0.5.0
-- Implement a method to allow both the LLM and randomizer to feed data into a prompt.
-
 # Version 0.4.0
-- Implement StableAI's LLM as a prompt generator.
+- Implement base game features (trading, battles, interactions, etc).
+
+# Version 0.3.5
+- Implement necessary components to implement a gacha game (stats, profile/image storage, etc.)
 
 # Version 0.3.0
 - Implement a prompt list randomizer.  Adds comma-separated words to a prompt, with optional defaults.

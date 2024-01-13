@@ -33,7 +33,7 @@ class MariadbIfc:
     __lock = th.Lock()
 
     @staticmethod
-    def GetInstance(options : dict) -> MariadbIfc:
+    def GetInstance(options : dict):
         """Returns an instance of the singletion, or makes a new instance if
            one doesn't exist, using the provided options parameter.
 
@@ -159,7 +159,7 @@ class MariadbIfc:
 
     def GetImage(self,
                  picture_id : Optional[str] = None,
-                 profile_id : Optional[str] = "x'fffffffffffffffffffffffffffffffe'") -> str:
+                 profile_id : Optional[str] = "ffffffff-ffff-ffff-ffff-fffffffffffe") -> str:
         """Returns a given profile for a given user.
 
             Input: self - Pointer to the current object instance.
@@ -209,7 +209,7 @@ class MariadbIfc:
             return img[0]
 
     def GetProfile(self,
-                   id         : Optional[str] = "x'fffffffffffffffffffffffffffffffe'") -> Optional[pg.Profile]:
+                   id         : Optional[str] = "ffffffff-ffff-ffff-ffff-fffffffffffe") -> Optional[pg.Profile]:
         """Returns a given profile for a given user.
 
             Input: self - Pointer to the current object instance.
@@ -339,7 +339,7 @@ class MariadbIfc:
         """
         cursor     = self.con.cursor(buffered=False)
         cmd        = ""
-        entry      = pic.loads(profile)
+        entry      = profile#pic.loads(profile)
         entry.info = info
         owned      = None
         result     = None

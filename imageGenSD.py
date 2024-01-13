@@ -281,6 +281,7 @@ async def listprofiles(interaction: dis.Interaction):
     else:
 
         async def GetPage(page: int):
+
             page_size = 10
             embed     = dis.Embed(title="Owned characters", description="")
             offset    = (page-1) * page_size
@@ -317,6 +318,7 @@ async def Post(msg):
                                       embed=embed)
 
     elif msg['id'] == 'testgetid' or ((type(msg['id']) != str) and (msg['id'] < 10)):
+
         #Maybe a future version will have a generic image to return and eliminate this clause.
         embed = dis.Embed(title='Test GET successful:',
                           description=f"Status code: {msg['status_code']} Reason: {msg['reason']}",
@@ -325,13 +327,47 @@ async def Post(msg):
         await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
                                       embed=embed)
 
-    #TODO: Better post formatting based on command type.
-    elif msg['id'] == 'testrollid' or msg['id'] == 'testshowprofileid'  or msg['id'] == 'showprofileid':
+    elif msg['cmd'] == 'generate' or msg['id'] == 'testpostid':
+
+        info_dict = json.loads(msg['info'])
 
         embed = dis.Embed()
-        disLog.debug(f"Test/show profile: {pic.dumps(msg['profile'])}.")
-        favorite = "<@{msg['profile'].favorite}>" if msg['profile'].favorite != 0 else 'None. You could be here!'
+        embed.add_field(name='Prompt', value=info_dict['prompt'])
+        embed.add_field(name='Negative Prompt', value=info_dict['negative_prompt'])
+        embed.add_field(name='Steps', value=info_dict['steps'])
+        embed.add_field(name='Height', value=info_dict['height'])
+        embed.add_field(name='Width', value=info_dict['width'])
+        embed.add_field(name='Sampler', value=info_dict['sampler_name'])
+        embed.add_field(name='Seed', value=info_dict['seed'])
+        embed.add_field(name='Subseed', value=info_dict['subseed'])
+        embed.add_field(name='CFG Scale', value=info_dict['cfg_scale'])
+        #Randomized and co are special because they're not a parameter sent to SD.
+        embed.add_field(name='Randomized', value=msg['random'])
+        embed.add_field(name='Tags Added to Prompt', value=msg['tags_added'])
 
+        for i in msg['images']:
+            image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
+
+        await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
+                                      file=dis.File(fp=image,
+                                      filename='image.png'),
+                                      embed=embed)
+
+    #TODO: Better post formatting based on command type.
+    else :
+
+        if msg['cmd'] == 'roll':
+
+            info_dict = json.loads(msg['info'])
+            db_ifc.SaveRoll(id=msg['id'],
+                            img=msg['images'][0],
+                            info=info_dict,
+                            profile=msg['profile'])
+        embed = dis.Embed()
+        disLog.debug(f"Test/show profile: {pic.dumps(msg['profile'])}.")
+        favorite = f"<@{msg['profile'].favorite}>" if msg['profile'].favorite != 0 else "None. You could be here!"
+
+        embed.add_field(name='Creator', value=f"<@{msg['profile'].creator}>")
         embed.add_field(name='Owner', value=f"<@{msg['profile'].owner}>")
         embed.add_field(name='Name', value=msg['profile'].name)
         embed.add_field(name='Rarity', value=msg['profile'].rarity.name)
@@ -357,63 +393,6 @@ async def Post(msg):
                                       file=dis.File(fp=image,
                                       filename='image.png'),
                                       embed=embed)
-    else:
-
-        info_dict = json.loads(msg['info'])
-
-        if msg['cmd'] == 'roll':
-
-            db_ifc.SaveRoll(id=msg['id'],
-                            img=msg['images'][0],
-                            info=info_dict,
-                            profile=msg['profile'])
-
-            embed = dis.Embed()
-            profile = pic.loads(msg['profile'])
-            embed.add_field(name='Creator', value=f"<@{profile.creator}>")
-            embed.add_field(name='Owner', value=f"<@{profile.owner}>")
-            embed.add_field(name='Name', value=profile.name)
-            embed.add_field(name='Rarity', value=profile.rarity.name)
-            embed.add_field(name='Agility', value=profile.stats.agility)
-            embed.add_field(name='Defense', value=profile.stats.defense)
-            embed.add_field(name='Endurance', value=profile.stats.endurance)
-            embed.add_field(name='Luck', value=profile.stats.luck)
-            embed.add_field(name='Strength', value=profile.stats.strength)
-            embed.add_field(name='Description', value=profile.desc)
-            embed.add_field(name='Favorite', value=f"<@{profile.favorite}>" if profile.favorite != 0 else "None. You could be here!")
-
-            for i in msg['images']:
-
-                image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
-
-            await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
-                                          file=dis.File(fp=image,
-                                          filename='image.png'),
-                                          embed=embed)
-
-        else:
-
-            embed = dis.Embed()
-            embed.add_field(name='Prompt', value=info_dict['prompt'])
-            embed.add_field(name='Negative Prompt', value=info_dict['negative_prompt'])
-            embed.add_field(name='Steps', value=info_dict['steps'])
-            embed.add_field(name='Height', value=info_dict['height'])
-            embed.add_field(name='Width', value=info_dict['width'])
-            embed.add_field(name='Sampler', value=info_dict['sampler_name'])
-            embed.add_field(name='Seed', value=info_dict['seed'])
-            embed.add_field(name='Subseed', value=info_dict['subseed'])
-            embed.add_field(name='CFG Scale', value=info_dict['cfg_scale'])
-            #Randomized and co are special because they're not a parameter sent to SD.
-            embed.add_field(name='Randomized', value=msg['random'])
-            embed.add_field(name='Tags Added to Prompt', value=msg['tags_added'])
-
-            for i in msg['images']:
-                image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
-
-            await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
-                                          file=dis.File(fp=image,
-                                          filename='image.png'),
-                                          embed=embed)
 
 @IGSD_client.event
 async def on_ready():
@@ -506,7 +485,7 @@ async def roll(interaction: dis.Interaction):
                     #can't be pickeled, so this must be passed with the work.
                     'id'      : interaction.user.id,
                     'post'    : pg.GetDefaultJobData(),
-                    'profile' : pic.dumps(pg.Profile(interaction.user.id))},
+                    'profile' : pg.Profile(interaction.user.id)},
                 'reply' : ""
                 }
 
@@ -656,7 +635,7 @@ async def testpost(interaction: dis.Interaction):
                 'id'      : "testpostid",
                 'cmd'     : 'testpost',
                 'post'    : pg.GetDefaultJobData(),
-                'profile' : pic.dumps(pg.GetDefaultProfile())},
+                'profile' : pg.GetDefaultProfile()},
             'reply' : ""
             }
     disLog.debug(f"Posting test PUT job {msg} to the queue.")
@@ -689,7 +668,7 @@ async def testroll(interaction: dis.Interaction):
                 'id'      : "testrollid",
                 'cmd'     : 'testroll',
                 'post'    : pg.GetDefaultJobData(),
-                'profile' : pic.dumps(pg.GetDefaultProfile())},
+                'profile' : pg.GetDefaultProfile()},
             'reply' : ""
             }
 

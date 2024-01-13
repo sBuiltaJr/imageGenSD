@@ -89,7 +89,7 @@
         "max_guilds"       : "10",
         "max_guild_reqs"   : "10",
         "max_rand_tag_cnt" : "35",
-        "min_rand_tag_cnt" : "5",
+        "min_rand_tag_cnt" : "10",
         "rand_dict_path"   : "src/config/Tag_Randomizer_Dictionary.txt",
         "tag_retry_limit"  : "5",
         "webui_URL"        : "http://127.0.0.1:7860/"

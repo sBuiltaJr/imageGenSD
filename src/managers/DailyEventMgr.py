@@ -5,8 +5,11 @@
 
 import datetime as dt
 import logging as log
+import logging.handlers as lh
 import pathlib as pl
 import sched
+import src.db.MariadbIfc as mdb
+import threading as th
 import time
 
 
@@ -14,30 +17,35 @@ import time
 
 class DailyEventManager:
 
-    def __init__(self
-                 options : dict):
+    def __init__(self,
+                 opts : dict):
         """Schedules daily events for the system, like daily roll resets.
 
            Input: self - Pointer to the current object instance.
-                  options - a dict of options for this class.
+                  opts - a dict of options for this class.
 
            Output: None - Throws exceptions on error.
         """
         self.db_log = log.getLogger('daily')
-        self.db_log.setLevel(options['log_lvl'])
-        log_path = pl.Path(options['log_name_daily'])
+        self.db_log.setLevel(opts['log_lvl'])
+        log_path = pl.Path(opts['log_name_daily'])
 
         logHandler = lh.RotatingFileHandler(filename=log_path.absolute(),
-                                            encoding=options['log_encoding'],
-                                            maxBytes=int(options['max_bytes']),
-                                            backupCount=int(options['log_file_cnt']),
+                                            encoding=opts['log_encoding'],
+                                            maxBytes=int(opts['max_bytes']),
+                                            backupCount=int(opts['log_file_cnt']),
         )
         formatter = log.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}',
-                                  options['date_fmt'],
+                                  opts['date_fmt'],
                                   style='{'
         )
         logHandler.setFormatter(formatter)
         self.db_log.addHandler(logHandler)
+        
+        self.db_log.info(f"Creating Daily Reset thread.")
+        self.daily_reset_thread = th.Thread(target=DailyEventManager.DailyRollReset,
+                                            name="Daily Reset Thread",
+                                            daemon=True)
         
         self.sch = sched.scheduler(time.monotonic, time.sleep)
 
@@ -49,8 +57,7 @@ class DailyEventManager:
 
            Output: None - Throws exceptions on error.
         """
-        
-        
+        self.daily_reset_thread.start()
         
     def DailyRollReset():
         """Resets the daily roll tracker for all users.
@@ -59,3 +66,4 @@ class DailyEventManager:
 
            Output: None.
         """
+        pass

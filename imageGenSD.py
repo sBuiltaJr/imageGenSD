@@ -19,7 +19,7 @@ import pathlib as pl
 import pickle as pic
 import requests as req
 import src.db.MariadbIfc as mdb
-#import src.managers.DailyEventMgr as dem
+import src.managers.DailyEventMgr as dem
 import src.managers.QueueMgr as qm
 import src.utilities.NameRandomizer as nr
 import src.utilities.MenuPagination as mp
@@ -39,6 +39,7 @@ default_params = {'cfg'       : 'src/config/config.json',
                   'cred'      : 'src/config/credentials.json',
                   'bot_token' : ''}
 daily_mgr    = None
+daily_mgr_th = None
 dict_path    = ["","",""]
 dem_ifc      = None
 IGSD_version = '0.3.5'
@@ -164,58 +165,6 @@ def BannedWordsFound(prompt: str, banned_words: str) -> bool:
         result    = any(word in prompt for word in word_list)
 
     return result
-
-@IGSD_client.event
-async def on_ready():
-    """Performs post-login setup for the bot.
-
-       Input  : None.
-
-       Output : None.
-    """
-    global daily_mgr
-    global db_ifc
-    global job_queue
-    global profile_gen
-    global worker
-
-
-    disLog = log.getLogger('discord')
-    disLog.setLevel(params['log_lvl'])
-    log_path = pl.Path(params['log_name'])
-
-    logHandler = lh.RotatingFileHandler(filename=log_path.absolute(),
-                                        encoding=params['log_encoding'],
-                                        maxBytes=int(params['max_bytes']),
-                                        backupCount=int(params['log_file_cnt'])
-    )
-
-    formatter = log.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}',
-                              params['date_fmt'],
-                              style='{'
-    )
-    logHandler.setFormatter(formatter)
-    disLog.addHandler(logHandler)
-    #TODO: get propagate to properly disable.
-    #disLog.propagate=False
-
-    disLog.info(f'Logged in as {IGSD_client.user} (ID: {IGSD_client.user.id})')
-
-    disLog.debug(f"Creating Queue Manager.")
-    job_queue = qm.Manager(loop=IGSD_client.GetLoop(),
-                           manager_id=1,
-                           opts=params['queue_opts'])
-    worker    = th.Thread(target=job_queue.PutRequest,
-                          name="Queue mgr",
-                          daemon=True)
-
-    disLog.debug(f"Creating DB Interface.")
-    db_ifc = mdb.MariadbIfc(options=params['db_opts'])
-
-    #Only start the job queue once all otehr tasks are ready.
-    worker.start()
-
-    print('------')
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
@@ -465,6 +414,66 @@ async def Post(msg):
                                           file=dis.File(fp=image,
                                           filename='image.png'),
                                           embed=embed)
+
+@IGSD_client.event
+async def on_ready():
+    """Performs post-login setup for the bot.
+
+       Input  : None.
+
+       Output : None.
+    """
+    global daily_mgr
+    global daily_mgr_th
+    global db_ifc
+    global job_queue
+    global profile_gen
+    global worker
+
+
+    disLog = log.getLogger('discord')
+    disLog.setLevel(params['log_lvl'])
+    log_path = pl.Path(params['log_name'])
+
+    logHandler = lh.RotatingFileHandler(filename=log_path.absolute(),
+                                        encoding=params['log_encoding'],
+                                        maxBytes=int(params['max_bytes']),
+                                        backupCount=int(params['log_file_cnt'])
+    )
+
+    formatter = log.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}',
+                              params['date_fmt'],
+                              style='{'
+    )
+    logHandler.setFormatter(formatter)
+    disLog.addHandler(logHandler)
+    #TODO: get propagate to properly disable.
+    #disLog.propagate=False
+
+    disLog.info(f'Logged in as {IGSD_client.user} (ID: {IGSD_client.user.id})')
+
+    disLog.debug(f"Creating Queue Manager.")
+    job_queue = qm.Manager(loop=IGSD_client.GetLoop(),
+                           manager_id=1,
+                           opts=params['queue_opts'])
+    worker    = th.Thread(target=job_queue.PutRequest,
+                          name="Queue mgr",
+                          daemon=True)
+
+    disLog.debug(f"Creating DB Interface.")
+    db_ifc = mdb.MariadbIfc(options=params['db_opts'])
+
+    disLog.debug(f"Creating Daily Event Manager.")
+    daily_mgr    = dem.DailyEventManager(opts=params['daily_opts'])
+    daily_mgr_th = th.Thread(target=daily_mgr.Start,
+                             name="Daily Event mgr",
+                             daemon=True)
+
+    daily_mgr_th.start()
+    #Only start the job queue once all other tasks are ready.
+    worker.start()
+
+    print('------')
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)

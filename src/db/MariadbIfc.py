@@ -18,6 +18,7 @@ import src.utilities.ProfileGenerator as pg
 import src.utilities.RarityClass as rc
 import src.utilities.StatsClass as sc
 import sys
+import threading as th
 from typing import Literal, Optional
 
 #####  Package Variables  #####
@@ -28,6 +29,28 @@ class MariadbIfc:
     """Acts as the dabase interface for MariaDB SQL servers.  Also creates
         tables, users, and fields as needed.
     """
+    _instance = None
+    _lock = th.Lock()
+
+    def __new__(cls,
+                options : dict):
+        """Ensures that the interface acts as a singleton.
+
+            Input: cls - Pointer to the current class instance.
+                   options - the options passed to the initial instance.
+
+            Output: None - Throws exceptions on error.
+        """
+
+        if cls._instance is None:
+
+            with cls._lock:
+
+                if not cls._instance:
+
+                    cls._instance = super().__new__(cls)
+
+        return cls._instance
 
     def __init__(self,
                  options : dict):

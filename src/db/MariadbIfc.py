@@ -91,8 +91,8 @@ class MariadbIfc:
         self.db_log.debug(f"Loaded commands: {self.db_cmds} {self.pict_cmds} {self.prof_cmds} {self.user_cmds}")
 
     def ValidateInstall(self) -> bool:
-        """Validates all the database components are accessable and usable by the
-            script.
+        """Validates all the database components are accessable and usable by
+           the script.
 
             Input: self - Pointer to the current object instance.
 
@@ -100,8 +100,9 @@ class MariadbIfc:
         """
         all_ok = False
 
-        #These are separarte try statements for better error debugging.  The idea
-        #of creating missing DBs was scrapped due to implementation complexity.
+        #These are separarte try statements for better error debugging.  The
+        #idea of creating missing DBs was scrapped due to implementation
+        #complexity.
         #(The script would need to invoke mariadb as sudo with root).
         try:
             #TODO: convert to a threadpool
@@ -165,9 +166,10 @@ class MariadbIfc:
         """Returns a given profile for a given user.
 
             Input: self - Pointer to the current object instance.
-                   id - user ID to link the profile to.
-                   info - the picture metadata to store.
-                   profile - The profile to link the image to.
+                   picture_id - optional picture ID to find, defaults to the ID
+                                linked to the profile_id provided.
+                   profile_id - optional profile ID for the picture, defaults
+                                to the test image.
 
             Output: N/A.
         """
@@ -201,7 +203,7 @@ class MariadbIfc:
 
         if (img == None):
 
-            self.db_log.warn(f"Picture ID {profile[int(self.prof_cmds['pic_id_index'])]} not found!")
+            self.db_log.warning(f"Picture ID {profile[int(self.prof_cmds['pic_id_index'])]} not found!")
             return ""
 
         else:
@@ -210,14 +212,11 @@ class MariadbIfc:
             return img[0]
 
     def GetProfile(self,
-                   id         : Optional[str] = 'ffffffff-ffff-ffff-ffff-fffffffffffe',
-                   profile_id : Optional[str] = 'ffffffff-ffff-ffff-ffff-fffffffffffe') -> str:
+                   id         : Optional[str] = 'ffffffff-ffff-ffff-ffff-fffffffffffe') -> str:
         """Returns a given profile for a given user.
 
             Input: self - Pointer to the current object instance.
-                   id - user ID to link the profile to.
-                   info - the picture metadata to store.
-                   profile - The profile to link the image to.
+                   id - The profile to get, defaults to the test profile.
 
             Output: N/A.
         """
@@ -234,7 +233,7 @@ class MariadbIfc:
 
         if (result == None):
 
-            self.db_log.warn(f"Profile not found!: {id}")
+            self.db_log.warning(f"Profile not found!: {id}")
 
         else:
 
@@ -343,7 +342,7 @@ class MariadbIfc:
             #Somehow the the roll is linked to an existing, non-test profile?
             else:
 
-                self.db_log.warn(f"Found an existing non-test profile: {x}  For roll {info}")
+                self.db_log.warning(f"Found an existing non-test profile: {x}  For roll {info}")
 
         else:
 
@@ -377,7 +376,7 @@ class MariadbIfc:
             cmd = (self.prof_cmds['put_new']) % (self.db_cmds['default_id'], id, entry.creator, entry.stats.agility, entry.stats.defense, entry.stats.endurance, entry.stats.luck, entry.stats.strength, entry.desc, entry.favorite, json.dumps(entry.info), entry.name, entry.rarity.value)
             self.db_log.debug(f"Preparing to add profile: {cmd}")
             cursor.execute(cmd)
-            #We don't actually know the guid until we get it back from the DB.
+            #We don't actually know the GUID until we get it back from the DB.
             pr_uid=cursor.fetchone()
             self.db_log.info(f"Stored profile with UID {pr_uid}")
 
@@ -422,9 +421,7 @@ class MariadbIfc:
             self.db_log.info(f"Updated user {id}'s owned dict")
 
 
-#Forge waifus via combination?
-#
-#Daily rolls measured on UTC for days
+#Forge characters via combination?
 
 #TODO: define how a user is suppose to make the IGSD bot account and give access to the bogus and IGSD tables.
 #CREATE DATABASE IGSD;

@@ -521,12 +521,13 @@ async def roll(interaction: dis.Interaction):
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
-@dac.describe(id="The profile of the character you'd like to view.  Use /listprofiles to see the name and ID of profiles you own!")
+@dac.describe(id="The profile ID of the character you'd like to view.  Use /listprofiles to see the name and ID of profiles you own!")
 async def showprofile(interaction: dis.Interaction,
-                      id         : str):
+                      id         : dac.Range[str, 0, 36]): #The length of a UUID
     """Displays the profile associated with the provided ID.
 
         Input  : interaction - the interaction context from Discord.
+                 id - the profile ID to retrieve.
 
         Output : N/A.
     """
@@ -553,7 +554,7 @@ async def showprofile(interaction: dis.Interaction,
     
     else:
 
-        msg['images']= db_ifc.GetImage(profile_id=id),
+        msg['images'] = db_ifc.GetImage(profile_id=id),
 
         await interaction.response.send_message(f"Added {msg['profile'].name}'s profile to the post queue.", ephemeral=True, delete_after=9.0)
         await Post(msg)
@@ -780,6 +781,5 @@ if __name__ == '__main__':
 #/Cancel:  Kills most recent request from the poster, if possible.
 
 #Display command to show off profile to a server
-#list command in DMs to scroll through owned (needs filters to make managable)
 #Show command in DMs to show individual profiles (move to hash?  need better option than UUID)
-#List can update as user moves through list?
+#Initial set of seed profiles to give users a start?  Need to limit by id and other means to prevent trade abuse.

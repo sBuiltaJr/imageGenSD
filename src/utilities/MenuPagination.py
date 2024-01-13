@@ -17,7 +17,8 @@ class MenuPagination(dis.ui.View):
 
         super().__init__(timeout=100)
 
-    async def interaction_check(self, interaction: dis.Interaction) -> bool:
+    async def interaction_check(self,
+                                interaction: dis.Interaction) -> bool:
         """Validates an interaction to ensure the message author is the only
            person attempting to navigate through the pages.
 
@@ -59,7 +60,8 @@ class MenuPagination(dis.ui.View):
             self.UpdateButtons()
             await self.interaction.response.send_message(embed=emb, view=self)
 
-    async def EditPage(self, interaction: dis.Interaction):
+    async def EditPage(self,
+                       interaction: dis.Interaction):
         """Moves between pages, if possible.
 
            Input : self - a pointer to the current object.
@@ -90,7 +92,9 @@ class MenuPagination(dis.ui.View):
         self.children[1].disabled = self.index == self.total_pages
 
     @dis.ui.button(emoji="◀️", style=dis.ButtonStyle.blurple)
-    async def Previous(self, interaction: dis.Interaction, button: dis.Button):
+    async def Previous(self,
+                       interaction: dis.Interaction,
+                       button: dis.Button):
         """Handles the button interaction of moving back a page.
 
            Input : self - a pointer to the current object.
@@ -103,7 +107,9 @@ class MenuPagination(dis.ui.View):
         await self.EditPage(interaction)
 
     @dis.ui.button(emoji="▶️", style=dis.ButtonStyle.blurple)
-    async def Next(self, interaction: dis.Interaction, button: dis.Button):
+    async def Next(self,
+                   interaction: dis.Interaction,
+                   button: dis.Button):
         """Handles the button interaction of moving to the next page.
 
            Input : self - a pointer to the current object.
@@ -116,7 +122,9 @@ class MenuPagination(dis.ui.View):
         await self.EditPage(interaction)
 
     @dis.ui.button(emoji="⏭️", style=dis.ButtonStyle.blurple)
-    async def End(self, interaction: dis.Interaction, button: dis.Button):
+    async def End(self,
+                  interaction: dis.Interaction,
+                  button: dis.Button):
         """Handles the button interaction of moving to the first or last page.
 
            Input : self - a pointer to the current object.
@@ -125,7 +133,7 @@ class MenuPagination(dis.ui.View):
 
            Output : None.
         """
-        if self.index <= self.total_pages//2:
+        if self.index <= self.total_pages // 2:
 
             self.index = self.total_pages
 
@@ -147,7 +155,8 @@ class MenuPagination(dis.ui.View):
         await message.edit(view=None)
 
     @staticmethod
-    def GetTotalPages(total_items: int, items_per_page: int) -> int:
+    def GetTotalPages(total_items: int,
+                      items_per_page: int) -> int:
         """Calculates the total number of pages for a given object.
 
            Input : total_items - the total number of items in the menu.

@@ -28,10 +28,7 @@ def init(options : dict):
        have already been sanitized.
 
        Input: self - Pointer to the current object instance.
-              fn_dict_path - where to find the first name dictionary.
-              fn_dict_size - number of new-line separated names in the dictionary.
-              ln_dict_path - where to find the last name dictionary.
-              ln_dict_size - number of new-line separated names in the dictionary.
+              options - a dict of all necessary dictionary paths and sizes.
 
        Output: None - Throws exceptions on error.
     """
@@ -43,8 +40,8 @@ def init(options : dict):
 
     #Maybe this should be a separate log at some point.
     name_log  = log.getLogger('discord')
-    #This is deliberately not a Path, like in the parent, to allow linecache
-    #to read the file in case the user decided to provide a large file.
+    #This is deliberately not a Path, like in the parent, to allow linecache to
+    #read the file in case the user decided to provide a large file.
     #Also, apparently Pathlib is missing methods that cachelib is using
     #(probably for sanitization), causing exceptions if you give it a Path.
     fn_dict_path = os.path.abspath(options['fn_dict_path'])
@@ -72,7 +69,7 @@ def GetRandomName() -> str:
     first_name = "Default"
     last_name  = "Sally"
 
-    #Consider adding the ability for a variable length name string return.
+    #TODO: Consider adding the ability for a variable length name string return.
 
     first_name = (lc.getline(fn_dict_path, rand.randint(0, fn_dict_size))).rstrip()
     last_name  = (lc.getline(ln_dict_path, rand.randint(0, ln_dict_size))).rstrip()

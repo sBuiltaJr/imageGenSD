@@ -67,7 +67,7 @@
 	- Generated characters are automatically added to the user's profile and 'owned' list.
 	- Character profiles can be displayed with the `/showprofile` command.
 	- A user's command count statistics are updated after this command is successfully executed.
-- Added the `/showprofile ` command.
+- Added the `/showprofile` command.
 	- This command is used to show the profile of a character matching the specific ID.
 	- A user can retrieve the character IDs of profiles they own with the `/listprofiles` command.
 	- The command accepts a UUID string to search.

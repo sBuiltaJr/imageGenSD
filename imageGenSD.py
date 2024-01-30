@@ -88,7 +88,7 @@ except OSError as err:
     exit(-3)
 
 except FileNotFoundError as err:
-    print(f"Can't load one of the dictionaries dictionaries: {dict_path[0]} {dict_path[1]} {dict_path[2]}")
+    print(f"Can't load one of the dictionaries: {dict_path[0]} {dict_path[1]} {dict_path[2]}")
     exit(-4)
 
 except IndexError as err:
@@ -129,9 +129,8 @@ class IGSDClient(dis.Client):
         self.loop = asy.get_running_loop()
 
         self.disLog.debug(f"Syncing Guild Tree to Global.")
-        #self.tree.copy_global_to(guild=dis.Object(id=1084545432253894727))
 
-        await self.tree.sync()#self.tree.sync(guild=dis.Object(id=1084545432253894727))#
+        await self.tree.sync()
 
     def GetLoop(self):
         """Returns a reference to this client's asyncio event loop.
@@ -754,12 +753,3 @@ def Startup():
 
 if __name__ == '__main__':
     Startup()
-
-#Supported commands:
-#/flush:   clear queue and kill active jobs (if possible).  Needs Owner/Admin to run.
-#/Restart: Flush + recreates the queue objects.  Effectively restarts the script.  Also requires Owner.
-#/Cancel:  Kills most recent request from the poster, if possible.
-
-#Display command to show off profile to a server
-#Show command in DMs to show individual profiles (move to hash?  need better option than UUID)
-#Initial set of seed profiles to give users a start?  Need to limit by id and other means to prevent trade abuse.

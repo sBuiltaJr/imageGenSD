@@ -156,7 +156,6 @@ letterboxed
 aqua eyes
 rabbit girl
 happy
-hair censor
 hugging own legs
 braided ponytail
 cross-laced footwear
@@ -331,7 +330,7 @@ bandages
 bare legs
 confetti
 crown braid
-jack-o'-lantern
+jack-o-lantern
 lollipop
 twins
 pink flower
@@ -365,7 +364,6 @@ dual persona
 pen
 straw hat
 zoom layer
-garter belt
 demon horns
 frilled dress
 traditional media
@@ -651,7 +649,6 @@ headphones
 on head
 long dress
 bandeau
-puffy nipples
 black headwear
 blue hair
 holding flower
@@ -1117,7 +1114,6 @@ mask
 bodysuit
 long skirt
 table
-heart censor
 fighting stance
 ice cream
 top hat

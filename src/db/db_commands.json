@@ -1,0 +1,11 @@
+{
+    "create_db"         : "CREATE DATABASE IF NOT EXISTS %s;",
+    "create_table"      : "CREATE TABLE IF NOT EXISTS ",
+    "create_db_user"    : "CREATE USER IF NOT EXISTS %s@%s IDENTIFIED BY '%s';",
+	"default_id"        : "0xfffffffffffffffffffffffffffffffe",
+    "drop_db"           : "DROP DATABASE IF EXISTS %s;",
+    "edit_event"        : "",
+    "insert_new"        : "INSERT INTO %s VALUES (%s)",
+    "grant_db"          : "GRANT ALL PRIVILEGES ON %s.* TO %s@%s;",
+    "using_IGSD"        : "USE %s"
+}

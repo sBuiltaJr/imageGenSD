@@ -17,7 +17,7 @@ class TagRandomizer:
     def __init__(self, dict_path: str, dict_size: int, min_tags: int, max_tags:int, rand_retries: int):
         """Saves relevant tag randomizer settings for the object.  The
            randomizer gets all relevant parameters from the parent and assumes
-           #they have already been sanitized.
+           they have already been sanitized.
 
            Input: self - Pointer to the current object instance.
                   dict_path - where to find the tag dictionary.

@@ -753,3 +753,10 @@ def Startup():
 
 if __name__ == '__main__':
     Startup()
+
+
+#store command
+#Ability upgrades
+#Equipment upgrades
+#Loot/Reward opening (and generation?)
+#

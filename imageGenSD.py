@@ -591,28 +591,20 @@ async def testget(interaction: dis.Interaction):
        Output : None.
     """
     disLog = log.getLogger('discord')
-
-    msg = { 'metadata' : {
-                'ctx'    : interaction,
-                'loop'   : IGSD_client.GetLoop(),
-                'poster' : Post
-           },
-           'data' : {
-                #Requests are sorted by guild for rate-limiting
-                'guild'   : interaction.guild_id,
-                #This should really be metadata but the rest of the metadata
-                #can't be pickeled, so this must be passed with the work.
-                'id'      : "testgetid",
-                'cmd'     : 'testpost',
-                'post'    : {'random': False, 'tags_added':'', 'tag_cnt':0},
-                'profile' : "",
-            'reply' : "test msg"
-            }
-        }
+    metadata = {
+                 'ctx'     : interaction,
+                 'loop'    : IGSD_client.GetLoop(),
+                 'post_fn' : Post
+               }
+    msg = mf.MsgFactory.GetMsg(type=mf.MessageTypeEnum.TESTGET,
+                               ctx=interaction)
+                               
     disLog.debug(f"Posting test GET job {msg} to the queue.")
-    result = job_queue.Add(msg)
+    result = job_queue.Add(metadata=metadata,
+                           request=msg)
 
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
+
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(manage_guild=True) #The closest to 'be a mod' Discord has.

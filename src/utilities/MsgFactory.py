@@ -91,7 +91,8 @@ class GenerateMessage(Message):
     def GetUserId(self) -> int:
         pass
 
-    async def Post(self):
+    async def Post(self,
+                   ctx  : dis.Interaction):
         pass
 
     def Randomize(self):
@@ -119,7 +120,8 @@ class ListProfilesMessage(Message):
     def GetUserId(self) -> int:
         pass
 
-    async def Post(self):
+    async def Post(self,
+                   ctx  : dis.Interaction):
         pass
 
     def Randomize(self):
@@ -147,7 +149,8 @@ class RollMessage(Message):
     def GetUserId(self) -> int:
         pass
 
-    async def Post(self):
+    async def Post(self,
+                   ctx  : dis.Interaction):
         pass
 
     def Randomize(self):
@@ -175,7 +178,8 @@ class ShowProfileMessage(Message):
     def GetUserId(self) -> int:
         pass
 
-    async def Post(self):
+    async def Post(self,
+                   ctx  : dis.Interaction):
         pass
 
     def Randomize(self):
@@ -185,26 +189,49 @@ class TestGetMessage(Message):
 
     def __init__(self,
                  ctx  : dis.Interaction):
-        pass
+        """Creates a message object for the /testget command.
+
+           Input: self - Pointer to the current object instance.
+                  ctx - the Discord context from the user's slash command.
+
+           Output: N/A.
+        """
+
+        self.guild   = ctx.guild_id
+        self.reply   = ""
+        self.result  = req.Response()
+        self.user_id = ctx.user.id
 
     def DoWork(self,
                web_url: str):
-        pass
+
+        self.result = req.get(url=urljoin(web_url, '/sdapi/v1/memory'), timeout=5)
 
     def GetGuild(self) -> int:
-        pass
+
+        return self.guild
 
     def GetReason(self) -> int:
-        pass
+
+        return self.result.reason
 
     def GetStatusCode(self) -> int:
-        pass
+
+        return self.result.status_code
 
     def GetUserId(self) -> int:
-        pass
 
-    async def Post(self):
-        pass
+        return self.user_id
+
+    async def Post(self,
+                   ctx  : dis.Interaction):
+
+        embed = dis.Embed(title='Test GET successful:',
+                          description=f"Status code: {self.result.status_code} Reason: {self.result.reason}",
+                          color=0x008000)
+
+        await ctx.channel.send(content=f"<@{self.user_id}>",
+                               embed=embed)
 
     def Randomize(self):
         pass
@@ -213,6 +240,13 @@ class TestPostMessage(Message):
 
     def __init__(self,
                  ctx  : dis.Interaction):
+        """Creates a message object for the /testpost command.
+
+           Input: self - Pointer to the current object instance.
+                  ctx - the Discord context from the user's slash command.
+
+           Output: N/A.
+        """
 
         self.guild   = ctx.guild_id
         self.post    = pg.GetDefaultJobData()
@@ -295,7 +329,8 @@ class TestRollMessage(Message):
     def GetUserId(self) -> int:
         pass
 
-    async def Post(self):
+    async def Post(self,
+                   ctx  : dis.Interaction):
         pass
 
     def Randomize(self):
@@ -323,7 +358,8 @@ class TestShowMessage(Message):
     def GetUserId(self) -> int:
         pass
 
-    async def Post(self):
+    async def Post(self,
+                   ctx  : dis.Interaction):
         pass
 
     def Randomize(self):
@@ -337,6 +373,7 @@ class MsgFactory:
     def GetMsg(type : MessageTypeEnum,
                ctx  : dis.Interaction) -> Message:
         """Returns an instance of a message type with appropriate options set.
+           Note that no message can contain unpicklable data.
 
            Input: self - Pointer to the current object instance.
 

@@ -29,21 +29,21 @@ class Message(ABC):
                web_url: str):
         pass
 
-    @abstractmethod
     def GetGuild(self) -> int:
-        pass
 
-    @abstractmethod
-    def GetReason(self) -> str:
-        pass
+        return self.guild
 
-    @abstractmethod
+    def GetReason(self) -> int:
+
+        return self.result.reason
+
     def GetStatusCode(self) -> int:
-        pass
 
-    @abstractmethod
+        return self.result.status_code
+
     def GetUserId(self) -> int:
-        pass
+
+        return self.user_id
 
     @abstractmethod
     async def Post(self):
@@ -79,18 +79,6 @@ class GenerateMessage(Message):
                web_url: str):
         pass
 
-    def GetGuild(self) -> int:
-        pass
-
-    def GetReason(self) -> int:
-        pass
-
-    def GetStatusCode(self) -> int:
-        pass
-
-    def GetUserId(self) -> int:
-        pass
-
     async def Post(self,
                    ctx  : dis.Interaction):
         pass
@@ -108,18 +96,6 @@ class ListProfilesMessage(Message):
                web_url: str):
         pass
 
-    def GetGuild(self) -> int:
-        pass
-
-    def GetReason(self) -> int:
-        pass
-
-    def GetStatusCode(self) -> int:
-        pass
-
-    def GetUserId(self) -> int:
-        pass
-
     async def Post(self,
                    ctx  : dis.Interaction):
         pass
@@ -135,18 +111,6 @@ class RollMessage(Message):
 
     def DoWork(self,
                web_url: str):
-        pass
-
-    def GetGuild(self):
-        pass
-
-    def GetReason(self) -> int:
-        pass
-
-    def GetStatusCode(self) -> int:
-        pass
-
-    def GetUserId(self) -> int:
         pass
 
     async def Post(self,
@@ -172,18 +136,6 @@ class ShowProfileMessage(Message):
 
     def DoWork(self,
                web_url: str):
-        pass
-
-    def GetGuild(self) -> int:
-        pass
-
-    def GetReason(self) -> int:
-        pass
-
-    def GetStatusCode(self) -> int:
-        pass
-
-    def GetUserId(self) -> int:
         pass
 
     async def Post(self,
@@ -214,22 +166,6 @@ class TestGetMessage(Message):
                web_url: str):
 
         self.result = req.get(url=urljoin(web_url, '/sdapi/v1/memory'), timeout=5)
-
-    def GetGuild(self) -> int:
-
-        return self.guild
-
-    def GetReason(self) -> int:
-
-        return self.result.reason
-
-    def GetStatusCode(self) -> int:
-
-        return self.result.status_code
-
-    def GetUserId(self) -> int:
-
-        return self.user_id
 
     async def Post(self,
                    ctx  : dis.Interaction):
@@ -266,22 +202,6 @@ class TestPostMessage(Message):
                web_url: str):
 
         self.result = req.post(url=urljoin(web_url, '/sdapi/v1/txt2img'), json=self.post)
-
-    def GetGuild(self) -> int:
-
-        return self.guild
-
-    def GetReason(self) -> int:
-
-        return self.result.reason
-
-    def GetStatusCode(self) -> int:
-
-        return self.result.status_code
-
-    def GetUserId(self) -> int:
-
-        return self.user_id
 
     async def Post(self,
                    ctx  : dis.Interaction):
@@ -338,22 +258,6 @@ class TestRollMessage(Message):
 
         self.result = req.post(url=urljoin(web_url, '/sdapi/v1/txt2img'), json=self.post)
 
-    def GetGuild(self) -> int:
-
-        return self.guild
-
-    def GetReason(self) -> int:
-
-        return self.result.reason
-
-    def GetStatusCode(self) -> int:
-
-        return self.result.status_code
-
-    def GetUserId(self) -> int:
-
-        return self.user_id
-
     async def Post(self,
                    ctx  : dis.Interaction):
 
@@ -393,18 +297,6 @@ class TestShowMessage(Message):
 
     def DoWork(self,
                web_url: str):
-        pass
-
-    def GetGuild(self) -> int:
-        pass
-
-    def GetReason(self) -> int:
-        pass
-
-    def GetStatusCode(self) -> int:
-        pass
-
-    def GetUserId(self) -> int:
         pass
 
     async def Post(self,

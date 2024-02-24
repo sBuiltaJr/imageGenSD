@@ -1,3 +1,36 @@
+# Version 0.3.6
+
+## Highlights
+
+- Refactored slash command data into a factory.
+- Split the Tag Randomizer into its own log file.
+- Minor code cleanup as a result of the job factory.
+
+### Specific Changes
+
+- Created TagFactory.py to create specific jobs based on slash command.
+	- Replaced all slash commands using the queue with a factory equivalent.
+		- only `/listprofiles` and `/hello` do not use the job queue.
+		- `/testshowprofile` was converted into a queue job for consistency.
+	- Each command is now allowed to have a variable amount of data/metadata for its specific job.
+- Gave the Tag Randomizer its own log file (instead of relying on the Queue class's log file)
+	- The Tag Randomizer is now initialized by the main IGSD thread.
+	- The Queue Manager has no knowledge of Tag Randomization and only calls a `randomize` function provided by the job object.
+	- No error messages or logging levels where changed.
+	- All Tag randomizer init code was removed from the Queue Manager.
+- Minor code cleanup as a result of the job factory.
+	- The specifics of `Post` where migrated to job internals instead of a unified function in `imageGenSD.py`
+	- All dependencies necessary for posting have been moved into the job functionality.
+	- The total job data and metadata required to use jobs has been reduced.
+		- separate command identifiers/IDs are now just stored as job data.
+		- `QueueManager.py`'s `add` function now relies on job properties instead of job data in a dictionary.
+	- the `post` function in `imageGenSD.py` has been moved into correct alphabetical order.
+	-Several older comments/notes have been removed.
+
+### Notes
+
+- Admins restarting the bot may need to reset the `daily` flag in the DB, depending on how IGSD was shut down.
+
 # Version 0.3.5
 
 ## Highlights

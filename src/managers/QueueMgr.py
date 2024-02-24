@@ -241,26 +241,6 @@ class Manager:
             result.status_code = 404
             result.reason      = "Exception Running Job, try again later."
 
-            #Have a special check for the GET test, which doesn't expect to get
-            #any data from an actual job.
-            """if request['id'] == "testgetid" or ((not (isinstance(request['id'], str))) and (request['id'] < 10)):
-
-                self.queLog.debug(f"Performing GET test of URL: {self.web_url}.")
-                try:
-                    result = req.get(url=urljoin(self.web_url, '/sdapi/v1/memory'), timeout=5)
-
-                except Exception as err:
-                    self.queLog.error(f"Exception trying to GET: {err}.")
-
-            else:
-
-                self.queLog.info(f"Starting PUT to SD server at {self.web_url}.")
-                try:
-                    result = req.post(url=urljoin(self.web_url, '/sdapi/v1/txt2img'), json=request['post'])
-                    jres   = result.json()
-
-                except Exception as err:
-                    self.queLog.error(f"Exception trying to PUT: {err}.")"""
             try:
                 request.DoWork(web_url=self.web_url)
 
@@ -270,17 +250,6 @@ class Manager:
             self.queLog.info(f"Got a result from the queue for user {request.GetUserId()}.")
             self.queLog.debug(f"Request is: {request}")
             self.queLog.debug(f"Result is: {result}")
-            """jres['status_code'] = result.status_code
-            jres['reason']      = result.reason
-            jres['id']          = request['id'] #TODO this shouldn't be necessary
-            jres['cmd']         = request['cmd'] #TODO this shouldn't be necessary
-            jres['profile']     = request['profile']
-            jres['random']      = request['post']['random']
-            jres['tags_added']  = request['post']['tags_added']
-            #Pop last to ensure a new request from the same ID can be added
-            #only after their first request is completed.
-            job     = (jobs[request['guild']]).pop(request['id'])
-            jres   |= job"""
 
             metadata = (jobs[request.GetGuild()]).pop(request.GetUserId())
             if len(jobs[request.GetGuild()]) == 0:

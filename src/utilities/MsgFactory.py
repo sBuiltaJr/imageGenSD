@@ -151,6 +151,14 @@ class RollMessage(Message):
 
     async def Post(self,
                    ctx  : dis.Interaction):
+
+        """if msg['cmd'] == 'roll':
+
+            info_dict = json.loads(msg['info'])
+            db_ifc.SaveRoll(id=msg['id'],
+                            img=msg['images'][0],
+                            info=info_dict,
+                            profile=self.profile)"""
         pass
 
     def Randomize(self):
@@ -250,7 +258,6 @@ class TestPostMessage(Message):
 
         self.guild   = ctx.guild_id
         self.post    = pg.GetDefaultJobData()
-        self.profile = pg.GetDefaultProfile()
         self.reply   = ""
         self.result  = req.Response()
         self.user_id = ctx.user.id
@@ -311,27 +318,69 @@ class TestRollMessage(Message):
 
     def __init__(self,
                  ctx  : dis.Interaction):
-        pass
+        """Creates a message object for the /testroll command.
+
+           Input: self - Pointer to the current object instance.
+                  ctx - the Discord context from the user's slash command.
+
+           Output: N/A.
+        """
+
+        self.guild   = ctx.guild_id
+        self.post    = pg.GetDefaultJobData()
+        self.profile = pg.GetDefaultProfile()
+        self.reply   = ""
+        self.result  = req.Response()
+        self.user_id = ctx.user.id
 
     def DoWork(self,
                web_url: str):
-        pass
+
+        self.result = req.post(url=urljoin(web_url, '/sdapi/v1/txt2img'), json=self.post)
 
     def GetGuild(self) -> int:
-        pass
+
+        return self.guild
 
     def GetReason(self) -> int:
-        pass
+
+        return self.result.reason
 
     def GetStatusCode(self) -> int:
-        pass
+
+        return self.result.status_code
 
     def GetUserId(self) -> int:
-        pass
+
+        return self.user_id
 
     async def Post(self,
                    ctx  : dis.Interaction):
-        pass
+
+        embed = dis.Embed()
+        json_result = self.result.json()
+        info_dict   = json.loads(json_result['info'])
+        favorite = f"<@{self.profile.favorite}>" if self.profile.favorite != 0 else "None. You could be here!"
+
+        embed.add_field(name='Creator', value=f"<@{self.profile.creator}>")
+        embed.add_field(name='Owner', value=f"<@{self.profile.owner}>")
+        embed.add_field(name='Name', value=self.profile.name)
+        embed.add_field(name='Rarity', value=self.profile.rarity.name)
+        embed.add_field(name='Agility', value=self.profile.stats.agility)
+        embed.add_field(name='Defense', value=self.profile.stats.defense)
+        embed.add_field(name='Endurance', value=self.profile.stats.endurance)
+        embed.add_field(name='Luck', value=self.profile.stats.luck)
+        embed.add_field(name='Strength', value=self.profile.stats.strength)
+        embed.add_field(name='Description', value=self.profile.desc)
+        embed.add_field(name='Favorite', value=f"{favorite}")
+
+        for i in json_result['images']:
+            image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
+
+        await ctx.channel.send(content=f"<@{self.user_id}>",
+                               file=dis.File(fp=image,
+                                             filename='image.png'),
+                               embed=embed)
 
     def Randomize(self):
         pass

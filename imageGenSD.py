@@ -213,7 +213,37 @@ async def generate(interaction: dis.Interaction,
     if BannedWordsFound(prompt, params['options']['banned_words']) or BannedWordsFound(negative_prompt, params['options']['banned_neg_words']):
         result = f"Job ignored.  Please do not use words containing: {params['options']['banned_words']} in the positive prompt or {params['options']['banned_neg_words']} in the negative prompt."
     else:
-        job = { 'metadata' : {
+    
+        metadata = {
+                     'ctx'     : interaction,
+                     'db_ifc'  : db_ifc,
+                     'loop'    : IGSD_client.GetLoop(),
+                     'post_fn' : Post,
+                     'tag_rng' : tag_randomizer
+                   }
+        opts = {
+                'cfg_scale' : cfg_scale,
+                'height'   : (height - (height % int(params['options']['step_size']))),
+                'n_prompt' : negative_prompt,
+                'prompt'   : prompt,
+                'random'   : random,
+                'sampler'  : sampler,
+                'seed'     : -1,
+                'steps'    : steps,
+                'tag_cnt'  : tag_cnt,
+                'width'    : (width  - (width  % int(params['options']['step_size'])))
+        }
+        disLog.debug(f"Creating a job with metadata {metadata} and options {opts}.")
+        job = jf.JobFactory.GetJob(type=jf.JobTypeEnum.GENERATE,
+                                   ctx=interaction,
+                                   options=opts)
+        disLog.debug(f"Posting GENERATE job {job} to the queue.")
+        result = job_queue.Add(metadata=metadata,
+                               request=job)
+
+        await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
+        
+        """job = { 'metadata' : {
                     'ctx'    : interaction,
                     'loop'   : IGSD_client.GetLoop(),
                     'poster' : Post
@@ -246,7 +276,7 @@ async def generate(interaction: dis.Interaction,
         disLog.debug(f"Posting user job {job} to the queue.")
         result = job_queue.Add(job)
 
-    await interaction.response.send_message(f'{result}', ephemeral=True)
+    await interaction.response.send_message(f'{result}', ephemeral=True)"""
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
@@ -456,8 +486,6 @@ async def showprofile(interaction: dis.Interaction,
                            request=job)
 
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
-
-
 
 #This is commented until the failed inheritance issue can be resolved.
 #@IGSD_client.tree.command()

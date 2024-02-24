@@ -136,26 +136,78 @@ class GenerateJob(Job):
     def __init__(self,
                  ctx     : dis.Interaction,
                  options : Optional[dict] = None):
-        pass
+        """Creates a job object for the /generate command.
+
+           Input: self - Pointer to the current object instance.
+                  ctx - the Discord context from the user's slash command.
+                  options - a dict of configs for this job.
+
+           Output: N/A.
+        """
+                 
+        self.guild             = ctx.guild_id
+        self.post              = pg.GetDefaultJobData()
+        self.post['cfg_scale'] = options['cfg_scale']
+        self.post['height']    = options['height']
+        self.post['n_prompt']  = options['n_prompt']
+        self.post['prompt']    = options['prompt']
+        self.post['random']    = options['random']
+        self.post['sampler']   = options['sampler']
+        self.post['seed']      = options['seed']
+        self.post['steps']     = options['steps']
+        self.post['tag_cnt']   = options['tag_cnt']
+        self.post['width']     = options['width']
+        self.randomize         = bool(options['random'])
+        self.result            = req.Response()
+        self.user_id           = ctx.user.id
+        self.profile           = pg.Profile(self.user_id)
 
     def DoWork(self,
                web_url : str):
-        pass
+
+        self.result = req.post(url=urljoin(web_url, '/sdapi/v1/txt2img'), json=self.post)
 
     async def Post(self,
-                   ctx  : dis.Interaction):
-        pass
+                   metadata : dict):
+
+        embed = dis.Embed()
+        json_result = self.result.json()
+        info_dict   = json.loads(json_result['info'])
+
+        embed.add_field(name='Prompt', value=info_dict['prompt'])
+        embed.add_field(name='Negative Prompt', value=info_dict['negative_prompt'])
+        embed.add_field(name='Steps', value=info_dict['steps'])
+        embed.add_field(name='Height', value=info_dict['height'])
+        embed.add_field(name='Width', value=info_dict['width'])
+        embed.add_field(name='Sampler', value=info_dict['sampler_name'])
+        embed.add_field(name='Seed', value=info_dict['seed'])
+        embed.add_field(name='Subseed', value=info_dict['subseed'])
+        embed.add_field(name='CFG Scale', value=info_dict['cfg_scale'])
+        #Randomized and co are special because they're not a parameter sent to SD.
+        embed.add_field(name='Randomized', value=self.randomize)
+        embed.add_field(name='Tags Added to Prompt', value=self.post['tags_added'])
+
+        for i in json_result['images']:
+            image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
+
+        await metadata['ctx'].channel.send(content=f"<@{self.user_id}>",
+                                           file=dis.File(fp=image,
+                                                         filename='image.png'),
+                                           embed=embed)
 
     def Randomize(self,
                   tag_src):
-        pass
+
+        tag_data = tag_src.getRandomTags(int(self.post['tag_cnt']))
+        self.post['prompt']     += tag_data[0]
+        self.post['tags_added']  = tag_data[1]
 
 class RollJob(Job):
 
     def __init__(self,
                  ctx     : dis.Interaction,
                  options : dict):
-        """Creates a job object for the /showprofile command.
+        """Creates a job object for the /roll command.
 
            Input: self - Pointer to the current object instance.
                   ctx - the Discord context from the user's slash command.
@@ -440,7 +492,8 @@ class TestRollJob(Job):
 class TestShowJob(Job):
 
     def __init__(self,
-                 ctx  : dis.Interaction):
+                 ctx     : dis.Interaction,
+                 options : Optional[dict] = None):
         """Creates a job object for the /testshowprofile command.
 
            Input: self - Pointer to the current object instance.
@@ -541,4 +594,4 @@ class JobFactory:
                                    options)
 
             case _:
-                return ( 0,   1)
+                return Job()

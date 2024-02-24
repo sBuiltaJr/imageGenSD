@@ -258,7 +258,7 @@ class Manager:
                 del jobs[request.GetGuild()]
 
             self.queLog.debug(f"Job Id {request.GetUserId()} result was: ")
-            metadata['loop'].create_task(metadata['post_fn'](msg=request, ctx=metadata['ctx']),
+            metadata['loop'].create_task(metadata['post_fn'](msg=request, metadata=metadata),
                                          name="reply")
 
             if self.job_cooldown > 0.0:

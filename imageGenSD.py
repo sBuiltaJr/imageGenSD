@@ -355,8 +355,8 @@ async def on_ready():
 
     print('------')
 
-async def Post(msg,
-               ctx):
+async def Post(msg      : mf.Message,
+               metadata : dict):
     """Posts the query's result to Discord.  Runs in the main asyncio loop so
        the manager can start the next job concurrently.
 
@@ -374,12 +374,12 @@ async def Post(msg,
                           description=f"Status code: {msg.GetStatusCode()} Reason: {msg.GetReason()}",
                           color=0xec1802)
 
-        await ctx.channel.send(content=f"<@{msg.GetUserId()}>",
-                               embed=embed)
+        await metadata['ctx'].channel.send(content=f"<@{msg.GetUserId()}>",
+                                           embed=embed)
 
     else:
 
-        await msg.Post(ctx)
+        await msg.Post(metadata)
 
     """elif msg['id'] == 'testgetid' or ((type(msg['id']) != str) and (msg['id'] < 10)):
 
@@ -667,30 +667,20 @@ async def testshowprofile(interaction: dis.Interaction):
 
        Note: All slash commands *MUST* respond in 3 seconds or be terminated.
     """
-    msg = {'cmd'         : 'testshowprofile',
-           'ctx'         : interaction,
-           'guild'       : interaction.guild_id,
-           'id'          : "testshowprofileid",
-           'loop'        : IGSD_client.GetLoop(),
-           'images'      : db_ifc.GetImage(),
-           'poster'      : Post,
-           'post'        : pg.GetDefaultJobData(),
-           'profile'     : db_ifc.GetProfile(),
-           'reply'       : "",
-           'status_code' : 200
-            }
-
     disLog = log.getLogger('discord')
-    #TODO This should probably be its own queue to avoid the 3s timeout?
-
-    if msg['images'] == None or msg['profile'] == None:
-
-        await interaction.response.send_message(f'Error, test profile/pic do not exist!')
-
-    else:
-
-        await interaction.response.send_message(f'Added test message to the post queue', ephemeral=True, delete_after=9.0)
-        await Post(msg)
+    metadata = {
+                 'ctx'     : interaction,
+                 'db_ifc'  : db_ifc,
+                 'loop'    : IGSD_client.GetLoop(),
+                 'post_fn' : Post
+               }
+    msg = mf.MsgFactory.GetMsg(type=mf.MessageTypeEnum.TESTSHOW,
+                               ctx=interaction)
+    disLog.debug(f"Posting test SHOW job {msg} to the queue.")
+    result = job_queue.Add(metadata=metadata,
+                           request=msg)
+                           
+    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 #####  main  #####
 

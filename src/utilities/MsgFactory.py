@@ -7,10 +7,10 @@
 from abc import ABC, abstractmethod
 import asyncio as asy
 import base64 as b64
+from ..db import MariadbIfc as mdb
 import discord as dis
 from enum import IntEnum, verify, UNIQUE
 import io
-#import MenuPagination as mp
 import json
 import pickle as pic
 from . import ProfileGenerator as pg
@@ -46,7 +46,8 @@ class Message(ABC):
         return self.user_id
 
     @abstractmethod
-    async def Post(self):
+    async def Post(self,
+                   metadata : dict):
         pass
 
     @abstractmethod
@@ -76,7 +77,7 @@ class GenerateMessage(Message):
         pass
 
     def DoWork(self,
-               web_url: str):
+               web_url : str):
         pass
 
     async def Post(self,
@@ -93,11 +94,11 @@ class ListProfilesMessage(Message):
         pass
 
     def DoWork(self,
-               web_url: str):
+               web_url : str):
         pass
 
     async def Post(self,
-                   ctx  : dis.Interaction):
+                   metadata : dict):
         pass
 
     def Randomize(self):
@@ -110,11 +111,11 @@ class RollMessage(Message):
         pass
 
     def DoWork(self,
-               web_url: str):
+               web_url : str):
         pass
 
     async def Post(self,
-                   ctx  : dis.Interaction):
+                   metadata : dict):
 
         """if msg['cmd'] == 'roll':
 
@@ -139,7 +140,7 @@ class ShowProfileMessage(Message):
         pass
 
     async def Post(self,
-                   ctx  : dis.Interaction):
+                   metadata : dict):
         pass
 
     def Randomize(self):
@@ -158,24 +159,23 @@ class TestGetMessage(Message):
         """
 
         self.guild   = ctx.guild_id
-        self.reply   = ""
         self.result  = req.Response()
         self.user_id = ctx.user.id
 
     def DoWork(self,
-               web_url: str):
+               web_url : str):
 
         self.result = req.get(url=urljoin(web_url, '/sdapi/v1/memory'), timeout=5)
 
     async def Post(self,
-                   ctx  : dis.Interaction):
+                   metadata : dict):
 
         embed = dis.Embed(title='Test GET successful:',
                           description=f"Status code: {self.result.status_code} Reason: {self.result.reason}",
                           color=0x008000)
 
-        await ctx.channel.send(content=f"<@{self.user_id}>",
-                               embed=embed)
+        await metadata['ctx'].channel.send(content=f"<@{self.user_id}>",
+                                           embed=embed)
 
     def Randomize(self):
         pass
@@ -194,17 +194,16 @@ class TestPostMessage(Message):
 
         self.guild   = ctx.guild_id
         self.post    = pg.GetDefaultJobData()
-        self.reply   = ""
         self.result  = req.Response()
         self.user_id = ctx.user.id
 
     def DoWork(self,
-               web_url: str):
+               web_url : str):
 
         self.result = req.post(url=urljoin(web_url, '/sdapi/v1/txt2img'), json=self.post)
 
     async def Post(self,
-                   ctx  : dis.Interaction):
+                   metadata : dict):
 
         embed = dis.Embed()
         json_result = self.result.json()
@@ -226,10 +225,10 @@ class TestPostMessage(Message):
         for i in json_result['images']:
             image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
 
-        await ctx.channel.send(content=f"<@{self.user_id}>",
-                               file=dis.File(fp=image,
-                                             filename='image.png'),
-                               embed=embed)
+        await metadata['ctx'].channel.send(content=f"<@{self.user_id}>",
+                                           file=dis.File(fp=image,
+                                                         filename='image.png'),
+                                           embed=embed)
 
     def Randomize(self):
         pass
@@ -249,17 +248,16 @@ class TestRollMessage(Message):
         self.guild   = ctx.guild_id
         self.post    = pg.GetDefaultJobData()
         self.profile = pg.GetDefaultProfile()
-        self.reply   = ""
         self.result  = req.Response()
         self.user_id = ctx.user.id
 
     def DoWork(self,
-               web_url: str):
+               web_url : str):
 
         self.result = req.post(url=urljoin(web_url, '/sdapi/v1/txt2img'), json=self.post)
 
     async def Post(self,
-                   ctx  : dis.Interaction):
+                   metadata : dict):
 
         embed = dis.Embed()
         json_result = self.result.json()
@@ -281,10 +279,10 @@ class TestRollMessage(Message):
         for i in json_result['images']:
             image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
 
-        await ctx.channel.send(content=f"<@{self.user_id}>",
-                               file=dis.File(fp=image,
-                                             filename='image.png'),
-                               embed=embed)
+        await metadata['ctx'].channel.send(content=f"<@{self.user_id}>",
+                                            file=dis.File(fp=image,
+                                                          filename='image.png'),
+                                            embed=embed)
 
     def Randomize(self):
         pass
@@ -293,15 +291,44 @@ class TestShowMessage(Message):
 
     def __init__(self,
                  ctx  : dis.Interaction):
-        pass
+
+        #self.db_img  = ""
+        self.guild              = ctx.guild_id
+        self.result             = req.Response()
+        self.result.reason      = "OK"
+        self.result.status_code = 200
+        self.user_id            = ctx.user.id
 
     def DoWork(self,
-               web_url: str):
-        pass
+               web_url : str):
+        return
 
     async def Post(self,
-                   ctx  : dis.Interaction):
-        pass
+                   metadata : dict):
+
+        embed        = dis.Embed()
+        self.profile = metadata['db_ifc'].GetProfile()
+        self.db_img  = metadata['db_ifc'].GetImage()
+        favorite     = f"<@{self.profile.favorite}>" if self.profile.favorite != 0 else "None. You could be here!"
+
+        embed.add_field(name='Creator', value=f"<@{self.profile.creator}>")
+        embed.add_field(name='Owner', value=f"<@{self.profile.owner}>")
+        embed.add_field(name='Name', value=self.profile.name)
+        embed.add_field(name='Rarity', value=self.profile.rarity.name)
+        embed.add_field(name='Agility', value=self.profile.stats.agility)
+        embed.add_field(name='Defense', value=self.profile.stats.defense)
+        embed.add_field(name='Endurance', value=self.profile.stats.endurance)
+        embed.add_field(name='Luck', value=self.profile.stats.luck)
+        embed.add_field(name='Strength', value=self.profile.stats.strength)
+        embed.add_field(name='Description', value=self.profile.desc)
+        embed.add_field(name='Favorite', value=f"{favorite}")
+
+        image = io.BytesIO(b64.b64decode(self.db_img))
+
+        await metadata['ctx'].channel.send(content=f"<@{self.user_id}>",
+                                           file=dis.File(fp=image,
+                                                         filename='image.png'),
+                                           embed=embed)
 
     def Randomize(self):
         pass

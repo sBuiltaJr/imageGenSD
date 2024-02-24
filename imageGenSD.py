@@ -516,32 +516,21 @@ async def showprofile(interaction: dis.Interaction,
         Output : N/A.
     """
     disLog = log.getLogger('discord')
-    msg = {'cmd'         : 'showprofile',
-           'ctx'         : interaction,
-           'guild'       : interaction.guild_id,
-           'id'          : "showprofileid",
-           'loop'        : IGSD_client.GetLoop(),
-           'poster'      : Post,
-           'post'        : pg.GetDefaultJobData(),
-           'reply'       : "",
-           'status_code' : 200
-            }
+    metadata = {
+                 'ctx'     : interaction,
+                 'db_ifc'  : db_ifc,
+                 'id'      : id,
+                 'loop'    : IGSD_client.GetLoop(),
+                 'post_fn' : Post
+               }
+    msg = mf.MsgFactory.GetMsg(type=mf.MessageTypeEnum.SHOWPROFILE,
+                               ctx=interaction)
+    disLog.debug(f"Posting SHOW job {msg} to the queue.")
+    result = job_queue.Add(metadata=metadata,
+                           request=msg)
 
-    msg['profile'] = db_ifc.GetProfile(id)
+    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
-    if not msg['profile']:
-
-        embed = dis.Embed(title="Error",
-                          description=f"User A character with the ID `{id}` does not exist!",
-                          color=0xec1802)
-        await interaction.response.send_message(content=f"<@{interaction.user.id}>", embed=embed)
-
-    else:
-
-        msg['images'] = db_ifc.GetImage(profile_id=id),
-
-        await interaction.response.send_message(f"Added {msg['profile'].name}'s profile to the post queue.", ephemeral=True, delete_after=9.0)
-        await Post(msg)
 
 
 #This is commented until the failed inheritance issue can be resolved.
@@ -598,7 +587,7 @@ async def testget(interaction: dis.Interaction):
                }
     msg = mf.MsgFactory.GetMsg(type=mf.MessageTypeEnum.TESTGET,
                                ctx=interaction)
-                               
+
     disLog.debug(f"Posting test GET job {msg} to the queue.")
     result = job_queue.Add(metadata=metadata,
                            request=msg)
@@ -679,7 +668,7 @@ async def testshowprofile(interaction: dis.Interaction):
     disLog.debug(f"Posting test SHOW job {msg} to the queue.")
     result = job_queue.Add(metadata=metadata,
                            request=msg)
-                           
+
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 #####  main  #####

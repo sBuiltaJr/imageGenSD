@@ -1,5 +1,5 @@
-#encapsualtes different message types and post functions based on
-
+#encapsualtes different message types and post functions based on the specific
+#message type requested.
 
 
 #####  Imports  #####
@@ -27,31 +27,82 @@ class Message(ABC):
     @abstractmethod
     def DoWork(self,
                web_url: str):
+        """Does whatever work the message is requesting, like generating images
+           from the Stable Diffusion URL.
+
+           Input: self - Pointer to the current object instance.
+                  web_url - a URL to a place to do work.
+
+           Output: N/A.
+           
+           Note: This function is called in the Job Queue, meaning *only*
+                 picklable data is available to it.
+        """
         pass
 
     def GetGuild(self) -> int:
+        """Returns the Guild (Discord Server) ID originating this request.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: int - the numeric representation of a Guild.
+        """
 
         return self.guild
 
-    def GetReason(self) -> int:
+    def GetReason(self) -> str:
+        """Returns the HTTP Reason string associated with this request.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: str - Textual reason of a HTTP Status response.
+        """
 
         return self.result.reason
 
     def GetStatusCode(self) -> int:
+        """Returns the HTTP status code associated with this request.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: int - the numeric response to a HTTP request.
+        """
 
         return self.result.status_code
 
     def GetUserId(self) -> int:
+        """Returns the (Discord) user ID that originated this request.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: int - the numeric representation of a user.
+        """
 
         return self.user_id
 
     @abstractmethod
     async def Post(self,
                    metadata : dict):
+        """Posts the message's response data to Discord, including handling
+           command-specific formatting.
+
+           Input: self - Pointer to the current object instance.
+                  metadata - Context from the command needed to post correctly.
+
+           Output: N/A.
+        """
         pass
 
     @abstractmethod
     def Randomize(self):
+        """Performs randomization functions for the request, if applicable.
+           For example, adds randomized tags to a request if a 'randomized'
+           flag is set true.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: int - N/A.
+        """
         pass
 
 #####  Enum Casses  #####
@@ -62,7 +113,7 @@ class MessageTypeEnum(IntEnum):
     GENERATE     =    0
     LISTPROFILES =    1
     ROLL         =    2
-    SHOWPROFILES =    3
+    SHOWPROFILE  =    3
     TESTPOST     =    4
     TESTGET      =    5
     TESTROLL     =    6
@@ -133,7 +184,19 @@ class ShowProfileMessage(Message):
 
     def __init__(self,
                  ctx  : dis.Interaction):
-        pass
+        """Creates a message object for the /showprofile command.
+
+           Input: self - Pointer to the current object instance.
+                  ctx - the Discord context from the user's slash command.
+
+           Output: N/A.
+        """
+
+        self.guild              = ctx.guild_id
+        self.result             = req.Response()
+        self.result.reason      = "OK"
+        self.result.status_code = 200
+        self.user_id            = ctx.user.id
 
     def DoWork(self,
                web_url: str):
@@ -141,7 +204,39 @@ class ShowProfileMessage(Message):
 
     async def Post(self,
                    metadata : dict):
-        pass
+
+        self.profile = metadata['db_ifc'].GetProfile(metadata['id'])
+
+        if not self.profile:
+
+            embed = dis.Embed(title="Error",
+                              description=f"User A character with the ID `{metadata['id']}` does not exist!",
+                              color=0xec1802)
+            await metadata['ctx'].channel.send(content=f"<@{self.user_id}>", embed=embed)
+
+        else:
+            embed        = dis.Embed()
+            self.db_img  = metadata['db_ifc'].GetImage(profile_id=metadata['id'])
+            favorite     = f"<@{self.profile.favorite}>" if self.profile.favorite != 0 else "None. You could be here!"
+
+            embed.add_field(name='Creator', value=f"<@{self.profile.creator}>")
+            embed.add_field(name='Owner', value=f"<@{self.profile.owner}>")
+            embed.add_field(name='Name', value=self.profile.name)
+            embed.add_field(name='Rarity', value=self.profile.rarity.name)
+            embed.add_field(name='Agility', value=self.profile.stats.agility)
+            embed.add_field(name='Defense', value=self.profile.stats.defense)
+            embed.add_field(name='Endurance', value=self.profile.stats.endurance)
+            embed.add_field(name='Luck', value=self.profile.stats.luck)
+            embed.add_field(name='Strength', value=self.profile.stats.strength)
+            embed.add_field(name='Description', value=self.profile.desc)
+            embed.add_field(name='Favorite', value=f"{favorite}")
+
+            image = io.BytesIO(b64.b64decode(self.db_img))
+
+            await metadata['ctx'].channel.send(content=f"<@{self.user_id}>",
+                                               file=dis.File(fp=image,
+                                                             filename='image.png'),
+                                               embed=embed)
 
     def Randomize(self):
         pass
@@ -291,8 +386,14 @@ class TestShowMessage(Message):
 
     def __init__(self,
                  ctx  : dis.Interaction):
+        """Creates a message object for the /testshowprofile command.
 
-        #self.db_img  = ""
+           Input: self - Pointer to the current object instance.
+                  ctx - the Discord context from the user's slash command.
+
+           Output: N/A.
+        """
+
         self.guild              = ctx.guild_id
         self.result             = req.Response()
         self.result.reason      = "OK"
@@ -301,7 +402,7 @@ class TestShowMessage(Message):
 
     def DoWork(self,
                web_url : str):
-        return
+        pass
 
     async def Post(self,
                    metadata : dict):
@@ -359,8 +460,8 @@ class MsgFactory:
             case MessageTypeEnum.ROLL:
                 return RollMessage(ctx)
 
-            case MessageTypeEnum.SHOWPROFILES:
-                return ShowProfilesMessage(ctx)
+            case MessageTypeEnum.SHOWPROFILE:
+                return ShowProfileMessage(ctx)
 
             case MessageTypeEnum.TESTPOST:
                 return TestPostMessage(ctx)

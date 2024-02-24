@@ -116,7 +116,7 @@
         {
             "password"       : "Password to log-in as the MariaDB user.  Added here (insecurly) since the DB shouldn't be externally accessable."
         },
-        "queue_opts"    :
+        "profile_opts"    :
         {
             "fn_dict_path"   : "Path to a newline-separated list of first names to use in the generator.",
             "ln_dict_path"   : "Path to a newline-separated list of last names to use in the generator."
@@ -131,7 +131,7 @@
             "max_rand_tag_cnt" : "The maximum number of tags to add to a prompt if a user requests prompt randomization.  Does not count towards max_prompt_len.",
             "min_rand_tag_cnt" : "The minimum number of tags to add to a prompt if a user requests prompt randomization.  Does not count towards max_prompt_len.",
             "rand_dict_path"   : "Path to a newline-separated list of words for tag randomization.  Can be an absolute path or relative to imageGenSD.py.  Must conform to SD requirements (no underscores, escaped parentheses, etc).",
-            "tag_retry_limit"  : "How many times to retry getting a unique tag from the tag dictionary before moving on.  Reduces the chances of duplicate tages in a prompt."
+            "tag_retry_limit"  : "How many times to retry getting a unique tag from the tag dictionary before moving on.  Reduces the chances of duplicate tags in a prompt."
         }
     }
 }

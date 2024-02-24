@@ -7,8 +7,7 @@
 
 #####  Imports  #####
 
-from ..utilities import MsgFactory as mf
-from ..utilities import TagRandomizer as tr
+from ..utilities import JobFactory as jf
 import logging as log
 import logging.handlers as lh
 import multiprocessing as mp
@@ -60,7 +59,6 @@ jobs = {}
 class Manager:
 
     def __init__(self,
-                 loop,
                  manager_id : int,
                  opts       : dict):
         """Manages job request queueing and tracks relevant discord context,
@@ -68,7 +66,6 @@ class Manager:
            caller so different Managers could have different settings.
 
            Input: self - Pointer to the current object instance.
-                  loop - The asyncio event loop this manager posts to.
                   manager_id - The current Manager's ID, assigned by the caller.
                   opts - A dictionary of options, like cooldowns.
 
@@ -96,7 +93,6 @@ class Manager:
         self.id         = manager_id
         self.keep_going = True
         self.flush      = False
-        self.post_loop  = loop
         #It's possible all opts are provided directly from config.json,
         #requiring them to be cast appropriately for the manager.  This also
         #allows the caller to never have to worry about casting the types
@@ -112,18 +108,6 @@ class Manager:
         #subprocess_exec with TCP/UDP data to/from a set of remote terminals).
         self.queue = mp.Queue(self.depth)
 
-        #Currently it doesn't make sense for a queue to create multiple
-        #randomizers since jobs are processed serially.  This may need to
-        #change if the jobs are ever made parallel.
-        #
-        #This call also assumes opts['rand_dict_path'] has been sanitized by
-        #the parent before being passed down.
-        self.randomizer = tr.TagRandomizer(opts['rand_dict_path'],
-                                           int(opts['dict_size']),
-                                           int(opts['min_rand_tag_cnt']),
-                                           int(opts['max_rand_tag_cnt']),
-                                           int(opts['tag_retry_limit']))
-
     def Flush(self):
         """Sets the 'flush' flag true to enable the job queue to flush jobs
            when able.
@@ -136,13 +120,14 @@ class Manager:
 
     def Add(self,
             metadata : dict,
-            request  : mf.Message) -> str:
+            request  : jf.Job) -> str:
         """Passes queued jobs to the worker tasks.  Is effectively the 'main'
            of the class.  Workers return the image prompt and queue object id
            when complete.  The Manager should post the result to the main thread
            via a pipe to allow simultaneous handling of commands and responses.
 
            Input: self - Pointer to the current object instance.
+                  metadata - Unpicklable data needed to post a result to Discord.
                   request - Sanitized data to potentially add to the queue.
 
            Output: str - Result of the job scheduling attempt.
@@ -236,29 +221,24 @@ class Manager:
 #                self.queue.Flush()
                 self.flush = False
                 continue
-            request            = self.queue.get()
-            result             = req.Response()
-            result.status_code = 404
-            result.reason      = "Exception Running Job, try again later."
 
+            request = self.queue.get()
+
+            self.queLog.debug(f"Request is: {request}")
             try:
                 request.DoWork(web_url=self.web_url)
 
             except Exception as err:
                 self.queLog.error(f"Exception doing work for Request: {err}, {request}.")
 
-            self.queLog.info(f"Got a result from the queue for user {request.GetUserId()}.")
-            self.queLog.debug(f"Request is: {request}")
-            self.queLog.debug(f"Result is: {result}")
-
-            metadata = (jobs[request.GetGuild()]).pop(request.GetUserId())
             if len(jobs[request.GetGuild()]) == 0:
 
                 self.queLog.debug(f"Removing empty Guild {request.GetGuild()} from the list.")
                 del jobs[request.GetGuild()]
 
-            self.queLog.debug(f"Job Id {request.GetUserId()} result was: ")
-            metadata['loop'].create_task(metadata['post_fn'](msg=request, metadata=metadata),
+            metadata = (jobs[request.GetGuild()]).pop(request.GetUserId())
+            self.queLog.debug(f"Posting job result to Discord from metadata: {metadata}")
+            metadata['loop'].create_task(metadata['post_fn'](job=request, metadata=metadata),
                                          name="reply")
 
             if self.job_cooldown > 0.0:

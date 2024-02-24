@@ -1,5 +1,5 @@
-#encapsualtes different message types and post functions based on the specific
-#message type requested.
+#encapsualtes different job types and post functions based on the specific
+#job type requested.
 
 
 #####  Imports  #####
@@ -16,25 +16,25 @@ import pickle as pic
 from . import ProfileGenerator as pg
 import requests as req
 from . import TagRandomizer as tr
-from typing import Literal, Optional
+from typing import Optional
 from urllib.parse import urljoin
 
 #####  Package Variables  #####
 
 #####  Abstract Casses  #####
-class Message(ABC):
+class Job(ABC):
 
     @abstractmethod
     def DoWork(self,
                web_url: str):
-        """Does whatever work the message is requesting, like generating images
+        """Does whatever work the job is requesting, like generating images
            from the Stable Diffusion URL.
 
            Input: self - Pointer to the current object instance.
                   web_url - a URL to a place to do work.
 
            Output: N/A.
-           
+
            Note: This function is called in the Job Queue, meaning *only*
                  picklable data is available to it.
         """
@@ -83,7 +83,7 @@ class Message(ABC):
     @abstractmethod
     async def Post(self,
                    metadata : dict):
-        """Posts the message's response data to Discord, including handling
+        """Posts the job's response data to Discord, including handling
            command-specific formatting.
 
            Input: self - Pointer to the current object instance.
@@ -108,23 +108,23 @@ class Message(ABC):
 #####  Enum Casses  #####
 
 @verify(UNIQUE)
-class MessageTypeEnum(IntEnum):
+class JobTypeEnum(IntEnum):
 
     GENERATE     =    0
-    LISTPROFILES =    1
-    ROLL         =    2
-    SHOWPROFILE  =    3
-    TESTPOST     =    4
-    TESTGET      =    5
-    TESTROLL     =    6
-    TESTSHOW     =    7
+    ROLL         =    1
+    SHOWPROFILE  =    2
+    TESTPOST     =    3
+    TESTGET      =    4
+    TESTROLL     =    5
+    TESTSHOW     =    6
 
-#####  Message Casses  #####
+#####  Job Casses  #####
 
-class GenerateMessage(Message):
+class GenerateJob(Job):
 
     def __init__(self,
-                 ctx  : dis.Interaction):
+                 ctx     : dis.Interaction,
+                 options : Optional[dict] = None):
         pass
 
     def DoWork(self,
@@ -138,32 +138,32 @@ class GenerateMessage(Message):
     def Randomize(self):
         pass
 
-class ListProfilesMessage(Message):
+class RollJob(Job):
 
     def __init__(self,
-                 ctx  : dis.Interaction):
-        pass
+                 ctx     : dis.Interaction,
+                 options : dict):
+        """Creates a job object for the /showprofile command.
+
+           Input: self - Pointer to the current object instance.
+                  ctx - the Discord context from the user's slash command.
+                  options - a dict of configs for this job.
+
+           Output: N/A.
+        """
+        self.guild          = ctx.guild_id
+        self.post           = pg.GetDefaultJobData()
+        self.post['prompt'] = options['prompt']
+        self.post['seed']   = options['seed']
+        self.profile        = pg.GetDefaultProfile()
+        self.randomize      = options['random']
+        self.result         = req.Response()
+        self.user_id        = ctx.user.id
 
     def DoWork(self,
                web_url : str):
-        pass
 
-    async def Post(self,
-                   metadata : dict):
-        pass
-
-    def Randomize(self):
-        pass
-
-class RollMessage(Message):
-
-    def __init__(self,
-                 ctx  : dis.Interaction):
-        pass
-
-    def DoWork(self,
-               web_url : str):
-        pass
+        self.result = req.get(url=urljoin(web_url, '/sdapi/v1/memory'), timeout=5)
 
     async def Post(self,
                    metadata : dict):
@@ -178,20 +178,25 @@ class RollMessage(Message):
         pass
 
     def Randomize(self):
-        pass
 
-class ShowProfileMessage(Message):
+        pass
+        #if self.randomize:
+
+class ShowProfileJob(Job):
 
     def __init__(self,
-                 ctx  : dis.Interaction):
-        """Creates a message object for the /showprofile command.
+                 ctx     : dis.Interaction,
+                 options : dict):
+        """Creates a job object for the /showprofile command.
 
            Input: self - Pointer to the current object instance.
                   ctx - the Discord context from the user's slash command.
+                  options - a dict of configs for this job.
 
            Output: N/A.
         """
 
+        self.id                 = options['id']
         self.guild              = ctx.guild_id
         self.result             = req.Response()
         self.result.reason      = "OK"
@@ -205,18 +210,18 @@ class ShowProfileMessage(Message):
     async def Post(self,
                    metadata : dict):
 
-        self.profile = metadata['db_ifc'].GetProfile(metadata['id'])
+        self.profile = metadata['db_ifc'].GetProfile(self.id)
 
         if not self.profile:
 
             embed = dis.Embed(title="Error",
-                              description=f"User A character with the ID `{metadata['id']}` does not exist!",
+                              description=f"User A character with the ID `{self.id}` does not exist!",
                               color=0xec1802)
             await metadata['ctx'].channel.send(content=f"<@{self.user_id}>", embed=embed)
 
         else:
             embed        = dis.Embed()
-            self.db_img  = metadata['db_ifc'].GetImage(profile_id=metadata['id'])
+            self.db_img  = metadata['db_ifc'].GetImage(profile_id=self.id)
             favorite     = f"<@{self.profile.favorite}>" if self.profile.favorite != 0 else "None. You could be here!"
 
             embed.add_field(name='Creator', value=f"<@{self.profile.creator}>")
@@ -241,14 +246,16 @@ class ShowProfileMessage(Message):
     def Randomize(self):
         pass
 
-class TestGetMessage(Message):
+class TestGetJob(Job):
 
     def __init__(self,
-                 ctx  : dis.Interaction):
-        """Creates a message object for the /testget command.
+                 ctx     : dis.Interaction,
+                 options : Optional[dict] = None):
+        """Creates a job object for the /testget command.
 
            Input: self - Pointer to the current object instance.
                   ctx - the Discord context from the user's slash command.
+                  options - a dict of optional configs for this job.
 
            Output: N/A.
         """
@@ -275,14 +282,16 @@ class TestGetMessage(Message):
     def Randomize(self):
         pass
 
-class TestPostMessage(Message):
+class TestPostJob(Job):
 
     def __init__(self,
-                 ctx  : dis.Interaction):
-        """Creates a message object for the /testpost command.
+                 ctx     : dis.Interaction,
+                 options : Optional[dict] = None):
+        """Creates a job object for the /testpost command.
 
            Input: self - Pointer to the current object instance.
                   ctx - the Discord context from the user's slash command.
+                  options - a dict of optional configs for this job.
 
            Output: N/A.
         """
@@ -328,14 +337,16 @@ class TestPostMessage(Message):
     def Randomize(self):
         pass
 
-class TestRollMessage(Message):
+class TestRollJob(Job):
 
     def __init__(self,
-                 ctx  : dis.Interaction):
-        """Creates a message object for the /testroll command.
+                 ctx     : dis.Interaction,
+                 options : Optional[dict] = None):
+        """Creates a job object for the /testroll command.
 
            Input: self - Pointer to the current object instance.
                   ctx - the Discord context from the user's slash command.
+                  options - a dict of optional configs for this job.
 
            Output: N/A.
         """
@@ -382,14 +393,15 @@ class TestRollMessage(Message):
     def Randomize(self):
         pass
 
-class TestShowMessage(Message):
+class TestShowJob(Job):
 
     def __init__(self,
                  ctx  : dis.Interaction):
-        """Creates a message object for the /testshowprofile command.
+        """Creates a job object for the /testshowprofile command.
 
            Input: self - Pointer to the current object instance.
                   ctx - the Discord context from the user's slash command.
+                  options - a dict of optional configs for this job.
 
            Output: N/A.
         """
@@ -435,45 +447,66 @@ class TestShowMessage(Message):
         pass
 
 
-##### Post Message Factory Class  #####
+##### Post Job Factory Class  #####
 
-class MsgFactory:
+class JobFactory:
 
-    def GetMsg(type : MessageTypeEnum,
-               ctx  : dis.Interaction) -> Message:
-        """Returns an instance of a message type with appropriate options set.
-           Note that no message can contain unpicklable data.
+    def GetJob(type    : JobTypeEnum,
+               ctx     : dis.Interaction,
+               options : Optional[dict] = None) -> Job:
+        """Returns an instance of a job type with appropriate options set.
+           Note that no job can contain unpicklable data.
 
            Input: self - Pointer to the current object instance.
+                  ctx - the Discord context from the user's slash command.
+                  options - a dict of optional configs for this job.
 
-           Output: msg - The appropriate message type.
+           Output: msg - The appropriate job type.
         """
 
         match type:
 
-            case MessageTypeEnum.GENERATE:
-                return GenerateMessage(ctx)
+            case JobTypeEnum.GENERATE:
+                return GenerateJob(ctx,
+                                   options)
 
-            case MessageTypeEnum.LISTPROFILES:
-                return ListProfilesMessage(ctx)
+            case JobTypeEnum.ROLL:
+                return RollJob(ctx,
+                               options)
 
-            case MessageTypeEnum.ROLL:
-                return RollMessage(ctx)
+            case JobTypeEnum.SHOWPROFILE:
+                return ShowProfileJob(ctx,
+                                      options)
 
-            case MessageTypeEnum.SHOWPROFILE:
-                return ShowProfileMessage(ctx)
+            case JobTypeEnum.TESTPOST:
+                return TestPostJob(ctx,
+                                   options)
 
-            case MessageTypeEnum.TESTPOST:
-                return TestPostMessage(ctx)
+            case JobTypeEnum.TESTGET:
+                return TestGetJob(ctx,
+                                  options)
 
-            case MessageTypeEnum.TESTGET:
-                return TestGetMessage(ctx)
+            case JobTypeEnum.TESTROLL:
+                return TestRollJob(ctx,
+                                   options)
 
-            case MessageTypeEnum.TESTROLL:
-                return TestRollMessage(ctx)
-
-            case MessageTypeEnum.TESTSHOW:
-                return TestShowMessage(ctx)
+            case JobTypeEnum.TESTSHOW:
+                return TestShowJob(ctx,
+                                   options)
 
             case _:
                 return ( 0,   1)
+
+
+
+        """#Currently it doesn't make sense for a queue to create multiple
+        #randomizers since jobs are processed serially.  This may need to
+        #change if the jobs are ever made parallel.
+        #
+        #This call also assumes opts['rand_dict_path'] has been sanitized by
+        #the parent before being passed down.
+        self.randomizer = tr.TagRandomizer(opts['rand_dict_path'],
+                                           int(opts['dict_size']),
+                                           int(opts['min_rand_tag_cnt']),
+                                           int(opts['max_rand_tag_cnt']),
+                                           int(opts['tag_retry_limit']))"""

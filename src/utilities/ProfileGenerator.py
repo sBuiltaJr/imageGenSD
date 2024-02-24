@@ -101,7 +101,6 @@ def GetDefaultJobData() -> dict:
     'cfg_scale'           : 22.0,
     'width'               : 512,
     'height'              : 768,
-    'random'              : False, #Custom parameter not for SD POST
     'restore_faces'       : False,
     'tiling'              : False,
     'do_not_save_samples' : False,

@@ -50,6 +50,16 @@ class Job(ABC):
 
         return self.guild
 
+    def GetRandomize(self) -> bool:
+        """Returns whether this request should have randomized tags added.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: bool - Whether or not the job needs ranomized tags added.
+        """
+
+        return self.randomize
+
     def GetReason(self) -> str:
         """Returns the HTTP Reason string associated with this request.
 
@@ -94,7 +104,8 @@ class Job(ABC):
         pass
 
     @abstractmethod
-    def Randomize(self):
+    def Randomize(self,
+                  tag_src):
         """Performs randomization functions for the request, if applicable.
            For example, adds randomized tags to a request if a 'randomized'
            flag is set true.
@@ -135,7 +146,8 @@ class GenerateJob(Job):
                    ctx  : dis.Interaction):
         pass
 
-    def Randomize(self):
+    def Randomize(self,
+                  tag_src):
         pass
 
 class RollJob(Job):
@@ -155,32 +167,56 @@ class RollJob(Job):
         self.post           = pg.GetDefaultJobData()
         self.post['prompt'] = options['prompt']
         self.post['seed']   = options['seed']
-        self.profile        = pg.GetDefaultProfile()
-        self.randomize      = options['random']
+        self.randomize      = bool(options['random'])
         self.result         = req.Response()
         self.user_id        = ctx.user.id
+        self.profile        = pg.Profile(self.user_id)
 
     def DoWork(self,
                web_url : str):
 
-        self.result = req.get(url=urljoin(web_url, '/sdapi/v1/memory'), timeout=5)
+        self.result = req.post(url=urljoin(web_url, '/sdapi/v1/txt2img'), json=self.post)
 
     async def Post(self,
                    metadata : dict):
 
-        """if msg['cmd'] == 'roll':
+        embed       = dis.Embed()
+        json_result = self.result.json()
+        info_dict   = json.loads(json_result['info'])
+        
+        metadata['db_ifc'].SaveRoll(id=self.user_id,
+                                    img=json_result['images'][0],
+                                    info=info_dict,
+                                    profile=self.profile)
+                        
+        favorite = f"<@{self.profile.favorite}>" if self.profile.favorite != 0 else "None. You could be here!"
 
-            info_dict = json.loads(msg['info'])
-            db_ifc.SaveRoll(id=msg['id'],
-                            img=msg['images'][0],
-                            info=info_dict,
-                            profile=self.profile)"""
-        pass
+        embed.add_field(name='Creator', value=f"<@{self.profile.creator}>")
+        embed.add_field(name='Owner', value=f"<@{self.profile.owner}>")
+        embed.add_field(name='Name', value=self.profile.name)
+        embed.add_field(name='Rarity', value=self.profile.rarity.name)
+        embed.add_field(name='Agility', value=self.profile.stats.agility)
+        embed.add_field(name='Defense', value=self.profile.stats.defense)
+        embed.add_field(name='Endurance', value=self.profile.stats.endurance)
+        embed.add_field(name='Luck', value=self.profile.stats.luck)
+        embed.add_field(name='Strength', value=self.profile.stats.strength)
+        embed.add_field(name='Description', value=self.profile.desc)
+        embed.add_field(name='Favorite', value=f"{favorite}")
 
-    def Randomize(self):
+        for i in json_result['images']:
+            image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
 
-        pass
-        #if self.randomize:
+        await metadata['ctx'].channel.send(content=f"<@{self.user_id}>",
+                                            file=dis.File(fp=image,
+                                                          filename='image.png'),
+                                            embed=embed)
+
+    def Randomize(self,
+                  tag_src):
+
+        tag_data = tag_src.getRandomTags(int(self.post['tag_cnt']))
+        self.post['prompt']     += tag_data[0]
+        self.post['tags_added']  = tag_data[1]
 
 class ShowProfileJob(Job):
 
@@ -198,6 +234,7 @@ class ShowProfileJob(Job):
 
         self.id                 = options['id']
         self.guild              = ctx.guild_id
+        self.randomize          = False
         self.result             = req.Response()
         self.result.reason      = "OK"
         self.result.status_code = 200
@@ -243,7 +280,8 @@ class ShowProfileJob(Job):
                                                              filename='image.png'),
                                                embed=embed)
 
-    def Randomize(self):
+    def Randomize(self,
+                  tag_src):
         pass
 
 class TestGetJob(Job):
@@ -260,9 +298,10 @@ class TestGetJob(Job):
            Output: N/A.
         """
 
-        self.guild   = ctx.guild_id
-        self.result  = req.Response()
-        self.user_id = ctx.user.id
+        self.guild     = ctx.guild_id
+        self.randomize = False
+        self.result    = req.Response()
+        self.user_id   = ctx.user.id
 
     def DoWork(self,
                web_url : str):
@@ -279,7 +318,8 @@ class TestGetJob(Job):
         await metadata['ctx'].channel.send(content=f"<@{self.user_id}>",
                                            embed=embed)
 
-    def Randomize(self):
+    def Randomize(self,
+                  tag_src):
         pass
 
 class TestPostJob(Job):
@@ -296,10 +336,11 @@ class TestPostJob(Job):
            Output: N/A.
         """
 
-        self.guild   = ctx.guild_id
-        self.post    = pg.GetDefaultJobData()
-        self.result  = req.Response()
-        self.user_id = ctx.user.id
+        self.guild     = ctx.guild_id
+        self.post      = pg.GetDefaultJobData()
+        self.randomize = False
+        self.result    = req.Response()
+        self.user_id   = ctx.user.id
 
     def DoWork(self,
                web_url : str):
@@ -334,7 +375,8 @@ class TestPostJob(Job):
                                                          filename='image.png'),
                                            embed=embed)
 
-    def Randomize(self):
+    def Randomize(self,
+                  tag_src):
         pass
 
 class TestRollJob(Job):
@@ -351,11 +393,12 @@ class TestRollJob(Job):
            Output: N/A.
         """
 
-        self.guild   = ctx.guild_id
-        self.post    = pg.GetDefaultJobData()
-        self.profile = pg.GetDefaultProfile()
-        self.result  = req.Response()
-        self.user_id = ctx.user.id
+        self.guild     = ctx.guild_id
+        self.post      = pg.GetDefaultJobData()
+        self.profile   = pg.GetDefaultProfile()
+        self.randomize = False
+        self.result    = req.Response()
+        self.user_id   = ctx.user.id
 
     def DoWork(self,
                web_url : str):
@@ -390,7 +433,8 @@ class TestRollJob(Job):
                                                           filename='image.png'),
                                             embed=embed)
 
-    def Randomize(self):
+    def Randomize(self,
+                  tag_src):
         pass
 
 class TestShowJob(Job):
@@ -408,6 +452,7 @@ class TestShowJob(Job):
 
         self.guild              = ctx.guild_id
         self.result             = req.Response()
+        self.randomize          = False
         self.result.reason      = "OK"
         self.result.status_code = 200
         self.user_id            = ctx.user.id
@@ -443,7 +488,8 @@ class TestShowJob(Job):
                                                          filename='image.png'),
                                            embed=embed)
 
-    def Randomize(self):
+    def Randomize(self,
+                  tag_src):
         pass
 
 
@@ -496,17 +542,3 @@ class JobFactory:
 
             case _:
                 return ( 0,   1)
-
-
-
-        """#Currently it doesn't make sense for a queue to create multiple
-        #randomizers since jobs are processed serially.  This may need to
-        #change if the jobs are ever made parallel.
-        #
-        #This call also assumes opts['rand_dict_path'] has been sanitized by
-        #the parent before being passed down.
-        self.randomizer = tr.TagRandomizer(opts['rand_dict_path'],
-                                           int(opts['dict_size']),
-                                           int(opts['min_rand_tag_cnt']),
-                                           int(opts['max_rand_tag_cnt']),
-                                           int(opts['tag_retry_limit']))"""

@@ -179,9 +179,9 @@ class Manager:
             #and the safest time, since a user's request is already recorded,
             #preventing them from spamming requests if the randomizer takes a
             #long time for some reason.
-            #Also, the message object ensures adding randomized tags is only
-            #done if the specific message type supports it.
-            request.Randomize()
+            if request.GetRandomize() :
+
+                request.Randomize(metadata['tag_rng'])
 
             #The Metadata can't be pickeled, meaning we can only send data
             #through the queue.

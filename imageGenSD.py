@@ -385,83 +385,6 @@ async def Post(job      : jf.Job,
 
         await job.Post(metadata)
 
-    """elif job['id'] == 'testgetid' or ((type(job['id']) != str) and (job['id'] < 10)):
-
-        #Maybe a future version will have a generic image to return and eliminate this clause.
-        embed = dis.Embed(title='Test GET successful:',
-                          description=f"Status code: {job['status_code']} Reason: {job['reason']}",
-                          color=0x008000)
-
-        await job['ctx'].channel.send(content=f"<@{job['ctx'].user.id}>",
-                                      embed=embed)
-
-    elif job['cmd'] == 'generate' or job['id'] == 'testpostid':
-
-        info_dict = json.loads(job['info'])
-
-        embed = dis.Embed()
-        embed.add_field(name='Prompt', value=info_dict['prompt'])
-        embed.add_field(name='Negative Prompt', value=info_dict['negative_prompt'])
-        embed.add_field(name='Steps', value=info_dict['steps'])
-        embed.add_field(name='Height', value=info_dict['height'])
-        embed.add_field(name='Width', value=info_dict['width'])
-        embed.add_field(name='Sampler', value=info_dict['sampler_name'])
-        embed.add_field(name='Seed', value=info_dict['seed'])
-        embed.add_field(name='Subseed', value=info_dict['subseed'])
-        embed.add_field(name='CFG Scale', value=info_dict['cfg_scale'])
-        #Randomized and co are special because they're not a parameter sent to SD.
-        embed.add_field(name='Randomized', value=job['random'])
-        embed.add_field(name='Tags Added to Prompt', value=job['tags_added'])
-
-        for i in job['images']:
-            image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
-
-        await job['ctx'].channel.send(content=f"<@{job['ctx'].user.id}>",
-                                      file=dis.File(fp=image,
-                                      filename='image.png'),
-                                      embed=embed)
-
-    #TODO: Better post formatting based on command type.
-    else :
-
-        if job['cmd'] == 'roll':
-
-            info_dict = json.loads(job['info'])
-            db_ifc.SaveRoll(id=job['id'],
-                            img=job['images'][0],
-                            info=info_dict,
-                            profile=job['profile'])
-        embed = dis.Embed()
-        disLog.debug(f"Test/show profile: {pic.dumps(job['profile'])}.")
-        favorite = f"<@{job['profile'].favorite}>" if job['profile'].favorite != 0 else "None. You could be here!"
-
-        embed.add_field(name='Creator', value=f"<@{job['profile'].creator}>")
-        embed.add_field(name='Owner', value=f"<@{job['profile'].owner}>")
-        embed.add_field(name='Name', value=job['profile'].name)
-        embed.add_field(name='Rarity', value=job['profile'].rarity.name)
-        embed.add_field(name='Agility', value=job['profile'].stats.agility)
-        embed.add_field(name='Defense', value=job['profile'].stats.defense)
-        embed.add_field(name='Endurance', value=job['profile'].stats.endurance)
-        embed.add_field(name='Luck', value=job['profile'].stats.luck)
-        embed.add_field(name='Strength', value=job['profile'].stats.strength)
-        embed.add_field(name='Description', value=job['profile'].desc)
-        embed.add_field(name='Favorite', value=f"{favorite}")
-
-        if job['id'] == 'testshowprofileid':
-
-            image = io.BytesIO(b64.b64decode(job['images']))
-
-        else:
-
-            for i in job['images']:
-
-                image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
-
-        await job['ctx'].channel.send(content=f"<@{job['ctx'].user.id}>",
-                                      file=dis.File(fp=image,
-                                      filename='image.png'),
-                                      embed=embed)"""
-
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
 async def roll(interaction: dis.Interaction):
@@ -482,8 +405,10 @@ async def roll(interaction: dis.Interaction):
     else :
         metadata = {
                      'ctx'     : interaction,
+                     'db_ifc'  : db_ifc,
                      'loop'    : IGSD_client.GetLoop(),
-                     'post_fn' : Post
+                     'post_fn' : Post,
+                     'tag_rng' : tag_randomizer
                    }
         opts = {
                 'random' : True,
@@ -499,33 +424,6 @@ async def roll(interaction: dis.Interaction):
                                request=job)
 
         await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
-
-        """job = { 'metadata' : {
-                    'ctx'     : interaction,
-                    'loop'    : IGSD_client.GetLoop(),
-                    'poster'  : Post
-               },
-               'data' : {
-                    #Requests are sorted by guild for rate-limiting
-                    'guild'   : interaction.guild_id,
-                    'cmd'     : 'roll',
-                    #This should really be metadata but the rest of the metadata
-                    #can't be pickeled, so this must be passed with the work.
-                    'id'      : interaction.user.id,
-                    'post'    : pg.GetDefaultJobData(),
-                    'profile' : pg.Profile(interaction.user.id)},
-                'reply' : ""
-                }
-
-        job['data']['post']['random'] = True
-        job['data']['post']['prompt'] = params['options']['prompts']
-        job['data']['post']['seed']   = -1
-
-        #Check for daily limits?
-        disLog.debug(f"Posting ROLL job {job} to the queue.")
-        result = job_queue.Add(job)
-
-        await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)"""
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)

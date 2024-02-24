@@ -51,8 +51,8 @@ class TagRandomizer:
         #(probably for sanitization), causing exceptions if you give it a Path.
         self.dict_path     = os.path.abspath(opts['rand_dict_path'])
         self.dict_size     = opts['dict_size']
-        self.max_tags      = int(opts['min_rand_tag_cnt'])
-        self.min_tags      = int(opts['max_rand_tag_cnt'])
+        self.max_tags      = int(opts['max_rand_tag_cnt'])
+        self.min_tags      = int(opts['min_rand_tag_cnt'])
         self.post_limit    = 1023
         self.rand_retries  = int(opts['tag_retry_limit'])
 

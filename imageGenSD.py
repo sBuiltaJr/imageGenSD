@@ -6,10 +6,8 @@
 #####  Imports  #####
 
 import asyncio as asy
-import base64 as b64
 import discord as dis
 from discord import app_commands as dac
-import io
 import logging as log
 import logging.handlers as lh
 import json
@@ -22,6 +20,7 @@ import src.db.MariadbIfc as mdb
 import src.managers.DailyEventMgr as dem
 import src.managers.QueueMgr as qm
 import src.utilities.NameRandomizer as nr
+import src.utilities.MsgFactory as mf
 import src.utilities.MenuPagination as mp
 import src.utilities.ProfileGenerator as pg
 import threading as th
@@ -296,7 +295,68 @@ async def listprofiles(interaction: dis.Interaction):
 
         await mp.MenuPagination(interaction, GetPage).Navigate()
 
-async def Post(msg):
+@IGSD_client.event
+async def on_ready():
+    """Performs post-login setup for the bot.
+
+       Input  : None.
+
+       Output : None.
+    """
+    global daily_mgr
+    global daily_mgr_th
+    global db_ifc
+    global job_queue
+    global profile_gen
+    global worker
+
+
+    disLog = log.getLogger('discord')
+    disLog.setLevel(params['log_lvl'])
+    log_path = pl.Path(params['log_name'])
+
+    logHandler = lh.RotatingFileHandler(filename=log_path.absolute(),
+                                        encoding=params['log_encoding'],
+                                        maxBytes=int(params['max_bytes']),
+                                        backupCount=int(params['log_file_cnt'])
+    )
+
+    formatter = log.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}',
+                              params['date_fmt'],
+                              style='{'
+    )
+    logHandler.setFormatter(formatter)
+    disLog.addHandler(logHandler)
+    #TODO: get propagate to properly disable.
+    #disLog.propagate=False
+
+    disLog.info(f'Logged in as {IGSD_client.user} (ID: {IGSD_client.user.id})')
+
+    disLog.debug(f"Creating Queue Manager.")
+    job_queue = qm.Manager(loop=IGSD_client.GetLoop(),
+                           manager_id=1,
+                           opts=params['queue_opts'])
+    worker    = th.Thread(target=job_queue.PutRequest,
+                          name="Queue mgr",
+                          daemon=True)
+
+    disLog.debug(f"Creating DB Interface.")
+    db_ifc = mdb.MariadbIfc(options=params['db_opts'])
+
+    disLog.debug(f"Creating Daily Event Manager.")
+    daily_mgr    = dem.DailyEventManager(opts=params['daily_opts'])
+    daily_mgr_th = th.Thread(target=daily_mgr.Start,
+                             name="Daily Event mgr",
+                             daemon=True)
+
+    daily_mgr_th.start()
+    #Only start the job queue once all other tasks are ready.
+    worker.start()
+
+    print('------')
+
+async def Post(msg,
+               ctx):
     """Posts the query's result to Discord.  Runs in the main asyncio loop so
        the manager can start the next job concurrently.
 
@@ -308,15 +368,20 @@ async def Post(msg):
     embed = None
     image = None
 
-    if msg['status_code'] != 200:
+    if msg.GetStatusCode() != 200:
+
         embed = dis.Embed(title='Job Error:',
-                          description=f"Status code: {msg['status_code']} Reason: {msg['reason']}",
+                          description=f"Status code: {msg.GetStatusCode()} Reason: {msg.GetReason()}",
                           color=0xec1802)
 
-        await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
-                                      embed=embed)
+        await ctx.channel.send(content=f"<@{msg.GetUserId()}>",
+                               embed=embed)
 
-    elif msg['id'] == 'testgetid' or ((type(msg['id']) != str) and (msg['id'] < 10)):
+    else:
+
+        await msg.Post(ctx)
+
+    """elif msg['id'] == 'testgetid' or ((type(msg['id']) != str) and (msg['id'] < 10)):
 
         #Maybe a future version will have a generic image to return and eliminate this clause.
         embed = dis.Embed(title='Test GET successful:',
@@ -391,67 +456,7 @@ async def Post(msg):
         await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
                                       file=dis.File(fp=image,
                                       filename='image.png'),
-                                      embed=embed)
-
-@IGSD_client.event
-async def on_ready():
-    """Performs post-login setup for the bot.
-
-       Input  : None.
-
-       Output : None.
-    """
-    global daily_mgr
-    global daily_mgr_th
-    global db_ifc
-    global job_queue
-    global profile_gen
-    global worker
-
-
-    disLog = log.getLogger('discord')
-    disLog.setLevel(params['log_lvl'])
-    log_path = pl.Path(params['log_name'])
-
-    logHandler = lh.RotatingFileHandler(filename=log_path.absolute(),
-                                        encoding=params['log_encoding'],
-                                        maxBytes=int(params['max_bytes']),
-                                        backupCount=int(params['log_file_cnt'])
-    )
-
-    formatter = log.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}',
-                              params['date_fmt'],
-                              style='{'
-    )
-    logHandler.setFormatter(formatter)
-    disLog.addHandler(logHandler)
-    #TODO: get propagate to properly disable.
-    #disLog.propagate=False
-
-    disLog.info(f'Logged in as {IGSD_client.user} (ID: {IGSD_client.user.id})')
-
-    disLog.debug(f"Creating Queue Manager.")
-    job_queue = qm.Manager(loop=IGSD_client.GetLoop(),
-                           manager_id=1,
-                           opts=params['queue_opts'])
-    worker    = th.Thread(target=job_queue.PutRequest,
-                          name="Queue mgr",
-                          daemon=True)
-
-    disLog.debug(f"Creating DB Interface.")
-    db_ifc = mdb.MariadbIfc(options=params['db_opts'])
-
-    disLog.debug(f"Creating Daily Event Manager.")
-    daily_mgr    = dem.DailyEventManager(opts=params['daily_opts'])
-    daily_mgr_th = th.Thread(target=daily_mgr.Start,
-                             name="Daily Event mgr",
-                             daemon=True)
-
-    daily_mgr_th.start()
-    #Only start the job queue once all other tasks are ready.
-    worker.start()
-
-    print('------')
+                                      embed=embed)"""
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
@@ -621,24 +626,16 @@ async def testpost(interaction: dis.Interaction):
        Note: All slash commands *MUST* respond in 3 seconds or be terminated.
     """
     disLog = log.getLogger('discord')
-    msg = { 'metadata' : {
-                'ctx'    : interaction,
-                'loop'   : IGSD_client.GetLoop(),
-                'poster' : Post
-           },
-           'data' : {
-                #Requests are sorted by guild for rate-limiting
-                'guild'   : interaction.guild_id,
-                #This should really be metadata but the rest of the metadata
-                #can't be pickeled, so this must be passed with the work.
-                'id'      : "testpostid",
-                'cmd'     : 'testpost',
-                'post'    : pg.GetDefaultJobData(),
-                'profile' : pg.GetDefaultProfile()},
-            'reply' : ""
-            }
+    metadata = {
+                 'ctx'     : interaction,
+                 'loop'    : IGSD_client.GetLoop(),
+                 'post_fn' : Post
+               }
+    msg = mf.MsgFactory.GetMsg(type=mf.MessageTypeEnum.TESTPOST,
+                               ctx=interaction)
     disLog.debug(f"Posting test PUT job {msg} to the queue.")
-    result = job_queue.Add(msg)
+    result = job_queue.Add(metadata=metadata,
+                           request=msg)
 
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
@@ -753,10 +750,3 @@ def Startup():
 
 if __name__ == '__main__':
     Startup()
-
-
-#store command
-#Ability upgrades
-#Equipment upgrades
-#Loot/Reward opening (and generation?)
-#

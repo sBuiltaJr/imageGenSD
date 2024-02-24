@@ -4,17 +4,18 @@
 
 #####  Imports  #####
 
-
-import .ProfileGenerator as pg
-import .MenuPagination as mp
-import .TagRandomizer as tr
 from abc import ABC, abstractmethod
+import asyncio as asy
 import base64 as b64
 import discord as dis
 from enum import IntEnum, verify, UNIQUE
 import io
+#import MenuPagination as mp
+import json
 import pickle as pic
+from . import ProfileGenerator as pg
 import requests as req
+from . import TagRandomizer as tr
 from typing import Literal, Optional
 from urllib.parse import urljoin
 
@@ -33,11 +34,7 @@ class Message(ABC):
         pass
 
     @abstractmethod
-    def GetResult(self) -> str:
-        pass
-
-    @abstractmethod
-    def GetId(self) -> int:
+    def GetReason(self) -> str:
         pass
 
     @abstractmethod
@@ -45,7 +42,11 @@ class Message(ABC):
         pass
 
     @abstractmethod
-    def Post(self):
+    def GetUserId(self) -> int:
+        pass
+
+    @abstractmethod
+    async def Post(self):
         pass
 
     @abstractmethod
@@ -71,7 +72,8 @@ class MessageTypeEnum(IntEnum):
 class GenerateMessage(Message):
 
     def __init__(self,
-                 options : dict):
+                 ctx  : dis.Interaction):
+        pass
 
     def DoWork(self,
                web_url: str):
@@ -80,13 +82,16 @@ class GenerateMessage(Message):
     def GetGuild(self) -> int:
         pass
 
-    def GetId(self) -> int:
+    def GetReason(self) -> int:
         pass
 
     def GetStatusCode(self) -> int:
         pass
 
-    def Post(self):
+    def GetUserId(self) -> int:
+        pass
+
+    async def Post(self):
         pass
 
     def Randomize(self):
@@ -95,7 +100,8 @@ class GenerateMessage(Message):
 class ListProfilesMessage(Message):
 
     def __init__(self,
-                 options : dict):
+                 ctx  : dis.Interaction):
+        pass
 
     def DoWork(self,
                web_url: str):
@@ -104,13 +110,16 @@ class ListProfilesMessage(Message):
     def GetGuild(self) -> int:
         pass
 
-    def GetId(self) -> int:
+    def GetReason(self) -> int:
         pass
 
     def GetStatusCode(self) -> int:
         pass
 
-    def Post(self):
+    def GetUserId(self) -> int:
+        pass
+
+    async def Post(self):
         pass
 
     def Randomize(self):
@@ -119,22 +128,26 @@ class ListProfilesMessage(Message):
 class RollMessage(Message):
 
     def __init__(self,
-                 options : dict):
+                 ctx  : dis.Interaction):
+        pass
 
     def DoWork(self,
                web_url: str):
         pass
 
-    def GetGuild(self) -> int:
+    def GetGuild(self):
         pass
 
-    def GetId(self) -> int:
+    def GetReason(self) -> int:
         pass
 
     def GetStatusCode(self) -> int:
         pass
 
-    def Post(self):
+    def GetUserId(self) -> int:
+        pass
+
+    async def Post(self):
         pass
 
     def Randomize(self):
@@ -143,7 +156,8 @@ class RollMessage(Message):
 class ShowProfileMessage(Message):
 
     def __init__(self,
-                 options : dict):
+                 ctx  : dis.Interaction):
+        pass
 
     def DoWork(self,
                web_url: str):
@@ -152,13 +166,16 @@ class ShowProfileMessage(Message):
     def GetGuild(self) -> int:
         pass
 
-    def GetId(self) -> int:
+    def GetReason(self) -> int:
         pass
 
     def GetStatusCode(self) -> int:
         pass
 
-    def Post(self):
+    def GetUserId(self) -> int:
+        pass
+
+    async def Post(self):
         pass
 
     def Randomize(self):
@@ -167,7 +184,8 @@ class ShowProfileMessage(Message):
 class TestGetMessage(Message):
 
     def __init__(self,
-                 options : dict)
+                 ctx  : dis.Interaction):
+        pass
 
     def DoWork(self,
                web_url: str):
@@ -176,13 +194,16 @@ class TestGetMessage(Message):
     def GetGuild(self) -> int:
         pass
 
-    def GetId(self) -> int:
+    def GetReason(self) -> int:
         pass
 
     def GetStatusCode(self) -> int:
         pass
 
-    def Post(self):
+    def GetUserId(self) -> int:
+        pass
+
+    async def Post(self):
         pass
 
     def Randomize(self):
@@ -191,59 +212,63 @@ class TestGetMessage(Message):
 class TestPostMessage(Message):
 
     def __init__(self,
-                 options : dict):
+                 ctx  : dis.Interaction):
 
-        self.ctx      = options['ctx']
-        self.embed    = dis.Embed()
-        self.guild    = self.ctx.guild_id
-        self.loop     = options['loop']
-        self.post_fn  = options['post_fn']
-        self.post     = pg.GetDefaultJobData()
-        self.post     = pg.GetDefaultProfile()
-        self.reply    = ""
-        self.result   = req.Response()
-        self.user_id  = self.ctx.user.id
+        self.guild   = ctx.guild_id
+        self.post    = pg.GetDefaultJobData()
+        self.profile = pg.GetDefaultProfile()
+        self.reply   = ""
+        self.result  = req.Response()
+        self.user_id = ctx.user.id
 
     def DoWork(self,
                web_url: str):
-        self.result = req.get(url=urljoin(web_url, '/sdapi/v1/memory'), timeout=5)
+
+        self.result = req.post(url=urljoin(web_url, '/sdapi/v1/txt2img'), json=self.post)
 
     def GetGuild(self) -> int:
+
         return self.guild
-        
-    def GetResult(self) -> str:
+
+    def GetReason(self) -> int:
+
+        return self.result.reason
+
+    def GetStatusCode(self) -> int:
+
         return self.result.status_code
 
     def GetUserId(self) -> int:
-        return self.ctx.user.id
 
-    def GetStatusCode(self) -> int:
-        pass
+        return self.user_id
 
-    def Post(self):
-    
-        info_dict = json.loads(msg['info'])
+    async def Post(self,
+                   ctx  : dis.Interaction):
 
-        self.embed.add_field(name='Prompt', value=info_dict['prompt'])
-        self.embed.add_field(name='Negative Prompt', value=info_dict['negative_prompt'])
-        self.embed.add_field(name='Steps', value=info_dict['steps'])
-        self.embed.add_field(name='Height', value=info_dict['height'])
-        self.embed.add_field(name='Width', value=info_dict['width'])
-        self.embed.add_field(name='Sampler', value=info_dict['sampler_name'])
-        self.embed.add_field(name='Seed', value=info_dict['seed'])
-        self.embed.add_field(name='Subseed', value=info_dict['subseed'])
-        self.embed.add_field(name='CFG Scale', value=info_dict['cfg_scale'])
+        embed = dis.Embed()
+        json_result = self.result.json()
+        info_dict   = json.loads(json_result['info'])
+
+        embed.add_field(name='Prompt', value=info_dict['prompt'])
+        embed.add_field(name='Negative Prompt', value=info_dict['negative_prompt'])
+        embed.add_field(name='Steps', value=info_dict['steps'])
+        embed.add_field(name='Height', value=info_dict['height'])
+        embed.add_field(name='Width', value=info_dict['width'])
+        embed.add_field(name='Sampler', value=info_dict['sampler_name'])
+        embed.add_field(name='Seed', value=info_dict['seed'])
+        embed.add_field(name='Subseed', value=info_dict['subseed'])
+        embed.add_field(name='CFG Scale', value=info_dict['cfg_scale'])
         #Randomized and co are special because they're not a parameter sent to SD.
-        self.embed.add_field(name='Randomized', value=msg['random'])
-        self.embed.add_field(name='Tags Added to Prompt', value=msg['tags_added'])
+        embed.add_field(name='Randomized', value=False)
+        embed.add_field(name='Tags Added to Prompt', value="None")
 
-        for i in msg['images']:
+        for i in json_result['images']:
             image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
 
-        await msg['ctx'].channel.send(content=f"<@{msg['ctx'].user.id}>",
-                                      file=dis.File(fp=image,
-                                      filename='image.png'),
-                                      embed=embed)
+        await ctx.channel.send(content=f"<@{self.user_id}>",
+                               file=dis.File(fp=image,
+                                             filename='image.png'),
+                               embed=embed)
 
     def Randomize(self):
         pass
@@ -251,7 +276,8 @@ class TestPostMessage(Message):
 class TestRollMessage(Message):
 
     def __init__(self,
-                 options : dict):
+                 ctx  : dis.Interaction):
+        pass
 
     def DoWork(self,
                web_url: str):
@@ -260,13 +286,16 @@ class TestRollMessage(Message):
     def GetGuild(self) -> int:
         pass
 
-    def GetId(self) -> int:
+    def GetReason(self) -> int:
         pass
 
     def GetStatusCode(self) -> int:
         pass
 
-    def Post(self):
+    def GetUserId(self) -> int:
+        pass
+
+    async def Post(self):
         pass
 
     def Randomize(self):
@@ -275,7 +304,8 @@ class TestRollMessage(Message):
 class TestShowMessage(Message):
 
     def __init__(self,
-                 options : dict):
+                 ctx  : dis.Interaction):
+        pass
 
     def DoWork(self,
                web_url: str):
@@ -284,13 +314,16 @@ class TestShowMessage(Message):
     def GetGuild(self) -> int:
         pass
 
-    def GetId(self) -> int:
+    def GetReason(self) -> int:
         pass
 
     def GetStatusCode(self) -> int:
         pass
 
-    def Post(self):
+    def GetUserId(self) -> int:
+        pass
+
+    async def Post(self):
         pass
 
     def Randomize(self):
@@ -301,9 +334,8 @@ class TestShowMessage(Message):
 
 class MsgFactory:
 
-    def GetMsg(self,
-               type    : MessageTypeEnum,
-               options : dict) -> Message:
+    def GetMsg(type : MessageTypeEnum,
+               ctx  : dis.Interaction) -> Message:
         """Returns an instance of a message type with appropriate options set.
 
            Input: self - Pointer to the current object instance.
@@ -314,28 +346,28 @@ class MsgFactory:
         match type:
 
             case MessageTypeEnum.GENERATE:
-                return GenerateMessage(options)
+                return GenerateMessage(ctx)
 
             case MessageTypeEnum.LISTPROFILES:
-                return ListProfilesMessage(options)
+                return ListProfilesMessage(ctx)
 
             case MessageTypeEnum.ROLL:
-                return RollMessage(options)
+                return RollMessage(ctx)
 
             case MessageTypeEnum.SHOWPROFILES:
-                return ShowProfilesMessage(options)
+                return ShowProfilesMessage(ctx)
 
             case MessageTypeEnum.TESTPOST:
-                return TestPostMessage(options)
+                return TestPostMessage(ctx)
 
             case MessageTypeEnum.TESTGET:
-                return TestGetMessage(options)
+                return TestGetMessage(ctx)
 
             case MessageTypeEnum.TESTROLL:
-                return TestRollMessage(options)
+                return TestRollMessage(ctx)
 
             case MessageTypeEnum.TESTSHOW:
-                return TestShowMessage(options)
+                return TestShowMessage(ctx)
 
             case _:
                 return ( 0,   1)

@@ -44,7 +44,7 @@ class DailyEventManager:
         self.dem_log.debug(f"Creating DB Interface.")
         #The options are empty because the interface is a singleton and should
         #already be initialized properly by the main thread.
-        self.db_ifc      = mdb.MariadbIfc.GetInstance(options={})
+        self.db_ifc      = mdb.MariadbIfc.getInstance(options={})
         self.roll_thread = None
 
     #TODO: manage persistent state information.
@@ -63,8 +63,8 @@ class DailyEventManager:
         #unblocked while loop.
         #So a separate thread with blunt sleep it is.
         self.roll_thread = th.Thread(target=self.DailyRollReset,
-                                       name="Daily Roll Reset Thread",
-                                       daemon=True)
+                                     name="Daily Roll Reset Thread",
+                                     daemon=True)
         self.roll_thread.start()
 
     def DailyRollReset(self):
@@ -91,7 +91,7 @@ class DailyEventManager:
             self.dem_log.warning(f"Resetting daily rolls!")
             try:
 
-                self.db_ifc.ResetDailyRoll()
+                self.db_ifc.resetDailyRoll()
                 self.dem_log.info(f"Daily roll reset complete")
 
             except Exception as err:

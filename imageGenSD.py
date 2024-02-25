@@ -14,7 +14,6 @@ import json
 import multiprocessing as mp
 import os
 import pathlib as pl
-import pickle as pic
 import requests as req
 import src.db.MariadbIfc as mdb
 import src.managers.DailyEventMgr as dem
@@ -110,8 +109,8 @@ class IGSDClient(dis.Client):
 
             Output : None
         """
-        self.disLog = log.getLogger('discord')
-        self.disLog.debug(f"Intents are: {intents}")
+        self.dis_log = log.getLogger('discord')
+        self.dis_log.debug(f"Intents are: {intents}")
 
         super().__init__(intents=intents)
         self.tree = dac.CommandTree(self)
@@ -129,11 +128,11 @@ class IGSDClient(dis.Client):
         #of message posting.  It's more efficent and better separated.
         self.loop = asy.get_running_loop()
 
-        self.disLog.debug(f"Syncing Guild Tree to Global.")
+        self.dis_log.debug(f"Syncing Guild Tree to Global.")
 
         await self.tree.sync()
 
-    def GetLoop(self):
+    def getLoop(self):
         """Returns a reference to this client's asyncio event loop.
 
             Input  : self - a reference to the current object.
@@ -147,7 +146,7 @@ IGSD_client = IGSDClient(intents=intents)
 
 #####  Package Functions  #####
 
-def BannedWordsFound(prompt: str, banned_words: str) -> bool:
+def bannedWordsFound(prompt: str, banned_words: str) -> bool:
     """Tests if banded words exist in the provided parameters.  This is written
        as a separate function to allow future updates to the banned word list
        without restarting the bot.
@@ -207,18 +206,18 @@ async def generate(interaction: dis.Interaction,
 
         Output : N/A.
     """
-    disLog = log.getLogger('discord')
+    dis_log = log.getLogger('discord')
     error = False;
 
-    if BannedWordsFound(prompt, params['options']['banned_words']) or BannedWordsFound(negative_prompt, params['options']['banned_neg_words']):
+    if bannedWordsFound(prompt, params['options']['banned_words']) or bannedWordsFound(negative_prompt, params['options']['banned_neg_words']):
         result = f"Job ignored.  Please do not use words containing: {params['options']['banned_words']} in the positive prompt or {params['options']['banned_neg_words']} in the negative prompt."
     else:
     
         metadata = {
                      'ctx'     : interaction,
                      'db_ifc'  : db_ifc,
-                     'loop'    : IGSD_client.GetLoop(),
-                     'post_fn' : Post,
+                     'loop'    : IGSD_client.getLoop(),
+                     'post_fn' : post,
                      'tag_rng' : tag_randomizer
                    }
         opts = {
@@ -233,13 +232,13 @@ async def generate(interaction: dis.Interaction,
                 'tag_cnt'  : tag_cnt,
                 'width'    : (width  - (width  % int(params['options']['step_size'])))
         }
-        disLog.debug(f"Creating a job with metadata {metadata} and options {opts}.")
-        job = jf.JobFactory.GetJob(type=jf.JobTypeEnum.GENERATE,
+        dis_log.debug(f"Creating a job with metadata {metadata} and options {opts}.")
+        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.GENERATE,
                                    ctx=interaction,
                                    options=opts)
-        disLog.debug(f"Posting GENERATE job {job} to the queue.")
-        result = job_queue.Add(metadata=metadata,
-                               request=job)
+        dis_log.debug(f"Posting GENERATE job {job} to the queue.")
+        result = job_queue.add(metadata=metadata,
+                               job=job)
 
         await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
@@ -263,8 +262,8 @@ async def listprofiles(interaction: dis.Interaction):
 
         Output : N/A.
     """
-    disLog = log.getLogger('discord')
-    profiles = db_ifc.GetProfiles(interaction.user.id)
+    dis_log = log.getLogger('discord')
+    profiles = db_ifc.getProfiles(interaction.user.id)
 
     if not profiles:
 
@@ -275,7 +274,7 @@ async def listprofiles(interaction: dis.Interaction):
 
     else:
 
-        async def GetPage(page: int):
+        async def getPage(page: int):
 
             page_size = 10
             embed     = dis.Embed(title="Owned characters", description="")
@@ -286,11 +285,11 @@ async def listprofiles(interaction: dis.Interaction):
                 embed.description += f"Name: `{profile[0]}` ID: `{profile[1]}`\n"
 
             embed.set_author(name=f"Characters owned by {interaction.user.display_name}.")
-            pages = mp.MenuPagination.GetTotalPages(len(profiles), page_size)
+            pages = mp.MenuPagination.getTotalPages(len(profiles), page_size)
             embed.set_footer(text=f"Page {page} of {pages}")
             return embed, pages
 
-        await mp.MenuPagination(interaction, GetPage).Navigate()
+        await mp.MenuPagination(interaction, getPage).navigate()
 
 @IGSD_client.event
 async def on_ready():
@@ -308,8 +307,8 @@ async def on_ready():
     global worker
 
 
-    disLog = log.getLogger('discord')
-    disLog.setLevel(params['log_lvl'])
+    dis_log = log.getLogger('discord')
+    dis_log.setLevel(params['log_lvl'])
     log_path = pl.Path(params['log_name'])
 
     logHandler = lh.RotatingFileHandler(filename=log_path.absolute(),
@@ -323,26 +322,26 @@ async def on_ready():
                               style='{'
     )
     logHandler.setFormatter(formatter)
-    disLog.addHandler(logHandler)
+    dis_log.addHandler(logHandler)
     #TODO: get propagate to properly disable.
-    #disLog.propagate=False
+    #dis_log.propagate=False
 
-    disLog.info(f'Logged in as {IGSD_client.user} (ID: {IGSD_client.user.id})')
+    dis_log.info(f'Logged in as {IGSD_client.user} (ID: {IGSD_client.user.id})')
 
-    disLog.debug(f"Instantiating the Tag Randomizer.")
+    dis_log.debug(f"Instantiating the Tag Randomizer.")
     tag_randomizer = tr.TagRandomizer(opts=params['tag_rng_opts'])
 
-    disLog.debug(f"Creating Queue Manager.")
+    dis_log.debug(f"Creating Queue Manager.")
     job_queue = qm.Manager(manager_id=1,
                            opts=params['queue_opts'])
-    worker    = th.Thread(target=job_queue.PutRequest,
+    worker    = th.Thread(target=job_queue.putJob,
                           name="Queue mgr",
                           daemon=True)
 
-    disLog.debug(f"Creating DB Interface.")
+    dis_log.debug(f"Creating DB Interface.")
     db_ifc = mdb.MariadbIfc(options=params['db_opts'])
 
-    disLog.debug(f"Creating Daily Event Manager.")
+    dis_log.debug(f"Creating Daily Event Manager.")
     daily_mgr    = dem.DailyEventManager(opts=params['daily_opts'])
     daily_mgr_th = th.Thread(target=daily_mgr.Start,
                              name="Daily Event mgr",
@@ -354,7 +353,7 @@ async def on_ready():
 
     print('------')
 
-async def Post(job      : jf.Job,
+async def post(job      : jf.Job,
                metadata : dict):
     """Posts the query's result to Discord.  Runs in the main asyncio loop so
        the manager can start the next job concurrently.
@@ -363,22 +362,22 @@ async def Post(job      : jf.Job,
 
         Output : N/A.
     """
-    disLog = log.getLogger('discord')
+    dis_log = log.getLogger('discord')
     embed = None
     image = None
 
-    if job.GetStatusCode() != 200:
+    if job.getStatusCode() != 200:
 
         embed = dis.Embed(title='Job Error:',
-                          description=f"Status code: {job.GetStatusCode()} Reason: {job.GetReason()}",
+                          description=f"Status code: {job.getStatusCode()} Reason: {job.getReason()}",
                           color=0xec1802)
 
-        await metadata['ctx'].channel.send(content=f"<@{job.GetUserId()}>",
+        await metadata['ctx'].channel.send(content=f"<@{job.getUserId()}>",
                                            embed=embed)
 
     else:
 
-        await job.Post(metadata)
+        await job.post(metadata)
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
@@ -391,9 +390,9 @@ async def roll(interaction: dis.Interaction):
 
        Note: All slash commands *MUST* respond in 3 seconds or be terminated.
     """
-    disLog = log.getLogger('discord')
+    dis_log = log.getLogger('discord')
 
-    if db_ifc.DailyDone(interaction.user.id) :
+    if db_ifc.dailyDone(interaction.user.id) :
 
         await interaction.response.send_message(f"You have already claimed a daily character, please wait until the daily reset to claim another.", ephemeral=True, delete_after=30.0)
 
@@ -401,8 +400,8 @@ async def roll(interaction: dis.Interaction):
         metadata = {
                      'ctx'     : interaction,
                      'db_ifc'  : db_ifc,
-                     'loop'    : IGSD_client.GetLoop(),
-                     'post_fn' : Post,
+                     'loop'    : IGSD_client.getLoop(),
+                     'post_fn' : post,
                      'tag_rng' : tag_randomizer
                    }
         opts = {
@@ -410,13 +409,13 @@ async def roll(interaction: dis.Interaction):
                 'prompt' : params['options']['prompts'],
                 'seed'   : -1
         }
-        disLog.debug(f"Creating a job with metadata {metadata} and options {opts}.")
-        job = jf.JobFactory.GetJob(type=jf.JobTypeEnum.ROLL,
+        dis_log.debug(f"Creating a job with metadata {metadata} and options {opts}.")
+        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.ROLL,
                                    ctx=interaction,
                                    options=opts)
-        disLog.debug(f"Posting ROLL job {job} to the queue.")
-        result = job_queue.Add(metadata=metadata,
-                               request=job)
+        dis_log.debug(f"Posting ROLL job {job} to the queue.")
+        result = job_queue.add(metadata=metadata,
+                               job=job)
 
         await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
@@ -432,23 +431,23 @@ async def showprofile(interaction: dis.Interaction,
 
         Output : N/A.
     """
-    disLog = log.getLogger('discord')
+    dis_log = log.getLogger('discord')
     metadata = {
                  'ctx'     : interaction,
                  'db_ifc'  : db_ifc,
-                 'loop'    : IGSD_client.GetLoop(),
-                 'post_fn' : Post
+                 'loop'    : IGSD_client.getLoop(),
+                 'post_fn' : post
                }
     opts = {
             'id' : id,
     }
-    disLog.debug(f"Creating a job with metadata {metadata} and options {opts}.")
-    job = jf.JobFactory.GetJob(type=jf.JobTypeEnum.SHOWPROFILE,
+    dis_log.debug(f"Creating a job with metadata {metadata} and options {opts}.")
+    job = jf.JobFactory.getJob(type=jf.JobTypeEnum.SHOWPROFILE,
                                ctx=interaction,
                                options=opts)
-    disLog.debug(f"Posting SHOW job {job} to the queue.")
-    result = job_queue.Add(metadata=metadata,
-                           request=job)
+    dis_log.debug(f"Posting SHOW job {job} to the queue.")
+    result = job_queue.add(metadata=metadata,
+                           job=job)
 
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
@@ -461,13 +460,13 @@ async def showprofile(interaction: dis.Interaction,
 #
 #       Output : None.
 #    """
-#    disLog = log.getLogger('discord')
+#    dis_log = log.getLogger('discord')
 #    rng    = range(1,10)
 #
 #    job = [{ 'metadata' : {
 #                'ctx'    : interaction,
-#                'loop'   : IGSD_client.GetLoop(),
-#                'poster' : Post
+#                'loop'   : IGSD_client.getLoop(),
+#                'poster' : post
 #           },
 #           'data' : {
 #                #Requests are sorted by guild for rate-limiting
@@ -479,12 +478,12 @@ async def showprofile(interaction: dis.Interaction,
 #                'reply'  : "test job"
 #            }
 #        } for x in rng]
-#    disLog.debug(f"trying to clear the queue.")
+#    dis_log.debug(f"trying to clear the queue.")
 #
 #    for m in rng:
-#        result = job_queue.Add(job[m -1])
+#        result = job_queue.add(job[m -1])
 #
-#    job_queue.Flush()
+#    job_queue.flush()
 #
 #    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
@@ -498,19 +497,19 @@ async def testget(interaction: dis.Interaction):
 
        Output : None.
     """
-    disLog = log.getLogger('discord')
+    dis_log = log.getLogger('discord')
     metadata = {
                  'ctx'     : interaction,
-                 'loop'    : IGSD_client.GetLoop(),
-                 'post_fn' : Post
+                 'loop'    : IGSD_client.getLoop(),
+                 'post_fn' : post
                }
-    disLog.debug(f"Creating a job with metadata {metadata}.")
-    job = jf.JobFactory.GetJob(type=jf.JobTypeEnum.TESTGET,
+    dis_log.debug(f"Creating a job with metadata {metadata}.")
+    job = jf.JobFactory.getJob(type=jf.JobTypeEnum.TESTGET,
                                ctx=interaction)
 
-    disLog.debug(f"Posting test GET job {job} to the queue.")
-    result = job_queue.Add(metadata=metadata,
-                           request=job)
+    dis_log.debug(f"Posting test GET job {job} to the queue.")
+    result = job_queue.add(metadata=metadata,
+                           job=job)
 
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
@@ -526,18 +525,18 @@ async def testpost(interaction: dis.Interaction):
 
        Note: All slash commands *MUST* respond in 3 seconds or be terminated.
     """
-    disLog = log.getLogger('discord')
+    dis_log = log.getLogger('discord')
     metadata = {
                  'ctx'     : interaction,
-                 'loop'    : IGSD_client.GetLoop(),
-                 'post_fn' : Post
+                 'loop'    : IGSD_client.getLoop(),
+                 'post_fn' : post
                }
-    disLog.debug(f"Creating a job with metadata {metadata}.")
-    job = jf.JobFactory.GetJob(type=jf.JobTypeEnum.TESTPOST,
+    dis_log.debug(f"Creating a job with metadata {metadata}.")
+    job = jf.JobFactory.getJob(type=jf.JobTypeEnum.TESTPOST,
                                ctx=interaction)
-    disLog.debug(f"Posting test PUT job {job} to the queue.")
-    result = job_queue.Add(metadata=metadata,
-                           request=job)
+    dis_log.debug(f"Posting test PUT job {job} to the queue.")
+    result = job_queue.add(metadata=metadata,
+                           job=job)
 
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
@@ -552,18 +551,18 @@ async def testroll(interaction: dis.Interaction):
 
        Note: All slash commands *MUST* respond in 3 seconds or be terminated.
     """
-    disLog = log.getLogger('discord')
+    dis_log = log.getLogger('discord')
     metadata = {
                  'ctx'     : interaction,
-                 'loop'    : IGSD_client.GetLoop(),
-                 'post_fn' : Post
+                 'loop'    : IGSD_client.getLoop(),
+                 'post_fn' : post
                }
-    disLog.debug(f"Creating a job with metadata {metadata}.")
-    job = jf.JobFactory.GetJob(type=jf.JobTypeEnum.TESTROLL,
+    dis_log.debug(f"Creating a job with metadata {metadata}.")
+    job = jf.JobFactory.getJob(type=jf.JobTypeEnum.TESTROLL,
                                ctx=interaction)
-    disLog.debug(f"Posting test ROLL job {job} to the queue.")
-    result = job_queue.Add(metadata=metadata,
-                           request=job)
+    dis_log.debug(f"Posting test ROLL job {job} to the queue.")
+    result = job_queue.add(metadata=metadata,
+                           job=job)
 
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
@@ -578,19 +577,19 @@ async def testshowprofile(interaction: dis.Interaction):
 
        Note: All slash commands *MUST* respond in 3 seconds or be terminated.
     """
-    disLog = log.getLogger('discord')
+    dis_log = log.getLogger('discord')
     metadata = {
                  'ctx'     : interaction,
                  'db_ifc'  : db_ifc,
-                 'loop'    : IGSD_client.GetLoop(),
-                 'post_fn' : Post
+                 'loop'    : IGSD_client.getLoop(),
+                 'post_fn' : post
                }
-    disLog.debug(f"Creating a job with metadata {metadata}.")
-    job = jf.JobFactory.GetJob(type=jf.JobTypeEnum.TESTSHOW,
+    dis_log.debug(f"Creating a job with metadata {metadata}.")
+    job = jf.JobFactory.getJob(type=jf.JobTypeEnum.TESTSHOW,
                                ctx=interaction)
-    disLog.debug(f"Posting test SHOW job {job} to the queue.")
-    result = job_queue.Add(metadata=metadata,
-                           request=job)
+    dis_log.debug(f"Posting test SHOW job {job} to the queue.")
+    result = job_queue.add(metadata=metadata,
+                           job=job)
 
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 

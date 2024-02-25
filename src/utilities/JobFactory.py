@@ -5,17 +5,14 @@
 #####  Imports  #####
 
 from abc import ABC, abstractmethod
-import asyncio as asy
 import base64 as b64
 from ..db import MariadbIfc as mdb
 import discord as dis
 from enum import IntEnum, verify, UNIQUE
 import io
 import json
-import pickle as pic
 from . import ProfileGenerator as pg
 import requests as req
-from . import TagRandomizer as tr
 from typing import Optional
 from urllib.parse import urljoin
 
@@ -25,7 +22,7 @@ from urllib.parse import urljoin
 class Job(ABC):
 
     @abstractmethod
-    def DoWork(self,
+    def doWork(self,
                web_url: str):
         """Does whatever work the job is requesting, like generating images
            from the Stable Diffusion URL.
@@ -40,7 +37,20 @@ class Job(ABC):
         """
         pass
 
-    def _GetEmbedBaseForGenerate(self,
+    @abstractmethod
+    def doRandomize(self,
+                    tag_src):
+        """Performs randomization functions for the request, if applicable.
+           For example, adds randomized tags to a request if a 'randomized'
+           flag is set true.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: int - N/A.
+        """
+        pass
+
+    def _getEmbedBaseForGenerate(self,
                                  info : dict) -> dis.Embed:
         """Returns a Dsicord embed object formatted for generate-style posts.
 
@@ -66,7 +76,7 @@ class Job(ABC):
 
         return embed
 
-    def _GetEmbedBaseForProfiles(self) -> dis.Embed:
+    def _getEmbedBaseForProfiles(self) -> dis.Embed:
         """Returns a Dsicord embed object formatted for profile-style posts.
 
            Input: self - Pointer to the current object instance.
@@ -92,7 +102,7 @@ class Job(ABC):
 
         return embed
 
-    def GetGuild(self) -> int:
+    def getGuild(self) -> int:
         """Returns the Guild (Discord Server) ID originating this request.
 
            Input: self - Pointer to the current object instance.
@@ -102,7 +112,7 @@ class Job(ABC):
 
         return self.guild
 
-    def GetRandomize(self) -> bool:
+    def getRandomize(self) -> bool:
         """Returns whether this request should have randomized tags added.
 
            Input: self - Pointer to the current object instance.
@@ -112,7 +122,7 @@ class Job(ABC):
 
         return self.randomize
 
-    def GetReason(self) -> str:
+    def getReason(self) -> str:
         """Returns the HTTP Reason string associated with this request.
 
            Input: self - Pointer to the current object instance.
@@ -122,7 +132,7 @@ class Job(ABC):
 
         return self.result.reason
 
-    def GetStatusCode(self) -> int:
+    def getStatusCode(self) -> int:
         """Returns the HTTP status code associated with this request.
 
            Input: self - Pointer to the current object instance.
@@ -132,7 +142,7 @@ class Job(ABC):
 
         return self.result.status_code
 
-    def GetUserId(self) -> int:
+    def getUserId(self) -> int:
         """Returns the (Discord) user ID that originated this request.
 
            Input: self - Pointer to the current object instance.
@@ -143,7 +153,7 @@ class Job(ABC):
         return self.user_id
 
     @abstractmethod
-    async def Post(self,
+    async def post(self,
                    metadata : dict):
         """Posts the job's response data to Discord, including handling
            command-specific formatting.
@@ -152,19 +162,6 @@ class Job(ABC):
                   metadata - Context from the command needed to post correctly.
 
            Output: N/A.
-        """
-        pass
-
-    @abstractmethod
-    def Randomize(self,
-                  tag_src):
-        """Performs randomization functions for the request, if applicable.
-           For example, adds randomized tags to a request if a 'randomized'
-           flag is set true.
-
-           Input: self - Pointer to the current object instance.
-
-           Output: int - N/A.
         """
         pass
 
@@ -197,36 +194,36 @@ class GenerateJob(Job):
            Output: N/A.
         """
 
-        self.guild             = ctx.guild_id
-        self.post              = pg.GetDefaultJobData()
-        self.post['cfg_scale'] = options['cfg_scale']
-        self.post['height']    = options['height']
-        self.post['n_prompt']  = options['n_prompt']
-        self.post['prompt']    = options['prompt']
-        self.post['random']    = options['random']
-        self.post['sampler']   = options['sampler']
-        self.post['seed']      = options['seed']
-        self.post['steps']     = options['steps']
-        self.post['tag_cnt']   = options['tag_cnt']
-        self.post['width']     = options['width']
-        self.randomize         = bool(options['random'])
-        self.result            = req.Response()
-        self.user_id           = ctx.user.id
-        self.profile           = pg.Profile(self.user_id)
+        self.guild                  = ctx.guild_id
+        self.post_data              = pg.getDefaultJobData()
+        self.post_data['cfg_scale'] = options['cfg_scale']
+        self.post_data['height']    = options['height']
+        self.post_data['n_prompt']  = options['n_prompt']
+        self.post_data['prompt']    = options['prompt']
+        self.post_data['random']    = options['random']
+        self.post_data['sampler']   = options['sampler']
+        self.post_data['seed']      = options['seed']
+        self.post_data['steps']     = options['steps']
+        self.post_data['tag_cnt']   = options['tag_cnt']
+        self.post_data['width']     = options['width']
+        self.randomize              = bool(options['random'])
+        self.result                 = req.Response()
+        self.user_id                = ctx.user.id
+        self.profile                = pg.Profile(self.user_id)
 
-    def DoWork(self,
+    def doWork(self,
                web_url : str):
 
-        self.result = req.post(url=urljoin(web_url, '/sdapi/v1/txt2img'), json=self.post)
+        self.result = req.post(url=urljoin(web_url, '/sdapi/v1/txt2img'), json=self.post_data)
 
-    async def Post(self,
+    async def post(self,
                    metadata : dict):
 
         json_result             = self.result.json()
         info_dict               = json.loads(json_result['info'])
         info_dict['random']     = self.randomize
-        info_dict['tags_added'] = self.post['tags_added']
-        embed                   = self._GetEmbedBaseForGenerate(info=info_dict)
+        info_dict['tags_added'] = self.post_data['tags_added']
+        embed                   = self._getEmbedBaseForGenerate(info=info_dict)
 
         for i in json_result['images']:
             image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
@@ -236,12 +233,12 @@ class GenerateJob(Job):
                                                          filename='image.png'),
                                            embed=embed)
 
-    def Randomize(self,
-                  tag_src):
+    def doRandomize(self,
+                    tag_src):
 
-        tag_data = tag_src.getRandomTags(int(self.post['tag_cnt']))
-        self.post['prompt']     += tag_data[0]
-        self.post['tags_added']  = tag_data[1]
+        tag_data = tag_src.getRandomTags(int(self.post_data['tag_cnt']))
+        self.post_data['prompt']     += tag_data[0]
+        self.post_data['tags_added']  = tag_data[1]
 
 class RollJob(Job):
 
@@ -256,21 +253,21 @@ class RollJob(Job):
 
            Output: N/A.
         """
-        self.guild          = ctx.guild_id
-        self.post           = pg.GetDefaultJobData()
-        self.post['prompt'] = options['prompt']
-        self.post['seed']   = options['seed']
-        self.randomize      = bool(options['random'])
-        self.result         = req.Response()
-        self.user_id        = ctx.user.id
-        self.profile        = pg.Profile(self.user_id)
+        self.guild               = ctx.guild_id
+        self.post_data           = pg.getDefaultJobData()
+        self.post_data['prompt'] = options['prompt']
+        self.post_data['seed']   = options['seed']
+        self.randomize           = bool(options['random'])
+        self.result              = req.Response()
+        self.user_id             = ctx.user.id
+        self.profile             = pg.Profile(self.user_id)
 
-    def DoWork(self,
+    def doWork(self,
                web_url : str):
 
-        self.result = req.post(url=urljoin(web_url, '/sdapi/v1/txt2img'), json=self.post)
+        self.result = req.post(url=urljoin(web_url, '/sdapi/v1/txt2img'), json=self.post_data)
 
-    async def Post(self,
+    async def post(self,
                    metadata : dict):
 
         json_result = self.result.json()
@@ -280,14 +277,14 @@ class RollJob(Job):
         #/roll command cross different servers while the image is being
         #generated.  It's non-atomic so there's still a small window for
         #duplicate rolls, but is acceptable for now.
-        if not metadata['db_ifc'].DailyDone(self.user_id):
+        if not metadata['db_ifc'].dailyDone(self.user_id):
 
-            metadata['db_ifc'].SaveRoll(id=self.user_id,
+            metadata['db_ifc'].saveRoll(id=self.user_id,
                                         img=json_result['images'][0],
                                         info=info_dict,
                                         profile=self.profile)
 
-            embed = self._GetEmbedBaseForProfiles()
+            embed = self._getEmbedBaseForProfiles()
 
             for i in json_result['images']:
                 image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
@@ -297,12 +294,12 @@ class RollJob(Job):
                                                               filename='image.png'),
                                                 embed=embed)
 
-    def Randomize(self,
-                  tag_src):
+    def doRandomize(self,
+                    tag_src):
 
-        tag_data = tag_src.getRandomTags(int(self.post['tag_cnt']))
-        self.post['prompt']     += tag_data[0]
-        self.post['tags_added']  = tag_data[1]
+        tag_data = tag_src.getRandomTags(int(self.post_data['tag_cnt']))
+        self.post_data['prompt']     += tag_data[0]
+        self.post_data['tags_added']  = tag_data[1]
 
 class ShowProfileJob(Job):
 
@@ -326,14 +323,14 @@ class ShowProfileJob(Job):
         self.result.status_code = 200
         self.user_id            = ctx.user.id
 
-    def DoWork(self,
+    def doWork(self,
                web_url: str):
         pass
 
-    async def Post(self,
+    async def post(self,
                    metadata : dict):
 
-        self.profile = metadata['db_ifc'].GetProfile(self.id)
+        self.profile = metadata['db_ifc'].getProfile(self.id)
 
         if not self.profile:
 
@@ -343,8 +340,8 @@ class ShowProfileJob(Job):
             await metadata['ctx'].channel.send(content=f"<@{self.user_id}>", embed=embed)
 
         else:
-            embed       = self._GetEmbedBaseForProfiles()
-            self.db_img = metadata['db_ifc'].GetImage(profile_id=self.id)
+            embed       = self._getEmbedBaseForProfiles()
+            self.db_img = metadata['db_ifc'].getImage(profile_id=self.id)
 
             image = io.BytesIO(b64.b64decode(self.db_img))
 
@@ -353,8 +350,8 @@ class ShowProfileJob(Job):
                                                              filename='image.png'),
                                                embed=embed)
 
-    def Randomize(self,
-                  tag_src):
+    def doRandomize(self,
+                    tag_src):
         pass
 
 class TestGetJob(Job):
@@ -376,12 +373,12 @@ class TestGetJob(Job):
         self.result    = req.Response()
         self.user_id   = ctx.user.id
 
-    def DoWork(self,
+    def doWork(self,
                web_url : str):
 
         self.result = req.get(url=urljoin(web_url, '/sdapi/v1/memory'), timeout=5)
 
-    async def Post(self,
+    async def post(self,
                    metadata : dict):
 
         embed = dis.Embed(title='Test GET successful:',
@@ -391,8 +388,8 @@ class TestGetJob(Job):
         await metadata['ctx'].channel.send(content=f"<@{self.user_id}>",
                                            embed=embed)
 
-    def Randomize(self,
-                  tag_src):
+    def doRandomize(self,
+                    tag_src):
         pass
 
 class TestPostJob(Job):
@@ -410,24 +407,24 @@ class TestPostJob(Job):
         """
 
         self.guild     = ctx.guild_id
-        self.post      = pg.GetDefaultJobData()
+        self.post_data = pg.getDefaultJobData()
         self.randomize = False
         self.result    = req.Response()
         self.user_id   = ctx.user.id
 
-    def DoWork(self,
+    def doWork(self,
                web_url : str):
 
-        self.result = req.post(url=urljoin(web_url, '/sdapi/v1/txt2img'), json=self.post)
+        self.result = req.post(url=urljoin(web_url, '/sdapi/v1/txt2img'), json=self.post_data)
 
-    async def Post(self,
+    async def post(self,
                    metadata : dict):
 
         json_result             = self.result.json()
         info_dict               = json.loads(json_result['info'])
         info_dict['random']     = False
         info_dict['tags_added'] = ""
-        embed                   = self._GetEmbedBaseForGenerate(info=info_dict)
+        embed                   = self._getEmbedBaseForGenerate(info=info_dict)
 
         for i in json_result['images']:
             image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
@@ -437,8 +434,8 @@ class TestPostJob(Job):
                                                          filename='image.png'),
                                            embed=embed)
 
-    def Randomize(self,
-                  tag_src):
+    def doRandomize(self,
+                    tag_src):
         pass
 
 class TestRollJob(Job):
@@ -456,21 +453,21 @@ class TestRollJob(Job):
         """
 
         self.guild     = ctx.guild_id
-        self.post      = pg.GetDefaultJobData()
-        self.profile   = pg.GetDefaultProfile()
+        self.post_data      = pg.getDefaultJobData()
+        self.profile   = pg.getDefaultProfile()
         self.randomize = False
         self.result    = req.Response()
         self.user_id   = ctx.user.id
 
-    def DoWork(self,
+    def doWork(self,
                web_url : str):
 
-        self.result = req.post(url=urljoin(web_url, '/sdapi/v1/txt2img'), json=self.post)
+        self.result = req.post(url=urljoin(web_url, '/sdapi/v1/txt2img'), json=self.post_data)
 
-    async def Post(self,
+    async def post(self,
                    metadata : dict):
 
-        embed       = self._GetEmbedBaseForProfiles()
+        embed       = self._getEmbedBaseForProfiles()
         json_result = self.result.json()
 
         for i in json_result['images']:
@@ -481,8 +478,8 @@ class TestRollJob(Job):
                                                           filename='image.png'),
                                             embed=embed)
 
-    def Randomize(self,
-                  tag_src):
+    def doRandomize(self,
+                    tag_src):
         pass
 
 class TestShowJob(Job):
@@ -507,16 +504,16 @@ class TestShowJob(Job):
         self.result.status_code = 200
         self.user_id            = ctx.user.id
 
-    def DoWork(self,
+    def doWork(self,
                web_url : str):
         pass
 
-    async def Post(self,
+    async def post(self,
                    metadata : dict):
 
-        self.profile = metadata['db_ifc'].GetProfile()
-        self.db_img  = metadata['db_ifc'].GetImage()
-        embed        = self._GetEmbedBaseForProfiles()
+        self.profile = metadata['db_ifc'].getProfile()
+        self.db_img  = metadata['db_ifc'].getImage()
+        embed        = self._getEmbedBaseForProfiles()
 
         image = io.BytesIO(b64.b64decode(self.db_img))
 
@@ -525,8 +522,8 @@ class TestShowJob(Job):
                                                          filename='image.png'),
                                            embed=embed)
 
-    def Randomize(self,
-                  tag_src):
+    def doRandomize(self,
+                    tag_src):
         pass
 
 
@@ -534,7 +531,7 @@ class TestShowJob(Job):
 
 class JobFactory:
 
-    def GetJob(type    : JobTypeEnum,
+    def getJob(type    : JobTypeEnum,
                ctx     : dis.Interaction,
                options : Optional[dict] = None) -> Job:
         """Returns an instance of a job type with appropriate options set.

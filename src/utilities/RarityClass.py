@@ -48,7 +48,7 @@ class RarityList(Enum):
 
 class Rarity:
 
-    def GenerateRarity(self) -> RarityList:
+    def generateRarity(self) -> RarityList:
         """Generates a random rarity level for the profile.
 
            Input: self - Pointer to the current object instance.

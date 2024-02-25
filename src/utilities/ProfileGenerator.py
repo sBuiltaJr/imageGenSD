@@ -58,17 +58,17 @@ class Profile:
         self.losses   = losses if losses != None else 0
         self.history  = history if history != None else None
         self.missions = missions if missions != None else 0
-        self.name     = nr.GetRandomName() if name == None else name
+        self.name     = nr.getRandomName() if name == None else name
         self.owner    = owner
-        self.rarity   = rc.Rarity.GenerateRarity(self) if rarity == None else rarity
+        self.rarity   = rc.Rarity.generateRarity(self) if rarity == None else rarity
         self.stats    = sc.Stats(self.rarity) if stats == None else stats
         self.wins     = wins if wins != None else 0
         #The items below rely on items above.
-        self.desc     = desc if desc != None else sc.GetDescription(self.rarity)
+        self.desc     = desc if desc != None else sc.getDescription(self.rarity)
 
 #####  Package Functions  #####
 
-def GetDefaultJobData() -> dict:
+def getDefaultJobData() -> dict:
     """Returns the default job settings that can be provided to an empty
        query (or to reinitialize an object).
 
@@ -123,7 +123,7 @@ def GetDefaultJobData() -> dict:
     'alwayson_scripts'    : {}
     }
 
-def GetDefaultProfile() -> Profile:
+def getDefaultProfile() -> Profile:
     """Returns the default profile, intended for test functions.
 
        Input: None.

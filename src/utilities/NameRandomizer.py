@@ -53,7 +53,7 @@ def init(options : dict):
 
     name_log.info(f"Initializing the Name RNG class with: first name dict path: {fn_dict_path} fn_dict_size: {fn_dict_size} last name dict path: {ln_dict_path} ln_dict_size: {ln_dict_size}.")
 
-def GetRandomName() -> str:
+def getRandomName() -> str:
     """Creates a randomized name from the name dictionaries provided during
        initialization.
 

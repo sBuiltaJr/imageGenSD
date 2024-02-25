@@ -57,7 +57,7 @@ class MenuPagination(dis.ui.View):
 
         elif self.total_pages > 1:
 
-            self.UpdateButtons()
+            self.updateButtons()
             await self.interaction.response.send_message(embed=emb, view=self)
 
     async def editPage(self,
@@ -70,7 +70,7 @@ class MenuPagination(dis.ui.View):
            Output : None.
         """
         emb, self.total_pages = await self.get_page(self.index)
-        self.UpdateButtons()
+        self.updateButtons()
         await interaction.response.edit_message(embed=emb, view=self)
 
     def updateButtons(self):
@@ -104,7 +104,7 @@ class MenuPagination(dis.ui.View):
            Output : None.
         """
         self.index -= 1
-        await self.EditPage(interaction)
+        await self.editPage(interaction)
 
     @dis.ui.button(emoji="▶️", style=dis.ButtonStyle.blurple)
     async def next(self,
@@ -119,7 +119,7 @@ class MenuPagination(dis.ui.View):
            Output : None.
         """
         self.index += 1
-        await self.EditPage(interaction)
+        await self.editPage(interaction)
 
     @dis.ui.button(emoji="⏭️", style=dis.ButtonStyle.blurple)
     async def end(self,
@@ -141,7 +141,7 @@ class MenuPagination(dis.ui.View):
 
             self.index = 1
 
-        await self.EditPage(interaction)
+        await self.editPage(interaction)
 
     async def on_timeout(self):
         """Handles the timeout interaction inherent to discord interactions.

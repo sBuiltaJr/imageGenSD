@@ -1,4 +1,4 @@
-#encapsualtes different job types and post functions based on the specific
+#Encapsulates different job types and post functions based on the specific
 #job type requested.
 
 
@@ -21,7 +21,7 @@ from urllib.parse import urljoin
 
 #####  Package Variables  #####
 
-#####  Abstract Casses  #####
+#####  Abstract Classes  #####
 class Job(ABC):
 
     @abstractmethod
@@ -40,6 +40,58 @@ class Job(ABC):
         """
         pass
 
+    def _GetEmbedBaseForGenerate(self,
+                                 info : dict) -> dis.Embed:
+        """Returns a Dsicord embed object formatted for generate-style posts.
+
+           Input: self - Pointer to the current object instance.
+                  info - a dict of all the relevent embed parameters.
+
+           Output: embed - A formatted Embed object.
+        """
+        embed = dis.Embed()
+
+        embed.add_field(name='Prompt', value=info['prompt'])
+        embed.add_field(name='Negative Prompt', value=info['negative_prompt'])
+        embed.add_field(name='Steps', value=info['steps'])
+        embed.add_field(name='Height', value=info['height'])
+        embed.add_field(name='Width', value=info['width'])
+        embed.add_field(name='Sampler', value=info['sampler_name'])
+        embed.add_field(name='Seed', value=info['seed'])
+        embed.add_field(name='Subseed', value=info['subseed'])
+        embed.add_field(name='CFG Scale', value=info['cfg_scale'])
+        #Randomized and co are special because they're not a parameter sent to SD.
+        embed.add_field(name='Randomized', value=info['random'])
+        embed.add_field(name='Tags Added to Prompt', value=info['tags_added'])
+
+        return embed
+
+    def _GetEmbedBaseForProfiles(self) -> dis.Embed:
+        """Returns a Dsicord embed object formatted for profile-style posts.
+
+           Input: self - Pointer to the current object instance.
+                  info - a dict of all the relevent embed parameters.
+
+           Output: embed - A formatted Embed object.
+        """
+        embed = dis.Embed()
+
+        favorite = f"<@{self.profile.favorite}>" if self.profile.favorite != 0 else "None. You could be here!"
+
+        embed.add_field(name='Creator', value=f"<@{self.profile.creator}>")
+        embed.add_field(name='Owner', value=f"<@{self.profile.owner}>")
+        embed.add_field(name='Name', value=self.profile.name)
+        embed.add_field(name='Rarity', value=self.profile.rarity.name)
+        embed.add_field(name='Agility', value=self.profile.stats.agility)
+        embed.add_field(name='Defense', value=self.profile.stats.defense)
+        embed.add_field(name='Endurance', value=self.profile.stats.endurance)
+        embed.add_field(name='Luck', value=self.profile.stats.luck)
+        embed.add_field(name='Strength', value=self.profile.stats.strength)
+        embed.add_field(name='Description', value=self.profile.desc)
+        embed.add_field(name='Favorite', value=f"{favorite}")
+
+        return embed
+
     def GetGuild(self) -> int:
         """Returns the Guild (Discord Server) ID originating this request.
 
@@ -55,7 +107,7 @@ class Job(ABC):
 
            Input: self - Pointer to the current object instance.
 
-           Output: bool - Whether or not the job needs ranomized tags added.
+           Output: bool - Whether or not the job needs randomized tags added.
         """
 
         return self.randomize
@@ -116,7 +168,7 @@ class Job(ABC):
         """
         pass
 
-#####  Enum Casses  #####
+#####  Enum Classes  #####
 
 @verify(UNIQUE)
 class JobTypeEnum(IntEnum):
@@ -129,7 +181,7 @@ class JobTypeEnum(IntEnum):
     TESTROLL     =    5
     TESTSHOW     =    6
 
-#####  Job Casses  #####
+#####  Job Classes  #####
 
 class GenerateJob(Job):
 
@@ -144,7 +196,7 @@ class GenerateJob(Job):
 
            Output: N/A.
         """
-                 
+
         self.guild             = ctx.guild_id
         self.post              = pg.GetDefaultJobData()
         self.post['cfg_scale'] = options['cfg_scale']
@@ -170,22 +222,11 @@ class GenerateJob(Job):
     async def Post(self,
                    metadata : dict):
 
-        embed = dis.Embed()
-        json_result = self.result.json()
-        info_dict   = json.loads(json_result['info'])
-
-        embed.add_field(name='Prompt', value=info_dict['prompt'])
-        embed.add_field(name='Negative Prompt', value=info_dict['negative_prompt'])
-        embed.add_field(name='Steps', value=info_dict['steps'])
-        embed.add_field(name='Height', value=info_dict['height'])
-        embed.add_field(name='Width', value=info_dict['width'])
-        embed.add_field(name='Sampler', value=info_dict['sampler_name'])
-        embed.add_field(name='Seed', value=info_dict['seed'])
-        embed.add_field(name='Subseed', value=info_dict['subseed'])
-        embed.add_field(name='CFG Scale', value=info_dict['cfg_scale'])
-        #Randomized and co are special because they're not a parameter sent to SD.
-        embed.add_field(name='Randomized', value=self.randomize)
-        embed.add_field(name='Tags Added to Prompt', value=self.post['tags_added'])
+        json_result             = self.result.json()
+        info_dict               = json.loads(json_result['info'])
+        info_dict['random']     = self.randomize
+        info_dict['tags_added'] = self.post['tags_added']
+        embed                   = self._GetEmbedBaseForGenerate(info=info_dict)
 
         for i in json_result['images']:
             image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
@@ -232,36 +273,29 @@ class RollJob(Job):
     async def Post(self,
                    metadata : dict):
 
-        embed       = dis.Embed()
         json_result = self.result.json()
         info_dict   = json.loads(json_result['info'])
-        
-        metadata['db_ifc'].SaveRoll(id=self.user_id,
-                                    img=json_result['images'][0],
-                                    info=info_dict,
-                                    profile=self.profile)
-                        
-        favorite = f"<@{self.profile.favorite}>" if self.profile.favorite != 0 else "None. You could be here!"
 
-        embed.add_field(name='Creator', value=f"<@{self.profile.creator}>")
-        embed.add_field(name='Owner', value=f"<@{self.profile.owner}>")
-        embed.add_field(name='Name', value=self.profile.name)
-        embed.add_field(name='Rarity', value=self.profile.rarity.name)
-        embed.add_field(name='Agility', value=self.profile.stats.agility)
-        embed.add_field(name='Defense', value=self.profile.stats.defense)
-        embed.add_field(name='Endurance', value=self.profile.stats.endurance)
-        embed.add_field(name='Luck', value=self.profile.stats.luck)
-        embed.add_field(name='Strength', value=self.profile.stats.strength)
-        embed.add_field(name='Description', value=self.profile.desc)
-        embed.add_field(name='Favorite', value=f"{favorite}")
+        #This is a cheating protection check to prevent a user that spamms the
+        #/roll command cross different servers while the image is being
+        #generated.  It's non-atomic so there's still a small window for
+        #duplicate rolls, but is acceptable for now.
+        if not metadata['db_ifc'].DailyDone(self.user_id):
 
-        for i in json_result['images']:
-            image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
+            metadata['db_ifc'].SaveRoll(id=self.user_id,
+                                        img=json_result['images'][0],
+                                        info=info_dict,
+                                        profile=self.profile)
 
-        await metadata['ctx'].channel.send(content=f"<@{self.user_id}>",
-                                            file=dis.File(fp=image,
-                                                          filename='image.png'),
-                                            embed=embed)
+            embed = self._GetEmbedBaseForProfiles()
+
+            for i in json_result['images']:
+                image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
+
+            await metadata['ctx'].channel.send(content=f"<@{self.user_id}>",
+                                                file=dis.File(fp=image,
+                                                              filename='image.png'),
+                                                embed=embed)
 
     def Randomize(self,
                   tag_src):
@@ -309,21 +343,8 @@ class ShowProfileJob(Job):
             await metadata['ctx'].channel.send(content=f"<@{self.user_id}>", embed=embed)
 
         else:
-            embed        = dis.Embed()
-            self.db_img  = metadata['db_ifc'].GetImage(profile_id=self.id)
-            favorite     = f"<@{self.profile.favorite}>" if self.profile.favorite != 0 else "None. You could be here!"
-
-            embed.add_field(name='Creator', value=f"<@{self.profile.creator}>")
-            embed.add_field(name='Owner', value=f"<@{self.profile.owner}>")
-            embed.add_field(name='Name', value=self.profile.name)
-            embed.add_field(name='Rarity', value=self.profile.rarity.name)
-            embed.add_field(name='Agility', value=self.profile.stats.agility)
-            embed.add_field(name='Defense', value=self.profile.stats.defense)
-            embed.add_field(name='Endurance', value=self.profile.stats.endurance)
-            embed.add_field(name='Luck', value=self.profile.stats.luck)
-            embed.add_field(name='Strength', value=self.profile.stats.strength)
-            embed.add_field(name='Description', value=self.profile.desc)
-            embed.add_field(name='Favorite', value=f"{favorite}")
+            embed       = self._GetEmbedBaseForProfiles()
+            self.db_img = metadata['db_ifc'].GetImage(profile_id=self.id)
 
             image = io.BytesIO(b64.b64decode(self.db_img))
 
@@ -402,22 +423,11 @@ class TestPostJob(Job):
     async def Post(self,
                    metadata : dict):
 
-        embed = dis.Embed()
-        json_result = self.result.json()
-        info_dict   = json.loads(json_result['info'])
-
-        embed.add_field(name='Prompt', value=info_dict['prompt'])
-        embed.add_field(name='Negative Prompt', value=info_dict['negative_prompt'])
-        embed.add_field(name='Steps', value=info_dict['steps'])
-        embed.add_field(name='Height', value=info_dict['height'])
-        embed.add_field(name='Width', value=info_dict['width'])
-        embed.add_field(name='Sampler', value=info_dict['sampler_name'])
-        embed.add_field(name='Seed', value=info_dict['seed'])
-        embed.add_field(name='Subseed', value=info_dict['subseed'])
-        embed.add_field(name='CFG Scale', value=info_dict['cfg_scale'])
-        #Randomized and co are special because they're not a parameter sent to SD.
-        embed.add_field(name='Randomized', value=False)
-        embed.add_field(name='Tags Added to Prompt', value="None")
+        json_result             = self.result.json()
+        info_dict               = json.loads(json_result['info'])
+        info_dict['random']     = False
+        info_dict['tags_added'] = ""
+        embed                   = self._GetEmbedBaseForGenerate(info=info_dict)
 
         for i in json_result['images']:
             image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
@@ -460,22 +470,8 @@ class TestRollJob(Job):
     async def Post(self,
                    metadata : dict):
 
-        embed = dis.Embed()
+        embed       = self._GetEmbedBaseForProfiles()
         json_result = self.result.json()
-        info_dict   = json.loads(json_result['info'])
-        favorite = f"<@{self.profile.favorite}>" if self.profile.favorite != 0 else "None. You could be here!"
-
-        embed.add_field(name='Creator', value=f"<@{self.profile.creator}>")
-        embed.add_field(name='Owner', value=f"<@{self.profile.owner}>")
-        embed.add_field(name='Name', value=self.profile.name)
-        embed.add_field(name='Rarity', value=self.profile.rarity.name)
-        embed.add_field(name='Agility', value=self.profile.stats.agility)
-        embed.add_field(name='Defense', value=self.profile.stats.defense)
-        embed.add_field(name='Endurance', value=self.profile.stats.endurance)
-        embed.add_field(name='Luck', value=self.profile.stats.luck)
-        embed.add_field(name='Strength', value=self.profile.stats.strength)
-        embed.add_field(name='Description', value=self.profile.desc)
-        embed.add_field(name='Favorite', value=f"{favorite}")
 
         for i in json_result['images']:
             image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
@@ -504,6 +500,7 @@ class TestShowJob(Job):
         """
 
         self.guild              = ctx.guild_id
+        self.profile            = ""
         self.result             = req.Response()
         self.randomize          = False
         self.result.reason      = "OK"
@@ -517,22 +514,9 @@ class TestShowJob(Job):
     async def Post(self,
                    metadata : dict):
 
-        embed        = dis.Embed()
         self.profile = metadata['db_ifc'].GetProfile()
         self.db_img  = metadata['db_ifc'].GetImage()
-        favorite     = f"<@{self.profile.favorite}>" if self.profile.favorite != 0 else "None. You could be here!"
-
-        embed.add_field(name='Creator', value=f"<@{self.profile.creator}>")
-        embed.add_field(name='Owner', value=f"<@{self.profile.owner}>")
-        embed.add_field(name='Name', value=self.profile.name)
-        embed.add_field(name='Rarity', value=self.profile.rarity.name)
-        embed.add_field(name='Agility', value=self.profile.stats.agility)
-        embed.add_field(name='Defense', value=self.profile.stats.defense)
-        embed.add_field(name='Endurance', value=self.profile.stats.endurance)
-        embed.add_field(name='Luck', value=self.profile.stats.luck)
-        embed.add_field(name='Strength', value=self.profile.stats.strength)
-        embed.add_field(name='Description', value=self.profile.desc)
-        embed.add_field(name='Favorite', value=f"{favorite}")
+        embed        = self._GetEmbedBaseForProfiles()
 
         image = io.BytesIO(b64.b64decode(self.db_img))
 

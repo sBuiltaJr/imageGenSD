@@ -90,9 +90,9 @@ class TagRandomizer:
 
         for word in range(0, tag_count):
 
-             tag = lc.getline(self.dict_path, rand.randint(0, self.dict_size))
+            tag = lc.getline(self.dict_path, rand.randint(0, self.dict_size))
 
-             if tag_list.find(tag) > -1:
+            if tag_list.find(tag) > -1:
 
                 self.rngLog.debug(f"Found duplicate tag {tag} from tag_list {tag_list}, attempting to get another")
 
@@ -106,8 +106,8 @@ class TagRandomizer:
                         break
 
                 self.rngLog.debug(f"Exiting de-dupe loop with tag {tag}.")
-             #The getline function includes getting the separator.
-             tag_list += (', ' + tag.rstrip(os.linesep))
+            #The getline function includes getting the separator.
+            tag_list += (', ' + tag.rstrip(os.linesep))
 
         #Note: Embedded fields (like how tags are displayed in the Discord post)
         #only allow up to self.post_limit characters, meaning we must truncate

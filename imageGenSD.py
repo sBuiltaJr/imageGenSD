@@ -242,41 +242,6 @@ async def generate(interaction: dis.Interaction,
                                request=job)
 
         await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
-        
-        """job = { 'metadata' : {
-                    'ctx'    : interaction,
-                    'loop'   : IGSD_client.GetLoop(),
-                    'poster' : Post
-               },
-               'data' : {
-                    #Requests are sorted by guild for rate-limiting
-                    'guild'   : interaction.guild_id,
-                    'cmd'     : 'generate',
-                    #This should really be metadata but the rest of the metadata
-                    #can't be pickeled, so this must be passed with the work.
-                    'id'      : interaction.user.id,
-                    'post'    : pg.GetDefaultJobData(),
-                    'profile' : pic.dumps(pg.GetDefaultProfile())},
-                'reply'   : ""
-                }
-
-        #And probably blacklist people who try to bypass prompt filters X times.
-        #Also nearly all input sanitization is done by the function call.
-        job['data']['post']['random']          = random
-        job['data']['post']['tag_cnt']         = tag_cnt
-        job['data']['post']['prompt']          = prompt
-        job['data']['post']['negative_prompt'] = negative_prompt
-        job['data']['post']['height']          = (height - (height % int(params['options']['step_size'])))
-        job['data']['post']['width']           = (width  - (width  % int(params['options']['step_size'])))
-        job['data']['post']['steps']           = steps
-        job['data']['post']['seed']            = seed
-        job['data']['post']['cfg_scale']       = cfg_scale
-        job['data']['post']['sampler']         = sampler
-
-        disLog.debug(f"Posting user job {job} to the queue.")
-        result = job_queue.Add(job)
-
-    await interaction.response.send_message(f'{result}', ephemeral=True)"""
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)

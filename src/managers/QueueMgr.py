@@ -134,7 +134,14 @@ class Manager:
         """
         global jobs
 
-        if request.GetGuild() not in jobs:#request['data']['guild'] not in jobs:
+        #TODO: consider removing to have a single dict of 1 action per user to
+        #ensure users can't submit multiple rolls.
+        #TODO2: consider having non-affect commands (like show) go to a
+        #different queue to allow the commands to process in parallel.
+        #TODO3: consider having a lock around 2 trackers, 1 per user and 1 for
+        #requests per guild, to ensure 1 global job per user and limit spam
+        #from a server (including user/account flooding from a server).
+        if request.GetGuild() not in jobs:
 
             if len(jobs) >= self.max_guilds :
 

@@ -1,3 +1,4 @@
 discord>=2.2.2
 mariadb>=1.1.9 
 requests>=2.28.2
+coverage>=7.4.3

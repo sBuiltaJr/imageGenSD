@@ -10,7 +10,11 @@
 
 #####  Imports  #####
 
+import coverage
 import unittest as unt
+#https://coverage.readthedocs.io/en/7.4.3/faq.html#q-why-do-the-bodies-of-functions-show-as-executed-but-the-def-lines-do-not
+cov = coverage.Coverage()
+cov.start()
 from src import UtilitiesTests as ut
 
 #####  Test Class  #####
@@ -36,4 +40,10 @@ def testUtilities():
 
     print(runner.run(suite))
 
-testUtilities()
+
+if __name__ == '__main__':
+    testUtilities()
+    cov.stop()
+    cov.html_report(directory='covhtml')
+    cov.save()
+    cov.report()

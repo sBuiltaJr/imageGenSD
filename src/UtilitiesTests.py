@@ -4,6 +4,7 @@
 
 #####  Imports  #####
 
+from . import MockClasses as mc
 from .utilities import JobFactory as jf
 from .utilities import MenuPagination as mp
 from .utilities import NameRandomizer as nr
@@ -22,195 +23,6 @@ from unittest import IsolatedAsyncioTestCase as iatc
 from unittest.mock import patch
 from unittest.mock import MagicMock
 
-
-#####  Mock Interaction Class  #####
-
-class MockInteraction():
-
-    class InteractionChannel():
-
-        async def send(self,
-                       content : Optional[str]       = None,
-                       embed   : Optional[dis.Embed] = None,
-                       file    : Optional[dis.File]  = None):
-            """A bare minimum mock to ensure test compatability.
-
-               Input: self - Pointer to the current object instance.
-                      content - Waht data to post to the channel.
-                      embed - An optional embed to add to the message.
-                      file - An optional fileadd to the message.
-
-               Output: none.
-            """
-            pass
-
-    class InteractionMessage():
-
-        async def edit(self,
-                       view : Optional[Any] = None):
-            """A bare minimum mock to ensure test compatability.
-
-               Input: self - Pointer to the current object instance.
-                      view - Which discord view to edit.
-
-               Output: none.
-            """
-            pass
-
-    class InteractionResponse():
-
-        async def send_message(self,
-                               delete_after : Optional[float]     = None,
-                               embed        : Optional[dis.Embed] = None,
-                               ephemeral    : Optional[bool]      = None,
-                               view         : Optional[Any]       = None):
-            """A bare minimum mock to ensure test compatability.
-
-               Input: self - Pointer to the current object instance.
-                      delete_after - How long to display the message if ephemeral.
-                      embed - An optional embed to add to the message.
-                      ephemeral - If the message should be automatically deleted.
-                      view - Which discord view to edit.
-
-               Output: none.
-            """
-            pass
-
-        async def edit_message(self,
-                               embed        : Optional[dis.Embed] = None,
-                               view         : Optional[Any]       = None):
-            """A bare minimum mock to ensure test compatability.
-
-               Input: self - Pointer to the current object instance.
-                      embed - An optional embed to add to the message.
-                      view - Which discord view to edit.
-
-               Output: none.
-            """
-            pass
-
-    class InteractionUser():
-
-        def __init__(self):
-            """A bare minimum mock to ensure test compatability.
-
-               Input: self - Pointer to the current object instance.
-
-               Output: none.
-            """
-
-            self.id = 1234567890
-
-    def __init__(self):
-        """A bare minimum mock to ensure test compatability.
-
-           Input: self - Pointer to the current object instance.
-
-           Output: none.
-        """
-
-        self.channel     = self.InteractionChannel()
-        self.guild_id    = 111111111
-        self.interaction = 0
-        self.message     = self.InteractionMessage()
-        self.response    = self.InteractionResponse()
-        self.user        = self.InteractionUser()
-
-    async def original_response(self):
-        """A bare minimum mock to ensure test compatability.
-
-           Input: self - Pointer to the current object instance.
-
-           Output: message - a mock Discord message.
-        """
-        return self.message
-
-
-#####  Mock GetPage Class  #####
-
-class MockGetPage():
-
-    async def get_page(self,
-                       index : int):
-        """A bare minimum mock to ensure test compatability.
-
-           Input: self - Pointer to the current object instance.
-                  index - which page to get.
-
-           Output: dis-Embed - a default Eiscord embed object.
-                   int - a valid value of pages for a menu.
-        """
-        return dis.Embed(), index
-
-
-#####  Mock GetPage Class  #####
-
-class MockResult():
-
-    def json(self):
-        """A bare minimum mock to ensure test compatability.
-
-           Input: self - Pointer to the current object instance.
-
-           Output: json - A string formatted like a json file.
-        """
-        return {'info' : '{"info":{"prompt":"good","negative_prompt":"bad","steps":"10","height":"256","width":"256","sampler_name":"Euler a","seed":"-1","subseed":"-1","cfg_scale":"1.0"},"images":{"0":"iVBORw0KGgoAAAANSUhEUgAABAAAAA"}}'}
-
-
-#####  Mock View Class  #####
-
-class MockView():
-
-    class MockMenuChild():
-
-        def __init__(self):
-            """A bare minimum mock to ensure test compatability.
-
-               Input: self - Pointer to the current object instance.
-
-               Output: none.
-            """
-
-            self.disabled = False
-            self.emoji    = ""
-
-    def __init__(self):
-        """A bare minimum mock to ensure test compatability.
-
-           Input: self - Pointer to the current object instance.
-
-           Output: none.
-        """
-
-        self.children  = [self.MockMenuChild(),
-                          self.MockMenuChild(),
-                          self.MockMenuChild()]
-
-
-#####  Mock Button Class  #####
-
-class MockUiButton():
-
-    def __init__(self,
-                 emoji: Optional[Any]       = None,
-                 style: Optional[Any]       = None):
-        """A bare minimum mock to ensure test compatability.
-
-           Input: self - Pointer to the current object instance.
-
-           Output: none.
-        """
-        pass
-
-    async def button(self):
-        """A bare minimum mock to ensure test compatability.
-
-           Input: self - Pointer to the current object instance.
-
-           Output: N.A
-        """
-        pass
-
 #####  Menu Pagination Class  #####
 
 class TestJobFactory(iatc):
@@ -227,7 +39,7 @@ class TestJobFactory(iatc):
 
            Output: none.
         """
-        self.interaction = MockInteraction()
+        self.interaction = mc.MockInteraction()
         self.web_url     = "http://127.0.0.1:7860/"
 
     def testJobFactoryRaisesErrorOnBadArgs(self):
@@ -273,11 +85,15 @@ class TestJobFactory(iatc):
                                    options=opts)
         self.assertNotEqual(job, None)
 
+        mock_tag_src = mc.MockTagSource()
+        job.doRandomize(tag_src=mock_tag_src)
+        self.assertEqual(job.post_data['tags_added'], 2)
+
         req.post              = MagicMock()
-        req.post.return_value = MockResult()
+        req.post.return_value = mc.MockResult()
 
         job.doWork(web_url=self.web_url)
-        self.assertTrue(True)
+        self.assertNotEqual(job.result, None)
 
         metadata = {'ctx' : self.interaction}
 
@@ -301,8 +117,8 @@ class TestMenuPagination(iatc):
            Output: none.
         """
 
-        self.interaction   = MockInteraction()
-        self.mock_get_page = MockGetPage()
+        self.interaction   = mc.MockInteraction()
+        self.mock_get_page = mc.MockGetPage()
         self.get_page      = self.mock_get_page.get_page
 
         with patch('discord.ui.View') as MockView, patch('discord.ui.Button') as MockUiButton:
@@ -332,7 +148,7 @@ class TestMenuPagination(iatc):
            Output: none.
         """
 
-        uut_interaction = MockInteraction()
+        uut_interaction = mc.MockInteraction()
 
         result = await self.uut.interaction_check(interaction=uut_interaction)
 
@@ -372,7 +188,7 @@ class TestMenuPagination(iatc):
            Output: none.
         """
 
-        uut_interaction = MockInteraction()
+        uut_interaction = mc.MockInteraction()
 
         await self.uut.editPage(interaction=uut_interaction)
 

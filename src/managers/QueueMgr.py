@@ -14,7 +14,6 @@ import multiprocessing as mp
 #from multiprocessing.queues import Queue
 #from multiprocessing import get_context
 import pathlib as pl
-import queue
 import requests as req
 import time
 

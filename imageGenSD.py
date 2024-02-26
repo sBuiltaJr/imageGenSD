@@ -222,15 +222,15 @@ async def generate(interaction: dis.Interaction,
                    }
         opts = {
                 'cfg_scale' : cfg_scale,
-                'height'   : (height - (height % int(params['options']['step_size']))),
-                'n_prompt' : negative_prompt,
-                'prompt'   : prompt,
-                'random'   : random,
-                'sampler'  : sampler,
-                'seed'     : -1,
-                'steps'    : steps,
-                'tag_cnt'  : tag_cnt,
-                'width'    : (width  - (width  % int(params['options']['step_size'])))
+                'height'    : (height - (height % int(params['options']['step_size']))),
+                'n_prompt'  : negative_prompt,
+                'prompt'    : prompt,
+                'random'    : random,
+                'sampler'   : sampler,
+                'seed'      : -1,
+                'steps'     : steps,
+                'tag_cnt'   : tag_cnt,
+                'width'     : (width  - (width  % int(params['options']['step_size'])))
         }
         dis_log.debug(f"Creating a job with metadata {metadata} and options {opts}.")
         job = jf.JobFactory.getJob(type=jf.JobTypeEnum.GENERATE,

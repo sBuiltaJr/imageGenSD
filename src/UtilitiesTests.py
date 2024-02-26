@@ -15,6 +15,7 @@ import discord as dis
 import json
 import pathlib as pl
 import re
+import requests as req
 from typing import Callable, Optional, Any
 import unittest
 from unittest import IsolatedAsyncioTestCase as iatc
@@ -25,6 +26,36 @@ from unittest.mock import MagicMock
 #####  Mock Interaction Class  #####
 
 class MockInteraction():
+
+    class InteractionChannel():
+
+        async def send(self,
+                       content : Optional[str]       = None,
+                       embed   : Optional[dis.Embed] = None,
+                       file    : Optional[dis.File]  = None):
+            """A bare minimum mock to ensure test compatability.
+
+               Input: self - Pointer to the current object instance.
+                      content - Waht data to post to the channel.
+                      embed - An optional embed to add to the message.
+                      file - An optional fileadd to the message.
+
+               Output: none.
+            """
+            pass
+
+    class InteractionMessage():
+
+        async def edit(self,
+                       view : Optional[Any] = None):
+            """A bare minimum mock to ensure test compatability.
+
+               Input: self - Pointer to the current object instance.
+                      view - Which discord view to edit.
+
+               Output: none.
+            """
+            pass
 
     class InteractionResponse():
 
@@ -58,18 +89,17 @@ class MockInteraction():
             """
             pass
 
-    class InteractionMessage():
+    class InteractionUser():
 
-        async def edit(self,
-                       view : Optional[Any] = None):
+        def __init__(self):
             """A bare minimum mock to ensure test compatability.
 
                Input: self - Pointer to the current object instance.
-                      view - Which discord view to edit.
 
                Output: none.
             """
-            pass
+
+            self.id = 1234567890
 
     def __init__(self):
         """A bare minimum mock to ensure test compatability.
@@ -79,10 +109,12 @@ class MockInteraction():
            Output: none.
         """
 
+        self.channel     = self.InteractionChannel()
+        self.guild_id    = 111111111
         self.interaction = 0
-        self.response    = self.InteractionResponse()
         self.message     = self.InteractionMessage()
-        self.user        = 0
+        self.response    = self.InteractionResponse()
+        self.user        = self.InteractionUser()
 
     async def original_response(self):
         """A bare minimum mock to ensure test compatability.
@@ -109,6 +141,20 @@ class MockGetPage():
                    int - a valid value of pages for a menu.
         """
         return dis.Embed(), index
+
+
+#####  Mock GetPage Class  #####
+
+class MockResult():
+
+    def json(self):
+        """A bare minimum mock to ensure test compatability.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: json - A string formatted like a json file.
+        """
+        return {'info' : '{"info":{"prompt":"good","negative_prompt":"bad","steps":"10","height":"256","width":"256","sampler_name":"Euler a","seed":"-1","subseed":"-1","cfg_scale":"1.0"},"images":{"0":"iVBORw0KGgoAAAANSUhEUgAABAAAAA"}}'}
 
 
 #####  Mock View Class  #####
@@ -181,10 +227,11 @@ class TestJobFactory(iatc):
 
            Output: none.
         """
-        self.interaction   = MockInteraction()
+        self.interaction = MockInteraction()
+        self.web_url     = "http://127.0.0.1:7860/"
 
     def testJobFactoryRaisesErrorOnBadArgs(self):
-        """A simple verification that the Job Factory class will throw the 
+        """A simple verification that the Job Factory class will throw the
            NotImplementedError if given a bad job type.
 
            Input: self - Pointer to the current object instance.
@@ -195,6 +242,47 @@ class TestJobFactory(iatc):
         with self.assertRaises(NotImplementedError):
             job = jf.JobFactory.getJob(type=8, ctx=self.interaction)
 
+    async def testRunGenerateJobFlow(self):
+        """Verifies that the GenerateJob object returned from the Job Factory
+           can perform all its necessary job functions.  This could be broken
+           into multiple UTs once the UT code is refactored.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        opts = {
+                'cfg_scale' : 1.0,
+                'height'    : 256,
+                'n_prompt'  : "bad",
+                'prompt'    : "good",
+                'random'    : True,
+                'sampler'   : "Euler a",
+                'seed'      : -1,
+                'steps'     : 10,
+                'tag_cnt'   : 0,
+                'width'     : 256
+        }
+
+        nr.getRandomName              = MagicMock()
+        nr.getRandomName.return_value = "Default Sally"
+
+        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.GENERATE,
+                                   ctx=self.interaction,
+                                   options=opts)
+        self.assertNotEqual(job, None)
+
+        req.post              = MagicMock()
+        req.post.return_value = MockResult()
+
+        job.doWork(web_url=self.web_url)
+        self.assertTrue(True)
+
+        metadata = {'ctx' : self.interaction}
+
+        await job.post(metadata=metadata)
+        self.assertTrue(True)
 
 #####  Menu Pagination Class  #####
 
@@ -231,11 +319,7 @@ class TestMenuPagination(iatc):
            Output: none.
         """
 
-        uut_interaction       = MockInteraction()
-        self.interaction.user = 1234567890
-        uut_interaction.user  = 1234567890
-
-        result = await self.uut.interaction_check(interaction=uut_interaction)
+        result = await self.uut.interaction_check(interaction=self.interaction)
 
         self.assertTrue(result)
 
@@ -248,9 +332,7 @@ class TestMenuPagination(iatc):
            Output: none.
         """
 
-        uut_interaction       = MockInteraction()
-        self.interaction.user = 1234567890
-        uut_interaction.user  =  987654321
+        uut_interaction = MockInteraction()
 
         result = await self.uut.interaction_check(interaction=uut_interaction)
 

@@ -4,6 +4,7 @@
 
 #####  Imports  #####
 
+from .utilities import JobFactory as jf
 from .utilities import MenuPagination as mp
 from .utilities import NameRandomizer as nr
 from .utilities import ProfileGenerator as pg
@@ -30,13 +31,15 @@ class MockInteraction():
         async def send_message(self,
                                delete_after : Optional[float]     = None,
                                embed        : Optional[dis.Embed] = None,
-                               ephemeral    : Optional[bool]      = None):
+                               ephemeral    : Optional[bool]      = None,
+                               view         : Optional[Any]       = None):
             """A bare minimum mock to ensure test compatability.
 
                Input: self - Pointer to the current object instance.
                       delete_after - How long to display the message if ephemeral.
                       embed - An optional embed to add to the message.
                       ephemeral - If the message should be automatically deleted.
+                      view - Which discord view to edit.
 
                Output: none.
             """
@@ -105,7 +108,7 @@ class MockGetPage():
            Output: dis-Embed - a default Eiscord embed object.
                    int - a valid value of pages for a menu.
         """
-        return dis.Embed(), 3
+        return dis.Embed(), index
 
 
 #####  Mock View Class  #####
@@ -164,23 +167,60 @@ class MockUiButton():
 
 #####  Menu Pagination Class  #####
 
+class TestJobFactory(iatc):
+
+
+    async def asyncSetUp(self):
+        """Method called to prepare the test fixture. This is called after
+           setUp(). This is called immediately before calling the test method;
+           other than AssertionError or SkipTest, any exception raised by this
+           method will be considered an error rather than a test failure. The
+           default implementation does nothing.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+        self.interaction   = MockInteraction()
+
+    def testJobFactoryRaisesErrorOnBadArgs(self):
+        """A simple verification that the Job Factory class will throw the 
+           NotImplementedError if given a bad job type.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        with self.assertRaises(NotImplementedError):
+            job = jf.JobFactory.getJob(type=8, ctx=self.interaction)
+
+
+#####  Menu Pagination Class  #####
+
 class TestMenuPagination(iatc):
 
 
     async def asyncSetUp(self):
+        """Method called to prepare the test fixture. This is called after
+           setUp(). This is called immediately before calling the test method;
+           other than AssertionError or SkipTest, any exception raised by this
+           method will be considered an error rather than a test failure. The
+           default implementation does nothing.
 
-        #self.mock_button   = MockUiButton()
-        #self.button        = self.mock_button.button
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
         self.interaction   = MockInteraction()
         self.mock_get_page = MockGetPage()
         self.get_page      = self.mock_get_page.get_page
 
         with patch('discord.ui.View') as MockView, patch('discord.ui.Button') as MockUiButton:
 
-            #with patch('discord.ui.Button') as MockUiButton:
-
             self.uut = mp.MenuPagination(interaction=self.interaction,
-                                        get_page=self.get_page)
+                                         get_page=self.get_page)
 
     async def testInteractionCheckPasses(self):
         """Verifies that the interaction_check function verifies only the post
@@ -215,6 +255,32 @@ class TestMenuPagination(iatc):
         result = await self.uut.interaction_check(interaction=uut_interaction)
 
         self.assertFalse(result)
+
+    async def testNavigatePassesOnOnePage(self):
+        """Verifies that the navigate function works for a 1-page navigation.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+        self.uut.index = 1
+
+        await self.uut.navigate()
+
+        self.assertTrue(True)
+
+    async def testNavigatePassesOnManyPages(self):
+        """Verifies that the navigate function works for a >1-page navigation.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+        self.uut.index = 10
+
+        await self.uut.navigate()
+
+        self.assertTrue(True)
 
     async def testEditPagePasses(self):
         """Verifies that the editPage function works.

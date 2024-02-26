@@ -575,4 +575,4 @@ class JobFactory:
                                    options)
 
             case _:
-                return Job()
+                raise NotImplementedError

@@ -4,17 +4,213 @@
 
 #####  Imports  #####
 
+from .utilities import MenuPagination as mp
 from .utilities import NameRandomizer as nr
 from .utilities import ProfileGenerator as pg
 from .utilities import RarityClass as rc
 from .utilities import StatsClass as sc
 from .utilities import TagRandomizer as tr
+import discord as dis
 import json
 import pathlib as pl
 import re
+from typing import Callable, Optional, Any
 import unittest
+from unittest import IsolatedAsyncioTestCase as iatc
 from unittest.mock import patch
 from unittest.mock import MagicMock
+
+
+#####  Mock Interaction Class  #####
+
+class MockInteraction():
+
+    class InteractionResponse():
+
+        async def send_message(self,
+                               delete_after : Optional[float]     = None,
+                               embed        : Optional[dis.Embed] = None,
+                               ephemeral    : Optional[bool]      = None):
+            """A bare minimum mock to ensure test compatability.
+
+               Input: self - Pointer to the current object instance.
+                      delete_after - How long to display the message if ephemeral.
+                      embed - An optional embed to add to the message.
+                      ephemeral - If the message should be automatically deleted.
+
+               Output: none.
+            """
+            pass
+
+        async def edit_message(self,
+                               embed        : Optional[dis.Embed] = None,
+                               view         : Optional[Any]       = None):
+            """A bare minimum mock to ensure test compatability.
+
+               Input: self - Pointer to the current object instance.
+                      embed - An optional embed to add to the message.
+                      view - Which discord view to edit.
+
+               Output: none.
+            """
+            pass
+
+    def __init__(self):
+        """A bare minimum mock to ensure test compatability.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        self.interaction = 0
+        self.response    = self.InteractionResponse()
+        self.user        = 0
+
+
+#####  Mock GetPage Class  #####
+
+class MockGetPage():
+
+
+    async def get_page(self,
+                       index : int):
+        """A bare minimum mock to ensure test compatability.
+
+           Input: self - Pointer to the current object instance.
+                  index - which page to get.
+
+           Output: dis-Embed - a default Eiscord embed object.
+                   int - a valid value of pages for a menu.
+        """
+        return dis.Embed(), 3
+
+#####  Mock View Class  #####
+
+class MockView():
+
+    class MockMenuChild():
+
+        def __init__(self):
+            """A bare minimum mock to ensure test compatability.
+
+               Input: self - Pointer to the current object instance.
+
+               Output: none.
+            """
+
+            self.disabled = False
+            self.emoji    = ""
+
+    def __init__(self):
+        """A bare minimum mock to ensure test compatability.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        self.children  = [self.MockMenuChild(),
+                          self.MockMenuChild(),
+                          self.MockMenuChild()]
+
+
+#####  Menu Pagination Class  #####
+
+class TestMenuPagination(iatc):
+
+
+    async def asyncSetUp(self):
+
+        self.interaction   = MockInteraction()
+        self.mock_get_page = MockGetPage()
+        self.get_page      = self.mock_get_page.get_page
+
+        with patch('discord.ui.View') as MockView:
+
+            self.uut = mp.MenuPagination(interaction=self.interaction,
+                                         get_page=self.get_page)
+
+    async def testInteractionCheckPasses(self):
+        """Verifies that the interaction_check function verifies only the post
+           author is allowed to interact with menu buttons.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        uut_interaction       = MockInteraction()
+        self.interaction.user = 1234567890
+        uut_interaction.user  = 1234567890
+
+        result = await self.uut.interaction_check(interaction=uut_interaction)
+
+        self.assertTrue(result)
+
+    async def testInteractionCheckFails(self):
+        """Verifies that the interaction_check function verifies that users
+           other than the author are not allowed to interact with menu buttons.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        uut_interaction       = MockInteraction()
+        self.interaction.user = 1234567890
+        uut_interaction.user  =  987654321
+
+        result = await self.uut.interaction_check(interaction=uut_interaction)
+
+        self.assertFalse(result)
+
+    async def testEditPagePasses(self):
+        """Verifies that the editPage function works.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        uut_interaction = MockInteraction()
+
+        await self.uut.editPage(interaction=uut_interaction)
+
+        self.assertTrue(True)
+
+    async def testUpdateButtonsSinglePasses(self):
+        """Verifies that the updateButtons function works with a single page.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        self.uut.total_pages = 1
+        self.uut.index       = 1
+        self.uut.updateButtons()
+
+        self.assertTrue(self.uut.children[0].disabled)
+        self.assertTrue(self.uut.children[1].disabled)
+        self.assertTrue(self.uut.children[2].emoji.name == "⏮️")
+
+    async def testUpdateButtonsSinglePassesWithDifferentIndex(self):
+        """Verifies that the updateButtons function works with a single page
+           but not an equal number of total pages.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        self.uut.total_pages = 1
+        self.uut.index       = 0
+        self.uut.updateButtons()
+
+        self.assertFalse(self.uut.children[0].disabled)
+        self.assertFalse(self.uut.children[1].disabled)
+        self.assertTrue(self.uut.children[2].emoji.name == "⏭️")
 
 
 #####  Name Randomizer Class  #####
@@ -160,6 +356,7 @@ class TestProfileGenerator(unittest.TestCase):
 
         self.assertTrue(isinstance(profile, pg.Profile))
 
+
 #####  Rarity Class  #####
 
 class TestRarityClass(unittest.TestCase):
@@ -277,6 +474,9 @@ class TestStatsClass(unittest.TestCase):
                              luck      = 1,
                              strength  = 1)
             self.assertTrue(True)
+
+
+#####  Tag Randomizer Class  #####
 
 class TestTagRandomizer(unittest.TestCase):
 

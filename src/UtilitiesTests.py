@@ -55,6 +55,19 @@ class MockInteraction():
             """
             pass
 
+    class InteractionMessage():
+
+        async def edit(self,
+                       view : Optional[Any] = None):
+            """A bare minimum mock to ensure test compatability.
+
+               Input: self - Pointer to the current object instance.
+                      view - Which discord view to edit.
+
+               Output: none.
+            """
+            pass
+
     def __init__(self):
         """A bare minimum mock to ensure test compatability.
 
@@ -65,13 +78,22 @@ class MockInteraction():
 
         self.interaction = 0
         self.response    = self.InteractionResponse()
+        self.message     = self.InteractionMessage()
         self.user        = 0
+
+    async def original_response(self):
+        """A bare minimum mock to ensure test compatability.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: message - a mock Discord message.
+        """
+        return self.message
 
 
 #####  Mock GetPage Class  #####
 
 class MockGetPage():
-
 
     async def get_page(self,
                        index : int):
@@ -84,6 +106,7 @@ class MockGetPage():
                    int - a valid value of pages for a menu.
         """
         return dis.Embed(), 3
+
 
 #####  Mock View Class  #####
 
@@ -115,6 +138,30 @@ class MockView():
                           self.MockMenuChild()]
 
 
+#####  Mock Button Class  #####
+
+class MockUiButton():
+
+    def __init__(self,
+                 emoji: Optional[Any]       = None,
+                 style: Optional[Any]       = None):
+        """A bare minimum mock to ensure test compatability.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+        pass
+
+    async def button(self):
+        """A bare minimum mock to ensure test compatability.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: N.A
+        """
+        pass
+
 #####  Menu Pagination Class  #####
 
 class TestMenuPagination(iatc):
@@ -122,14 +169,18 @@ class TestMenuPagination(iatc):
 
     async def asyncSetUp(self):
 
+        #self.mock_button   = MockUiButton()
+        #self.button        = self.mock_button.button
         self.interaction   = MockInteraction()
         self.mock_get_page = MockGetPage()
         self.get_page      = self.mock_get_page.get_page
 
-        with patch('discord.ui.View') as MockView:
+        with patch('discord.ui.View') as MockView, patch('discord.ui.Button') as MockUiButton:
+
+            #with patch('discord.ui.Button') as MockUiButton:
 
             self.uut = mp.MenuPagination(interaction=self.interaction,
-                                         get_page=self.get_page)
+                                        get_page=self.get_page)
 
     async def testInteractionCheckPasses(self):
         """Verifies that the interaction_check function verifies only the post
@@ -211,6 +262,43 @@ class TestMenuPagination(iatc):
         self.assertFalse(self.uut.children[0].disabled)
         self.assertFalse(self.uut.children[1].disabled)
         self.assertTrue(self.uut.children[2].emoji.name == "⏭️")
+
+    async def testOnTimeoutPasses(self):
+        """Verifies that the on_timeout function works.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        await self.uut.on_timeout()
+
+        self.assertTrue(True)
+
+    async def testGetTotalPagesGivesValidValues(self):
+        """Verifies that the getTotalPages function returns valid values of the
+           correct type when given valid inputs.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        pages = self.uut.getTotalPages(total_items    = 0,
+                                       items_per_page = 1)
+        self.assertEqual(pages, 0)
+
+        pages = self.uut.getTotalPages(total_items    = 1,
+                                       items_per_page = 1)
+        self.assertEqual(pages, 1)
+
+        pages = self.uut.getTotalPages(total_items    = 10,
+                                       items_per_page = 1)
+        self.assertEqual(pages, 10)
+
+        pages = self.uut.getTotalPages(total_items    = 100,
+                                       items_per_page = 10)
+        self.assertEqual(pages, 10)
 
 
 #####  Name Randomizer Class  #####

@@ -1,7 +1,74 @@
 #Defines the shared mock interfaces used by unit tests.
 
+from .utilities import ProfileGenerator as pg
 import discord as dis
 from typing import Callable, Optional, Any
+
+DEFAULT_PROFILE_ID = 1234567890
+
+#####  Mock GetPage Class  #####
+
+class MockDbInterface():
+
+    def dailyDone(self,
+                  id : int) ->bool:
+        """A bare minimum mock to ensure test compatability.
+
+           Input: self - Pointer to the current object instance.
+                  id - the Discord user id for the command author.
+
+           Output: bool - if the user has already rolled a daily
+        """
+        return (id != DEFAULT_PROFILE_ID)
+
+    def getProfile(self,
+                   profile_id : Optional[str] = DEFAULT_PROFILE_ID) -> pg.Profile:
+        """A bare minimum mock to ensure test compatability.
+
+           Input: self - Pointer to the current object instance.
+                  profile_id - the IGSD character profile to show.
+
+           Output: bool - if the user has already rolled a daily
+        """
+        if profile_id != None and profile_id == DEFAULT_PROFILE_ID:
+            
+            return pg.getDefaultProfile()
+            
+        else:
+        
+            return None
+
+    def getImage(self,
+                 profile_id : Optional[str] = DEFAULT_PROFILE_ID) -> Optional[str]:
+        """A bare minimum mock to ensure test compatability.
+
+           Input: self - Pointer to the current object instance.
+                  profile_id - the IGSD character profile to show.
+
+           Output: bool - if the user has already rolled a daily
+        """
+        if profile_id != None and profile_id == DEFAULT_PROFILE_ID:
+            
+            return "iVBORw0KGgoAAAANSUhEUgAABAAA"
+            
+        else:
+        
+            return None
+
+    def saveRoll(self,
+                       id      : int,
+                       img     : str,
+                       info    : dict,
+                       profile : pg.Profile):
+        """A bare minimum mock to ensure test compatability.
+
+           Input: self - Pointer to the current object instance.
+                  id - the Discord user id for the command author.
+
+           Output: bool - if the user has already rolled a daily
+        """
+        pass
+
 
 #####  Mock Interaction Class  #####
 
@@ -79,7 +146,7 @@ class MockInteraction():
                Output: none.
             """
 
-            self.id = 1234567890
+            self.id = DEFAULT_PROFILE_ID
 
     def __init__(self):
         """A bare minimum mock to ensure test compatability.
@@ -135,7 +202,47 @@ class MockResult():
            Output: json - A string formatted like a json file.
         """
         return {'info'   : '{"info":{"empty":"0"},"prompt":"good","negative_prompt":"bad","steps":"10","height":"256","width":"256","sampler_name":"Euler a","seed":"-1","subseed":"-1","cfg_scale":"1.0"}',
-                'images' : {"iVBORw0KGgoAAAANSUhEUgAABAAA":"0"}}
+                'images' : ["iVBORw0KGgoAAAANSUhEUgAABAAA"]}
+
+
+#####  Mock Tag Source Class  #####
+
+class MockTagSource():
+
+    def getRandomTags(self,
+                      tag_src : int):
+        """A bare minimum mock to ensure test compatability.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: N.A
+        """
+        return ("Default,Tag",2)
+
+
+#####  Mock Button Class  #####
+
+class MockUiButton():
+
+    def __init__(self,
+                 emoji: Optional[Any]       = None,
+                 style: Optional[Any]       = None):
+        """A bare minimum mock to ensure test compatability.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+        pass
+
+    async def button(self):
+        """A bare minimum mock to ensure test compatability.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: N.A
+        """
+        pass
 
 
 #####  Mock View Class  #####
@@ -166,44 +273,3 @@ class MockView():
         self.children  = [self.MockMenuChild(),
                           self.MockMenuChild(),
                           self.MockMenuChild()]
-
-
-#####  Mock Button Class  #####
-
-class MockUiButton():
-
-    def __init__(self,
-                 emoji: Optional[Any]       = None,
-                 style: Optional[Any]       = None):
-        """A bare minimum mock to ensure test compatability.
-
-           Input: self - Pointer to the current object instance.
-
-           Output: none.
-        """
-        pass
-
-    async def button(self):
-        """A bare minimum mock to ensure test compatability.
-
-           Input: self - Pointer to the current object instance.
-
-           Output: N.A
-        """
-        pass
-
-
-
-#####  Mock Tag Source Class  #####
-
-class MockTagSource():
-
-    def getRandomTags(self,
-                      tag_src : int):
-        """A bare minimum mock to ensure test compatability.
-
-           Input: self - Pointer to the current object instance.
-
-           Output: N.A
-        """
-        return ("Default,Tag",2)

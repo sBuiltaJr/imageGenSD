@@ -100,6 +100,212 @@ class TestJobFactory(iatc):
         await job.post(metadata=metadata)
         self.assertTrue(True)
 
+    async def testRunRollJobFlow(self):
+        """Verifies that the RollJob object returned from the Job Factory can
+           perform all its necessary job functions.  This could be broken into
+           multiple UTs once the UT code is refactored.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        opts = {
+                'prompt'    : "good",
+                'random'    : True,
+                'seed'      : -1
+        }
+
+        nr.getRandomName              = MagicMock()
+        nr.getRandomName.return_value = "Default Sally"
+
+        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.ROLL,
+                                   ctx=self.interaction,
+                                   options=opts)
+        self.assertNotEqual(job, None)
+
+        mock_tag_src = mc.MockTagSource()
+        job.doRandomize(tag_src=mock_tag_src)
+        self.assertEqual(job.post_data['tags_added'], 2)
+
+        req.post              = MagicMock()
+        req.post.return_value = mc.MockResult()
+
+        job.doWork(web_url=self.web_url)
+        self.assertNotEqual(job.result, None)
+
+        metadata    = {'ctx'    : self.interaction,
+                       'db_ifc' : mc.MockDbInterface()}
+        job.profile = pg.getDefaultProfile()
+
+        await job.post(metadata=metadata)
+        self.assertTrue(True)
+
+    async def testRunShowProfileJobFlow(self):
+        """Verifies that the ShowProfileJob object returned from the Job
+           Factory can perform all its necessary job functions.  This could be
+           broken into multiple UTs once the UT code is refactored.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        opts = {'id' : mc.DEFAULT_PROFILE_ID}
+
+        nr.getRandomName              = MagicMock()
+        nr.getRandomName.return_value = "Default Sally"
+
+        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.SHOWPROFILE,
+                                   ctx=self.interaction,
+                                   options=opts)
+        self.assertNotEqual(job, None)
+
+        metadata = {'ctx'    : self.interaction,
+                    'db_ifc' : mc.MockDbInterface()}
+
+        await job.post(metadata=metadata)
+        self.assertTrue(True)
+
+    async def testRunShowProfileJobFlowNoProfile(self):
+        """Verifies that the ShowProfileJob object returned from the Job
+           Factory will follow the error path if the request profile isn't
+           found.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        opts = {'id' : 1}
+
+        nr.getRandomName              = MagicMock()
+        nr.getRandomName.return_value = "Default Sally"
+
+        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.SHOWPROFILE,
+                                   ctx=self.interaction,
+                                   options=opts)
+        self.assertNotEqual(job, None)
+
+        metadata    = {'ctx'    : self.interaction,
+                       'db_ifc' : mc.MockDbInterface()}
+        job.id = 1
+
+        await job.post(metadata=metadata)
+        self.assertTrue(True)
+
+    async def testRunGetJobFlow(self):
+        """Verifies that the GetJob object returned from the Job Factory can
+           perform all its necessary job functions.  This could be broken into
+           multiple UTs once the UT code is refactored.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        nr.getRandomName              = MagicMock()
+        nr.getRandomName.return_value = "Default Sally"
+
+        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.TESTGET,
+                                   ctx=self.interaction)
+        self.assertNotEqual(job, None)
+
+        req.post              = MagicMock()
+        req.post.return_value = mc.MockResult()
+
+        job.doWork(web_url=self.web_url)
+        self.assertNotEqual(job.result, None)
+
+        metadata    = {'ctx'    : self.interaction}
+
+        await job.post(metadata=metadata)
+        self.assertTrue(True)
+
+    async def testRunTestPostJobFlow(self):
+        """Verifies that the TestPostJob object returned from the Job Factory
+           can perform all its necessary job functions.  This could be broken
+           into multiple UTs once the UT code is refactored.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        nr.getRandomName              = MagicMock()
+        nr.getRandomName.return_value = "Default Sally"
+
+        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.TESTPOST,
+                                   ctx=self.interaction)
+        self.assertNotEqual(job, None)
+
+        mock_tag_src = mc.MockTagSource()
+        job.doRandomize(tag_src=mock_tag_src)
+        self.assertEqual(job.post_data['tags_added'], "")
+
+        req.post              = MagicMock()
+        req.post.return_value = mc.MockResult()
+
+        job.doWork(web_url=self.web_url)
+        self.assertNotEqual(job.result, None)
+
+        metadata = {'ctx' : self.interaction}
+
+        await job.post(metadata=metadata)
+        self.assertTrue(True)
+
+    async def testRunTestRollJobFlow(self):
+        """Verifies that the TestRollJob object returned from the Job Factory
+           can perform all its necessary job functions.  This could be broken
+           into multiple UTs once the UT code is refactored.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        nr.getRandomName              = MagicMock()
+        nr.getRandomName.return_value = "Default Sally"
+
+        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.TESTROLL,
+                                   ctx=self.interaction)
+        self.assertNotEqual(job, None)
+
+        req.post              = MagicMock()
+        req.post.return_value = mc.MockResult()
+
+        job.doWork(web_url=self.web_url)
+        self.assertNotEqual(job.result, None)
+
+        metadata    = {'ctx'    : self.interaction}
+
+        await job.post(metadata=metadata)
+        self.assertTrue(True)
+
+    async def testRunTestShowProfileJobFlow(self):
+        """Verifies that the TestShowProfileJob object returned from the Job
+           Factory can perform all its necessary job functions.  This could be
+           broken into multiple UTs once the UT code is refactored.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        nr.getRandomName              = MagicMock()
+        nr.getRandomName.return_value = "Default Sally"
+
+        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.TESTSHOW,
+                                   ctx=self.interaction)
+        self.assertNotEqual(job, None)
+
+        metadata = {'ctx'    : self.interaction,
+                    'db_ifc' : mc.MockDbInterface()}
+
+        await job.post(metadata=metadata)
+        self.assertTrue(True)
+
+
 #####  Menu Pagination Class  #####
 
 class TestMenuPagination(iatc):

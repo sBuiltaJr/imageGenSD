@@ -453,7 +453,7 @@ class TestRollJob(Job):
         """
 
         self.guild     = ctx.guild_id
-        self.post_data      = pg.getDefaultJobData()
+        self.post_data = pg.getDefaultJobData()
         self.profile   = pg.getDefaultProfile()
         self.randomize = False
         self.result    = req.Response()

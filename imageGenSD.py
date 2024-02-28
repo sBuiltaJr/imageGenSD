@@ -331,6 +331,7 @@ async def on_ready():
     dis_log.debug(f"Instantiating the Tag Randomizer.")
     tag_randomizer = tr.TagRandomizer(opts=params['tag_rng_opts'])
 
+
     dis_log.debug(f"Creating Queue Manager.")
     job_queue = qm.Manager(manager_id=1,
                            opts=params['queue_opts'])
@@ -362,6 +363,7 @@ async def post(job      : jf.Job,
 
         Output : N/A.
     """
+
     dis_log = log.getLogger('discord')
     embed = None
     image = None
@@ -441,6 +443,7 @@ async def showprofile(interaction: dis.Interaction,
     opts = {
             'id' : id,
     }
+
     dis_log.debug(f"Creating a job with metadata {metadata} and options {opts}.")
     job = jf.JobFactory.getJob(type=jf.JobTypeEnum.SHOWPROFILE,
                                ctx=interaction,
@@ -497,6 +500,7 @@ async def testget(interaction: dis.Interaction):
 
        Output : None.
     """
+
     dis_log = log.getLogger('discord')
     metadata = {
                  'ctx'     : interaction,
@@ -525,6 +529,7 @@ async def testpost(interaction: dis.Interaction):
 
        Note: All slash commands *MUST* respond in 3 seconds or be terminated.
     """
+
     dis_log = log.getLogger('discord')
     metadata = {
                  'ctx'     : interaction,
@@ -551,6 +556,7 @@ async def testroll(interaction: dis.Interaction):
 
        Note: All slash commands *MUST* respond in 3 seconds or be terminated.
     """
+
     dis_log = log.getLogger('discord')
     metadata = {
                  'ctx'     : interaction,
@@ -577,6 +583,7 @@ async def testshowprofile(interaction: dis.Interaction):
 
        Note: All slash commands *MUST* respond in 3 seconds or be terminated.
     """
+
     dis_log = log.getLogger('discord')
     metadata = {
                  'ctx'     : interaction,

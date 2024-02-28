@@ -28,7 +28,6 @@ class TagRandomizer:
 
            Output: None - Throws exceptions on error.
         """
-
         self.rng_log = log.getLogger('tagrng')
         self.rng_log.setLevel(opts['log_lvl'])
         log_path     = pl.Path(opts['log_name_tagrng'])
@@ -106,6 +105,7 @@ class TagRandomizer:
                         break
 
                 self.rng_log.debug(f"Exiting de-dupe loop with tag {tag}.")
+
             #The getline function includes getting the separator.
             tag_list += (', ' + tag.rstrip(os.linesep))
 

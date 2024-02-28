@@ -253,6 +253,7 @@ class RollJob(Job):
 
            Output: N/A.
         """
+
         self.guild               = ctx.guild_id
         self.post_data           = pg.getDefaultJobData()
         self.post_data['prompt'] = options['prompt']
@@ -283,7 +284,6 @@ class RollJob(Job):
                                         img=json_result['images'][0],
                                         info=info_dict,
                                         profile=self.profile)
-
             embed = self._getEmbedBaseForProfiles()
 
             for i in json_result['images']:
@@ -525,7 +525,6 @@ class TestShowJob(Job):
     def doRandomize(self,
                     tag_src):
         pass
-
 
 ##### Post Job Factory Class  #####
 

@@ -92,6 +92,7 @@ class Manager:
         self.flush_queue = False
         self.id          = manager_id
         self.keep_going  = True
+
         #It's possible all opts are provided directly from config.json,
         #requiring them to be cast appropriately for the manager.  This also
         #allows the caller to never have to worry about casting the types

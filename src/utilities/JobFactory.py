@@ -290,9 +290,9 @@ class RollJob(Job):
                 image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
 
             await metadata['ctx'].channel.send(content=f"<@{self.user_id}>",
-                                                file=dis.File(fp=image,
-                                                              filename='image.png'),
-                                                embed=embed)
+                                               file=dis.File(fp=image,
+                                                             filename='image.png'),
+                                               embed=embed)
 
     def doRandomize(self,
                     tag_src):
@@ -474,9 +474,9 @@ class TestRollJob(Job):
             image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
 
         await metadata['ctx'].channel.send(content=f"<@{self.user_id}>",
-                                            file=dis.File(fp=image,
-                                                          filename='image.png'),
-                                            embed=embed)
+                                           file=dis.File(fp=image,
+                                                         filename='image.png'),
+                                           embed=embed)
 
     def doRandomize(self,
                     tag_src):

@@ -7,6 +7,7 @@
 
 #####  Imports  #####
 
+from ..utilities import JobFactory as jf
 import logging as log
 import logging.handlers as lh
 import multiprocessing as mp
@@ -15,8 +16,6 @@ import multiprocessing as mp
 import pathlib as pl
 import queue
 import requests as req
-from urllib.parse import urljoin
-from ..utilities import TagRandomizer as tr
 import time
 
 jobs = {}
@@ -60,7 +59,6 @@ jobs = {}
 class Manager:
 
     def __init__(self,
-                 loop,
                  manager_id : int,
                  opts       : dict):
         """Manages job request queueing and tracks relevant discord context,
@@ -68,7 +66,6 @@ class Manager:
            caller so different Managers could have different settings.
 
            Input: self - Pointer to the current object instance.
-                  loop - The asyncio event loop this manager posts to.
                   manager_id - The current Manager's ID, assigned by the caller.
                   opts - A dictionary of options, like cooldowns.
 
@@ -96,7 +93,6 @@ class Manager:
         self.id         = manager_id
         self.keep_going = True
         self.flush      = False
-        self.post_loop  = loop
         #It's possible all opts are provided directly from config.json,
         #requiring them to be cast appropriately for the manager.  This also
         #allows the caller to never have to worry about casting the types
@@ -112,18 +108,6 @@ class Manager:
         #subprocess_exec with TCP/UDP data to/from a set of remote terminals).
         self.queue = mp.Queue(self.depth)
 
-        #Currently it doesn't make sense for a queue to create multiple
-        #randomizers since jobs are processed serially.  This may need to
-        #change if the jobs are ever made parallel.
-        #
-        #This call also assumes opts['rand_dict_path'] has been sanitized by
-        #the parent before being passed down.
-        self.randomizer = tr.TagRandomizer(opts['rand_dict_path'],
-                                           int(opts['dict_size']),
-                                           int(opts['min_rand_tag_cnt']),
-                                           int(opts['max_rand_tag_cnt']),
-                                           int(opts['tag_retry_limit']))
-
     def Flush(self):
         """Sets the 'flush' flag true to enable the job queue to flush jobs
            when able.
@@ -135,53 +119,62 @@ class Manager:
         self.flush = True
 
     def Add(self,
-            request : dict) -> str:
+            metadata : dict,
+            request  : jf.Job) -> str:
         """Passes queued jobs to the worker tasks.  Is effectively the 'main'
            of the class.  Workers return the image prompt and queue object id
            when complete.  The Manager should post the result to the main thread
            via a pipe to allow simultaneous handling of commands and responses.
 
            Input: self - Pointer to the current object instance.
+                  metadata - Unpicklable data needed to post a result to Discord.
                   request - Sanitized data to potentially add to the queue.
 
            Output: str - Result of the job scheduling attempt.
         """
         global jobs
 
-        if request['data']['guild'] not in jobs:
+        #TODO: consider removing to have a single dict of 1 action per user to
+        #ensure users can't submit multiple rolls.
+        #TODO2: consider having non-affect commands (like show) go to a
+        #different queue to allow the commands to process in parallel.
+        #TODO3: consider having a lock around 2 trackers, 1 per user and 1 for
+        #requests per guild, to ensure 1 global job per user and limit spam
+        #from a server (including user/account flooding from a server).
+        if request.GetGuild() not in jobs:
 
             if len(jobs) >= self.max_guilds :
 
-                self.queLog.warning(f"Trying to add guild {request['data']['guild']} goes over Guild limit {self.max_guilds}!")
+                self.queLog.warning(f"Trying to add guild {request.GetGuild()} goes over Guild limit {self.max_guilds}!")
                 return "Bot is currently servicing the maximum number of allowed Guilds."
 
             else:
                 #Asyncio and Threading are suppose to be GIL safe, making this
                 #safe.  Change this if that changes.
-                jobs[request['data']['guild']] = {}
+                jobs[request.GetGuild()] = {}
 
         #This is a form of rate-limiting; limiting a guild to X posts instead
         #of attempting to track timing.
-        if len(jobs[request['data']['guild']]) >= self.max_guild_reqs:
+        if len(jobs[request.GetGuild()]) >= self.max_guild_reqs:
 
-            self.queLog.warning(f"User {request['data']['id']}'s request excedded the Guild request limit {self.max_guild_reqs}!")
+            self.queLog.warning(f"User {request.GetUserId()}'s request excedded the Guild request limit {self.max_guild_reqs}!")
 
-            if len(jobs[request['data']['guild']]) == 0:
+            if len(jobs[request.GetGuild()]) == 0:
 
-                del jobs[request['data']['guild']]
+                del jobs[request.GetGuild()]
 
             return "Unable to add your job, too many requests from this Guild are already in the queue."
 
         #This isn't an elif to avoid duplicating the contents. ID is also only
         #deleted after the job is done, so this function always loses the race.
-        if request['data']['id'] not in jobs[request['data']['guild']]:
+        if request.GetUserId() not in jobs[request.GetGuild()]:
 
-            (jobs[request['data']['guild']])[request['data']['id']] = request['metadata']
-            self.queLog.debug(f"Added new request from Guild {request['data']['guild']} to ID {request['data']['id']}.")
+            (jobs[request.GetGuild()])[request.GetUserId()] = metadata
+            self.queLog.debug(f"Added new request from Guild {request.GetGuild()} to ID {request.GetUserId()}.")
 
         else :
 
-            self.queLog.debug(f"Request id {request['data']['id']} alraedy exists!")
+            self.queLog.debug(f"Request id {request.GetUserId()} alraedy exists!")
             #In the future, this can be modified by converting ID into a
             #snowflake, allowing users to post multiple jobs.
             return "You already have a job on the queue, please wait until it's finished."
@@ -193,26 +186,25 @@ class Manager:
             #and the safest time, since a user's request is already recorded,
             #preventing them from spamming requests if the randomizer takes a
             #long time for some reason.
-            if request['data']['post']['random'] == True:
-                tag_data = self.randomizer.getRandomTags(int(request['data']['post']['tag_cnt']))
-                request['data']['post']['prompt'] += tag_data[0]
-                request['data']['post']['tags_added'] = tag_data[1]
+            if request.GetRandomize() :
+
+                request.Randomize(metadata['tag_rng'])
 
             #The Metadata can't be pickeled, meaning we can only send data
             #through the queue.
-            self.queue.put(request['data'])
+            self.queue.put(request)
 
         except queue.Full as err:
 
-            (jobs[request['data']['guild']]).pop(request['data']['id'])
-            self.queLog.warning(f" Encountered a full queue for request with metadata: {request['data']}, {err}!")
+            (jobs[request.GetGuild()]).pop(request.GetUserId())
+            self.queLog.warning(f" Encountered a full queue for request with metadata: {request}, {err}!")
 
             return "The work queue is currently full, please wait a bit before making another request."
 
         except Exception as err:
 
-            (jobs[request['data']['guild']]).pop(request['data']['id'])
-            self.queLog.error(f" Unable to add job to queue for request with metadata: {request['data']}, {err}!")
+            (jobs[request.GetGuild()]).pop(request.GetUserId())
+            self.queLog.error(f" Unable to add job to queue for request with metadata: {request}, {err}!")
 
             return "Unable to add your job to the queue.  Are you sending more than text and numbers?"
 
@@ -236,55 +228,25 @@ class Manager:
 #                self.queue.Flush()
                 self.flush = False
                 continue
-            request            = self.queue.get()
-            result             = req.Response()
-            result.status_code = 404
-            result.reason      = "Exception Running Job, try again later."
-            jres               = {}
 
-            #Have a special check for the GET test, which doesn't expect to get
-            #any data from an actual job.
-            if request['id'] == "testgetid" or ((not (isinstance(request['id'], str))) and (request['id'] < 10)):
+            request = self.queue.get()
 
-                self.queLog.debug(f"Performing GET test of URL: {self.web_url}.")
-                try:
-                    result = req.get(url=urljoin(self.web_url, '/sdapi/v1/memory'), timeout=5)
-
-                except Exception as err:
-                    self.queLog.error(f"Exception trying to GET: {err}.")
-
-            else:
-
-                self.queLog.info(f"Starting PUT to SD server at {self.web_url}.")
-                try:
-                    result = req.post(url=urljoin(self.web_url, '/sdapi/v1/txt2img'), json=request['post'])
-                    jres   = result.json()
-
-                except Exception as err:
-                    self.queLog.error(f"Exception trying to PUT: {err}.")
-
-            self.queLog.info(f"Got a result from the queue for user {request['id']}.")
             self.queLog.debug(f"Request is: {request}")
-            self.queLog.debug(f"Result is: {result}")
-            jres['status_code'] = result.status_code
-            jres['reason']      = result.reason
-            jres['id']          = request['id'] #TODO this shouldn't be necessary
-            jres['cmd']         = request['cmd'] #TODO this shouldn't be necessary
-            jres['profile']     = request['profile']
-            jres['random']      = request['post']['random']
-            jres['tags_added']  = request['post']['tags_added']
-            #Pop last to ensure a new request from the same ID can be added
-            #only after their first request is completed.
-            job     = (jobs[request['guild']]).pop(request['id'])
-            jres   |= job
+            try:
+                request.DoWork(web_url=self.web_url)
 
-            if len(jobs[request['guild']]) == 0:
+            except Exception as err:
+                self.queLog.error(f"Exception doing work for Request: {err}, {request}.")
 
-                self.queLog.debug(f"Removing empty Guild {request['guild']} from the list.")
-                del jobs[request['guild']]
+            if len(jobs[request.GetGuild()]) == 0:
 
-            self.queLog.debug(f"Job Id {jres['id']} result was: {jres}")
-            job['loop'].create_task(job['poster'](msg=jres), name="reply")
+                self.queLog.debug(f"Removing empty Guild {request.GetGuild()} from the list.")
+                del jobs[request.GetGuild()]
+
+            metadata = (jobs[request.GetGuild()]).pop(request.GetUserId())
+            self.queLog.debug(f"Posting job result to Discord from metadata: {metadata}")
+            metadata['loop'].create_task(metadata['post_fn'](job=request, metadata=metadata),
+                                         name="reply")
 
             if self.job_cooldown > 0.0:
 

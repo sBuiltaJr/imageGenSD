@@ -339,7 +339,7 @@ class MariadbIfc:
         """
         cursor     = self.con.cursor(buffered=False)
         cmd        = ""
-        entry      = profile#pic.loads(profile)
+        entry      = profile
         entry.info = info
         owned      = None
         result     = None
@@ -493,12 +493,3 @@ class MariadbIfc:
         all_ok = True;
 
         return all_ok
-
-#Forge characters via combination?
-
-#TODO: define how a user is suppose to make the IGSD bot account and give access to the bogus and IGSD tables.
-#CREATE DATABASE IGSD;
-#CREATE USER IF NOT EXISTS 'IGSD_Bot'@'%' IDENTIFIED BY 'password';
-#GRANT ALL PRIVILEGES ON IGSD.* TO 'IGSD_Bot'@'%';
-#Set the max_allowed_packet=4G in my.ini or ~/.my.cnf
-#extra install steps on linux (C library) and mac (install certs)

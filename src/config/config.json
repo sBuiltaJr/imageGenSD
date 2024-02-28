@@ -88,11 +88,22 @@
         "max_bytes"        : "16777216",
         "max_guilds"       : "10",
         "max_guild_reqs"   : "10",
+        "webui_URL"        : "http://127.0.0.1:7860/"
+    },
+    "tag_rng_opts":
+    {
+        "date_fmt"         : "%Y-%m-%d %H:%M:%S",
+        "log_dir"          : "logs",
+        "log_encoding"     : "utf-8",
+        "log_file_cnt"     : "5",
+        "log_lvl"          : "INFO",
+        "log_name_tagrng"  : "logs/IGSD_tag_rng.log",
+        "log_mode"         : "w",
+        "max_bytes"        : "16777216",
         "max_rand_tag_cnt" : "35",
         "min_rand_tag_cnt" : "10",
         "rand_dict_path"   : "src/config/Tag_Randomizer_Dictionary.txt",
-        "tag_retry_limit"  : "5",
-        "webui_URL"        : "http://127.0.0.1:7860/"
+        "tag_retry_limit"  : "5"
     },
     "comments":
     {
@@ -116,7 +127,7 @@
         {
             "password"       : "Password to log-in as the MariaDB user.  Added here (insecurly) since the DB shouldn't be externally accessable."
         },
-        "queue_opts"    :
+        "profile_opts"    :
         {
             "fn_dict_path"   : "Path to a newline-separated list of first names to use in the generator.",
             "ln_dict_path"   : "Path to a newline-separated list of last names to use in the generator."
@@ -127,11 +138,14 @@
             "job_cooldown"     : "How many seconds to delay before starting another job (in case your computer catches fire).",
             "job_count"        : "How many job tasks to spawn.  Each job gets a single queue object to send to the SD engine.",
             "max_guilds"       : "Max guilds to serve at a time, if you want to limit that.",
-            "max_guild_reqs"   : "How many requests can be submitted by a single guild.  Stops a single guild from spamming the bot.",
+            "max_guild_reqs"   : "How many requests can be submitted by a single guild.  Stops a single guild from spamming the bot."
+        },
+        "tag_rng_opts" :
+        {
             "max_rand_tag_cnt" : "The maximum number of tags to add to a prompt if a user requests prompt randomization.  Does not count towards max_prompt_len.",
             "min_rand_tag_cnt" : "The minimum number of tags to add to a prompt if a user requests prompt randomization.  Does not count towards max_prompt_len.",
             "rand_dict_path"   : "Path to a newline-separated list of words for tag randomization.  Can be an absolute path or relative to imageGenSD.py.  Must conform to SD requirements (no underscores, escaped parentheses, etc).",
-            "tag_retry_limit"  : "How many times to retry getting a unique tag from the tag dictionary before moving on.  Reduces the chances of duplicate tages in a prompt."
-        }
+            "tag_retry_limit"  : "How many times to retry getting a unique tag from the tag dictionary before moving on.  Reduces the chances of duplicate tags in a prompt."
+		}
     }
 }

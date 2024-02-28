@@ -14,6 +14,7 @@ import multiprocessing as mp
 #from multiprocessing.queues import Queue
 #from multiprocessing import get_context
 import pathlib as pl
+import queue
 import requests as req
 import time
 
@@ -88,10 +89,9 @@ class Manager:
         logHandler.setFormatter(formatter)
         self.queue_log.addHandler(logHandler)
 
-        self.flush      = False
-        self.id         = manager_id
-        self.keep_going = True
-        self.flush      = False
+        self.flush_queue = False
+        self.id          = manager_id
+        self.keep_going  = True
         #It's possible all opts are provided directly from config.json,
         #requiring them to be cast appropriately for the manager.  This also
         #allows the caller to never have to worry about casting the types
@@ -115,11 +115,11 @@ class Manager:
 
            Output: none.
         """
-        self.flush = True
+        self.flush_queue = True
 
     def add(self,
             metadata : dict,
-            job  : jf.Job) -> str:
+            job      : jf.Job) -> str:
         """Passes queued jobs to the worker tasks.  Is effectively the 'main'
            of the class.  Workers return the image prompt and queue object id
            when complete.  The Manager should post the result to the main thread
@@ -223,9 +223,9 @@ class Manager:
 
         while self.keep_going:
 
-            if self.flush:
+            if self.flush_queue:
 #                self.queue.flush()
-                self.flush = False
+                self.flush_queue = False
                 continue
 
             job = self.queue.get()

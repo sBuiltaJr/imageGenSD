@@ -343,7 +343,7 @@ async def on_ready():
 
     dis_log.debug(f"Creating Daily Event Manager.")
     daily_mgr    = dem.DailyEventManager(opts=params['daily_opts'])
-    daily_mgr_th = th.Thread(target=daily_mgr.Start,
+    daily_mgr_th = th.Thread(target=daily_mgr.start,
                              name="Daily Event mgr",
                              daemon=True)
 

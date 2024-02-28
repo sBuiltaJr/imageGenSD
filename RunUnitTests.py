@@ -15,6 +15,8 @@ import unittest as unt
 #https://coverage.readthedocs.io/en/7.4.3/faq.html#q-why-do-the-bodies-of-functions-show-as-executed-but-the-def-lines-do-not
 cov = coverage.Coverage()
 cov.start()
+from src import DbTests as dt
+from src import ManagersTests as mt
 from src import UtilitiesTests as ut
 
 #####  Test Class  #####
@@ -30,10 +32,19 @@ def testUtilities():
     suite  = unt.TestSuite()
     result = unt.TestResult()
     runner = unt.TextTestRunner()
+    
+    #TODO: convert name randomizer into an instantiated class to avoid mock destroying the package
+    #for all tests post-mock.
+    suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ut.TestNameRandomizer))
+
+    #TODO: resolve the flaming hell that is import mocking
+    #suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=dt.TestMariadbIfc))
+
+    suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=mt.TestDailyEventManager))
+    suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=mt.TestQueueManager))
 
     suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ut.TestJobFactory))
     suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ut.TestMenuPagination))
-    suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ut.TestNameRandomizer))
     suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ut.TestProfileGenerator))
     suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ut.TestRarityClass))
     suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ut.TestStatsClass))

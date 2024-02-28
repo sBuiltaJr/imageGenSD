@@ -327,7 +327,7 @@ class TestMenuPagination(iatc):
         self.mock_get_page = mc.MockGetPage()
         self.get_page      = self.mock_get_page.get_page
 
-        with patch('discord.ui.View') as MockView, patch('discord.ui.Button') as MockUiButton:
+        with patch('discord.ui.View') as mc.MockView, patch('discord.ui.Button') as mc.MockUiButton:
 
             self.uut = mp.MenuPagination(interaction=self.interaction,
                                          get_page=self.get_page)
@@ -586,7 +586,7 @@ class TestProfileGenerator(unittest.TestCase):
                              stats    = sc.Stats(rarity),
                              wins     = 1)
 
-        self.assertTrue(True)
+        self.assertNotEqual(profile, None)
 
     def testGetDefaultJobData(self):
         """Verifies that the getDefaultJobData function returns valid values of
@@ -599,6 +599,7 @@ class TestProfileGenerator(unittest.TestCase):
 
         profile = pg.getDefaultJobData()
 
+        self.assertNotEqual(profile, None)
         self.assertTrue(isinstance(profile, dict))
 
     def testGetDefaultProfile(self):
@@ -612,6 +613,7 @@ class TestProfileGenerator(unittest.TestCase):
 
         profile = pg.getDefaultProfile()
 
+        self.assertNotEqual(profile, None)
         self.assertTrue(isinstance(profile, pg.Profile))
 
 
@@ -645,7 +647,7 @@ class TestRarityClass(unittest.TestCase):
 
         rarity = rc.Rarity()
 
-        self.assertTrue(True)
+        self.assertNotEqual(rarity, None)
 
 #####  Stats Class  #####
 
@@ -772,6 +774,8 @@ class TestTagRandomizer(unittest.TestCase):
 
         self.options = params['tag_rng_opts']
 
+        self.uut = tr.TagRandomizer(opts=self.options)
+
     def testTagRandomizerBuilds(self):
         """A simple verification that the Tag Randomizer class will build
            correctly if given valid inputs.
@@ -781,9 +785,7 @@ class TestTagRandomizer(unittest.TestCase):
            Output: none.
         """
 
-        uut = tr.TagRandomizer(opts=self.options)
-
-        self.assertTrue(True)
+        self.assertNotEqual(self.uut, None)
 
     def testGetRandomTags(self):
         """Verifies that the getRandomTags function returns valid values of the
@@ -794,8 +796,7 @@ class TestTagRandomizer(unittest.TestCase):
            Output: none.
         """
 
-        uut                  = tr.TagRandomizer(opts=self.options)
-        random_tags, tag_cnt = uut.getRandomTags()
+        random_tags, tag_cnt = self.uut.getRandomTags()
 
         self.assertGreaterEqual(tag_cnt, int(self.options['min_rand_tag_cnt']))
         self.assertLessEqual(tag_cnt, int(self.options['max_rand_tag_cnt']))
@@ -816,8 +817,7 @@ class TestTagRandomizer(unittest.TestCase):
            Output: none.
         """
 
-        uut                  = tr.TagRandomizer(opts=self.options)
-        random_tags, tag_cnt = uut.getRandomTags(exact=10)
+        random_tags, tag_cnt = self.uut.getRandomTags(exact=10)
 
         self.assertEqual(tag_cnt, 10)
 

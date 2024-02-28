@@ -67,7 +67,7 @@ class MariadbIfc:
 
         if MariadbIfc.__instance != None:
 
-            return  MariadbIfc.__instance
+            return
 
         else:
 

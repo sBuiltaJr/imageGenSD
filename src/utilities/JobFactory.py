@@ -52,7 +52,7 @@ class Job(ABC):
 
     def _getEmbedBaseForGenerate(self,
                                  info : dict) -> dis.Embed:
-        """Returns a Dsicord embed object formatted for generate-style posts.
+        """Returns a Discord embed object formatted for generate-style posts.
 
            Input: self - Pointer to the current object instance.
                   info - a dict of all the relevent embed parameters.
@@ -77,7 +77,7 @@ class Job(ABC):
         return embed
 
     def _getEmbedBaseForProfiles(self) -> dis.Embed:
-        """Returns a Dsicord embed object formatted for profile-style posts.
+        """Returns a Discord embed object formatted for profile-style posts.
 
            Input: self - Pointer to the current object instance.
                   info - a dict of all the relevent embed parameters.

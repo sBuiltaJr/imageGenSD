@@ -18,9 +18,10 @@ import requests as req
 import src.db.MariadbIfc as mdb
 import src.managers.DailyEventMgr as dem
 import src.managers.QueueMgr as qm
+import src.ui.DropDownFactory as ddf
+import src.ui.MenuPagination as mp
 import src.utilities.JobFactory as jf
 import src.utilities.NameRandomizer as nr
-import src.utilities.MenuPagination as mp
 import src.utilities.ProfileGenerator as pg
 import src.utilities.TagRandomizer as tr
 import threading as th
@@ -98,6 +99,8 @@ except IndexError as err:
 job_queue   = None
 worker      = None
 
+MY_GUILD = dis.Object(id=1084545432253894727)
+
 #####  Package Classes  #####
 
 class IGSDClient(dis.Client):
@@ -129,8 +132,8 @@ class IGSDClient(dis.Client):
         self.loop = asy.get_running_loop()
 
         self.dis_log.debug(f"Syncing Guild Tree to Global.")
-
-        await self.tree.sync()
+        self.tree.copy_global_to(guild=MY_GUILD)
+        await self.tree.sync(guild=MY_GUILD)
 
     def getLoop(self):
         """Returns a reference to this client's asyncio event loop.
@@ -207,12 +210,12 @@ async def generate(interaction: dis.Interaction,
         Output : N/A.
     """
     dis_log = log.getLogger('discord')
-    error = False;
+    error   = False;
 
     if bannedWordsFound(prompt, params['options']['banned_words']) or bannedWordsFound(negative_prompt, params['options']['banned_neg_words']):
         result = f"Job ignored.  Please do not use words containing: {params['options']['banned_words']} in the positive prompt or {params['options']['banned_neg_words']} in the negative prompt."
     else:
-    
+
         metadata = {
                      'ctx'     : interaction,
                      'db_ifc'  : db_ifc,
@@ -255,41 +258,42 @@ async def hello(interaction: dis.Interaction):
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
-async def listprofiles(interaction: dis.Interaction):
+async def listprofiles(interaction : dis.Interaction,
+                       user        : Optional[dis.User] = None):
     """Returns a pagenated list of profile names and IDs owned by the caller.
 
         Input  : interaction - the interaction context from Discord.
 
         Output : N/A.
     """
-    dis_log = log.getLogger('discord')
-    profiles = db_ifc.getProfiles(interaction.user.id)
+    dis_log  = log.getLogger('discord')
+    #This has to be in the function body because an arg can't be used to assign
+    #another arg in the function call.
+    user_id = interaction.user.id if user == None else user.id
+    profiles = db_ifc.getProfiles(user_id)
 
     if not profiles:
 
         embed = dis.Embed(title="Owned characters",
-                          description=f"User <@{interaction.user.id}> does not own any characters!  Use the `/roll` command to create one!",
+                          description=f"User <@{user_id}> does not own any characters!",
                           color=0xec1802)
         await interaction.response.send_message(content=f"<@{interaction.user.id}>", embed=embed)
 
     else:
 
-        async def getPage(page: int):
+        await mp.MenuPagination(interaction, profiles).navigate()
 
-            page_size = 10
-            embed     = dis.Embed(title="Owned characters", description="")
-            offset    = (page-1) * page_size
-
-            for profile in profiles[offset:offset+page_size]:
-
-                embed.description += f"Name: `{profile[0]}` ID: `{profile[1]}`\n"
-
-            embed.set_author(name=f"Characters owned by {interaction.user.display_name}.")
-            pages = mp.MenuPagination.getTotalPages(len(profiles), page_size)
-            embed.set_footer(text=f"Page {page} of {pages}")
-            return embed, pages
-
-        await mp.MenuPagination(interaction, getPage).navigate()
+@IGSD_client.tree.command()
+@dac.checks.has_permissions(use_application_commands=True)
+async def showprofile2(interaction: dis.Interaction):
+    dis_log  = log.getLogger('discord')
+    profiles = db_ifc.getProfiles(interaction.user.id)
+    dis_log.debug(f"User {interaction.user.id} got profile list {profiles}.")
+    view     = ddf.DropdownView(ctx = interaction,
+                                type = ddf.DropDownTypeEnum.SHOW,
+                                options=profiles)
+    dis_log.debug(f"View is: {view}, {view.children}.")
+    await interaction.response.send_message('test',view=view)
 
 @IGSD_client.event
 async def on_ready():
@@ -423,9 +427,10 @@ async def roll(interaction: dis.Interaction):
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
-@dac.describe(id="The profile ID of the character you'd like to view.  Use /listprofiles to see the name and ID of profiles you own!")
-async def showprofile(interaction: dis.Interaction,
-                      id         : dac.Range[str, 0, 36]): #The length of a UUID
+@dac.describe(user_id="The profile ID of the character you'd like to view.  Use /listprofiles to see the name and ID other profiles!")
+async def showprofile(interaction : dis.Interaction,
+                      user_id     : Optional[dis.User] = None,
+                      profile_id  : Optional[dac.Range[str, 0, 36]] = None): #The length of a UUID
     """Displays the profile associated with the provided ID.
 
         Input  : interaction - the interaction context from Discord.
@@ -433,13 +438,22 @@ async def showprofile(interaction: dis.Interaction,
 
         Output : N/A.
     """
-    dis_log = log.getLogger('discord')
+    dis_log  = log.getLogger('discord')
     metadata = {
                  'ctx'     : interaction,
                  'db_ifc'  : db_ifc,
                  'loop'    : IGSD_client.getLoop(),
                  'post_fn' : post
                }
+
+    if id == None:
+
+        profiles = db_ifc.getProfiles(interaction.user.id)
+        dis_log.debug(f"User {id} returned profile list {profiles}.")
+        view     = ddf.DropdownView(interaction=interaction,
+                                    options=profiles)
+        dis_log.debug(f"View is: {view}, {view.children}.")
+
     opts = {
             'id' : id,
     }
@@ -501,7 +515,7 @@ async def testget(interaction: dis.Interaction):
        Output : None.
     """
 
-    dis_log = log.getLogger('discord')
+    dis_log  = log.getLogger('discord')
     metadata = {
                  'ctx'     : interaction,
                  'loop'    : IGSD_client.getLoop(),
@@ -530,7 +544,7 @@ async def testpost(interaction: dis.Interaction):
        Note: All slash commands *MUST* respond in 3 seconds or be terminated.
     """
 
-    dis_log = log.getLogger('discord')
+    dis_log  = log.getLogger('discord')
     metadata = {
                  'ctx'     : interaction,
                  'loop'    : IGSD_client.getLoop(),
@@ -557,7 +571,7 @@ async def testroll(interaction: dis.Interaction):
        Note: All slash commands *MUST* respond in 3 seconds or be terminated.
     """
 
-    dis_log = log.getLogger('discord')
+    dis_log  = log.getLogger('discord')
     metadata = {
                  'ctx'     : interaction,
                  'loop'    : IGSD_client.getLoop(),
@@ -584,7 +598,7 @@ async def testshowprofile(interaction: dis.Interaction):
        Note: All slash commands *MUST* respond in 3 seconds or be terminated.
     """
 
-    dis_log = log.getLogger('discord')
+    dis_log  = log.getLogger('discord')
     metadata = {
                  'ctx'     : interaction,
                  'db_ifc'  : db_ifc,

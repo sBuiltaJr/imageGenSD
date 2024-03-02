@@ -244,9 +244,7 @@ class MariadbIfc:
         """Returns a given profile for a given user.
 
             Input: self - Pointer to the current object instance.
-                   id - user ID to link the profile to.
-                   info - the picture metadata to store.
-                   profile - The profile to link the image to.
+                   user_id - user ID to interrogate for profiles.
 
             Output: N/A.
         """

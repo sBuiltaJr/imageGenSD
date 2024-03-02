@@ -99,8 +99,6 @@ except IndexError as err:
 job_queue   = None
 worker      = None
 
-MY_GUILD = dis.Object(id=1084545432253894727)
-
 #####  Package Classes  #####
 
 class IGSDClient(dis.Client):
@@ -132,8 +130,7 @@ class IGSDClient(dis.Client):
         self.loop = asy.get_running_loop()
 
         self.dis_log.debug(f"Syncing Guild Tree to Global.")
-        self.tree.copy_global_to(guild=MY_GUILD)
-        await self.tree.sync(guild=MY_GUILD)
+        await self.tree.sync()
 
     def getLoop(self):
         """Returns a reference to this client's asyncio event loop.

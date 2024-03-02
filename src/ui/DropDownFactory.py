@@ -34,11 +34,6 @@ class DropDownTypeEnum(IntEnum):
 #####  Abstract Classes  #####
 class DynamicDropdown(ABC, dis.ui.Select):
 
-    @abstractmethod
-    async def getPage(self,
-                      page: int):
-        pass
-
     async def on_timeout(self):
         """Handles the timeout interaction inherent to discord interactions.
 
@@ -50,16 +45,6 @@ class DynamicDropdown(ABC, dis.ui.Select):
         message = await self.interaction.original_response()
         await message.edit(view=None)
 
-    @staticmethod
-    def getTotalPages(total_items    : int) -> int:
-        """Calculates the total number of pages for a given object.
-
-           Input : total_items - the total number of items in the menu.
-
-           Output : int - How many pages are required for this list.
-        """
-        return ((total_items - 1) // DROPDOWN_ITEM_LIMIT) + 1
-
 
 #####  Modeal Factory  Class  ####
 
@@ -67,43 +52,69 @@ class ShowDropdown(DynamicDropdown):
 
 
     def __init__(self,
+                 choices  : list,
                  ctx      : dis.Interaction,
                  metadata : dict,
-                 opts     : Optional[dict],
-                 choices  : Optional[list] = None):
+                 opts     : dict):
+        """Creates a Dropdown with a slices of choices from a provided choice
+           list, including adding navigation via menu options.
+
+           Input : self - a pointer to the current object.
+                   ctx - the Discord context to associate wtih this dropdown.
+                   choices - an optional list of choices to pu in the dropdown.
+                   metadata - Where to make Post request, among other things.
+                   options - Dropdown-specific options.
+
+           Output : None.
+        """
 
         self.choices  = choices
         self.ctx      = ctx
         self.metadata = metadata
         self.offset   = 0 if opts == None else int(opts['offset'])
 
-        if choices != None:
 
-            self.pages = self.getTotalPages(total_items=len(choices))
-            options    = [dis.SelectOption(label=choices[x].name,value=choices[x].id) for x in range(0, DROPDOWN_ITEM_LIMIT_WITH_NAV)]
-            options.append(dis.SelectOption(label='Next',value=FORWARD_NAV_VALUE))
-            options.append(dis.SelectOption(label='Back',value=BACKWARD_NAV_VALUE))
-            options.append(dis.SelectOption(label='Cancel',value=CANCEL_NAV_VALUE))
+        if len(self.choices) <= DROPDOWN_ITEM_LIMIT_WITH_NAV :
+
+            slice = range(0, len(self.choices))
+
+        elif self.offset + DROPDOWN_ITEM_LIMIT_WITH_NAV <= len(self.choices) :
+
+            slice = range(0, DROPDOWN_ITEM_LIMIT_WITH_NAV)
+
+        else :
+
+            slice = range(0, len(self.choices) - self.offset)
+
+        options = [dis.SelectOption(label=choices[self.offset + x].name,value=choices[self.offset + x].id) for x in slice]
+        options.append(dis.SelectOption(label='Next',   value=FORWARD_NAV_VALUE))
+        options.append(dis.SelectOption(label='Back',   value=BACKWARD_NAV_VALUE))
+        options.append(dis.SelectOption(label='Cancel', value=CANCEL_NAV_VALUE))
 
         super().__init__(placeholder='Select a character to display.', min_values=1, max_values=1, options=options)
 
-    async def getPage(self,
-                      page: int):
-        pass
-
     async def callback(self,
                        interaction: dis.Interaction):
+        """Process otpions selected by a user when they click off the dropdown.
+           If needing to present new options, it will delete and replace the
+           existing Discord post with a new version.
 
-        if self.values[0] == str(FORWARD_NAV_VALUE) :
+           Input : self - a pointer to the current object.
+                   interaction - the Discord context for the dropdown.
 
-            opts = {}
-            choices = self.choices[5:DROPDOWN_ITEM_LIMIT_WITH_NAV+5]
-            opts['offset'] = 5
+           Output : None.
+        """
+
+        if self.values[0] == str(FORWARD_NAV_VALUE) or self.values[0] == str(BACKWARD_NAV_VALUE) :
+
+            opts           = {}
+            next           = self.offset + DROPDOWN_ITEM_LIMIT_WITH_NAV * int(self.values[0])
+            opts['offset'] = next if next >= 0 and next < len(self.choices) else self.offset
 
             new_view = DropdownView(ctx      = self.ctx,
                                     type     = DropDownTypeEnum.SHOW,
                                     metadata = self.metadata,
-                                    choices  = choices,
+                                    choices  = self.choices,
                                     options  = opts)
 
             await interaction.response.edit_message(view=new_view)
@@ -112,20 +123,6 @@ class ShowDropdown(DynamicDropdown):
 
             message = await self.ctx.original_response()
             await message.edit(view=None)
-
-        elif self.values[0] == str(BACKWARD_NAV_VALUE) :
-
-            opts = {}
-            choices = self.choices[0:DROPDOWN_ITEM_LIMIT_WITH_NAV]
-            opts['offset'] = 0
-
-            new_view = DropdownView(ctx      = self.ctx,
-                                    type     = DropDownTypeEnum.SHOW,
-                                    metadata = self.metadata,
-                                    choices  = choices,
-                                    options  = opts)
-
-            await interaction.response.edit_message(view=self.view)
 
         elif self.values != None:
 
@@ -147,12 +144,23 @@ class DropdownView(dis.ui.View):
                  choices  : Optional[list] = None,
                  metadata : Optional[dict] = None,
                  options  : Optional[list] = None):
-        super().__init__()
+        """Creates a parent view for the requesed dropdown.
 
-        # Adds the dropdown to our view object.
-        self.add_item(DropDownFactory.getDropDown(ctx      = ctx,
+           Input : self - a pointer to the current object.
+                   ctx - the Discord context to associate wtih this dropdown.
+                   type - what kind of dropdown to make.
+                   choices - an optional list of choices to pu in the dropdown.
+                   metadata - IGSD data for the dropdown.
+                   options - Dropdown-specific options.
+
+           Output : None.
+        """
+
+        super().__init__(timeout=100)
+
+        self.add_item(DropDownFactory.getDropDown(choices  = choices,
+                                                  ctx      = ctx,
                                                   type     = type,
-                                                  choices  = choices,
                                                   metadata = metadata,
                                                   options  = options))
 
@@ -166,8 +174,11 @@ class DropDownFactory:
         """Returns an instance of a drop down type with appropriate options set.
 
            Input: self - Pointer to the current object instance.
-                  ctx - the Discord context from the user's slash command.
-                  options - a dict of optional configs for this drop down.
+                  ctx - the Discord context to associate wtih this dropdown.
+                  type - what kind of dropdown to make.
+                  choices - an optional list of choices to pu in the dropdown.
+                  metadata - IGSD data for the dropdown.
+                  options - Dropdown-specific options.
 
            Output: dropdown - The appropriate dropdown type.
         """
@@ -175,9 +186,9 @@ class DropDownFactory:
         match type:
 
             case DropDownTypeEnum.SHOW:
-                return ShowDropdown(ctx      = ctx,
+                return ShowDropdown(choices  = choices,
+                                    ctx      = ctx,
                                     metadata = metadata,
-                                    choices  = choices,
                                     opts     = options)
 
             case DropDownTypeEnum.FACTORY:

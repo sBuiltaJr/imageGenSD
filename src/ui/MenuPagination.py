@@ -68,8 +68,8 @@ class MenuPagination(dis.ui.View):
 
         else:
 
-            emb = dis.Embed(description=f"Only the author of the command can perform this action.",
-                            color=16711680)
+            emb = dis.Embed(description = f"Only the author of the command can perform this action.",
+                            color       = 16711680)
 
             await interaction.response.send_message(embed=emb, ephemeral=True, delete_after=9.0)
             return False

@@ -51,7 +51,7 @@ class TestJobFactory(iatc):
         """
 
         with self.assertRaises(NotImplementedError):
-            job = jf.JobFactory.getJob(type=8, ctx=self.interaction)
+            job = jf.JobFactory.getJob(type=-1, ctx=self.interaction)
 
     async def testRunGenerateJobFlow(self):
         """Verifies that the GenerateJob object returned from the Job Factory

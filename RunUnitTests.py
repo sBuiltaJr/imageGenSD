@@ -51,6 +51,7 @@ def testUtilities():
     suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ut.TestTagRandomizer))
 
     suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=uit.TestMenuPagination))
+    suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=uit.TestDropdownFactory))
 
     print(runner.run(suite))
 

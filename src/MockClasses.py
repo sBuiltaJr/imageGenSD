@@ -235,6 +235,7 @@ class MockInteraction():
     class InteractionResponse():
 
         async def send_message(self,
+                               content      : Optional[str]       = None,
                                delete_after : Optional[float]     = None,
                                embed        : Optional[dis.Embed] = None,
                                ephemeral    : Optional[bool]      = None,
@@ -253,8 +254,9 @@ class MockInteraction():
             pass
 
         async def edit_message(self,
-                               embed        : Optional[dis.Embed] = None,
-                               view         : Optional[Any]       = None):
+                               content : Optional[str]       = None,
+                               embed   : Optional[dis.Embed] = None,
+                               view    : Optional[Any]       = None):
             """A bare minimum mock to ensure test compatability.
 
                Input: self - Pointer to the current object instance.

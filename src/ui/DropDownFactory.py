@@ -68,10 +68,10 @@ class ShowDropdown(DynamicDropdown):
            Output : None.
         """
 
-        self.choices  = choices
-        self.ctx      = ctx
-        self.metadata = metadata
-        self.offset   = 0 if opts == None else int(opts['offset'])
+        self.choices     = choices
+        self.interaction = ctx
+        self.metadata    = metadata
+        self.offset      = 0 if opts == None else int(opts['offset'])
 
 
         if len(self.choices) <= DROPDOWN_ITEM_LIMIT_WITH_NAV :
@@ -111,7 +111,7 @@ class ShowDropdown(DynamicDropdown):
             next           = self.offset + DROPDOWN_ITEM_LIMIT_WITH_NAV * int(self.values[0])
             opts['offset'] = next if next >= 0 and next < len(self.choices) else self.offset
 
-            new_view = DropdownView(ctx      = self.ctx,
+            new_view = DropdownView(ctx      = self.interaction,
                                     type     = DropDownTypeEnum.SHOW,
                                     metadata = self.metadata,
                                     choices  = self.choices,
@@ -121,7 +121,7 @@ class ShowDropdown(DynamicDropdown):
 
         elif self.values[0] == str(CANCEL_NAV_VALUE) :
 
-            message = await self.ctx.original_response()
+            message = await self.interaction.original_response()
             await message.edit(view=None)
 
         elif self.values != None:
@@ -129,12 +129,11 @@ class ShowDropdown(DynamicDropdown):
             opts = {'id' : self.values[0]}
 
             job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOWPROFILE,
-                                       ctx     = self.ctx,
+                                       ctx     = self.interaction,
                                        options = opts)
             result = self.metadata['queue'].add(metadata = self.metadata,
                                                 job      = job)
             await interaction.response.edit_message(content=result)
-
 
 class DropdownView(dis.ui.View):
 

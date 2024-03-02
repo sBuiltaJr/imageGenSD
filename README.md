@@ -76,6 +76,12 @@ Note: setup varies by OS.
 
 The bot will run in the terminal until killed with a `Ctrl+C` or similar.
 
+## To run the Unit Tests
+
+`<path to venv bin folder>python RunUnitTests.py`
+
+Test results are stored in `covhtml` located at the top-level directory.
+
 ## Supported commands
 
 Note: All command require a user to have at least slash command privileges.
@@ -98,18 +104,20 @@ can be combined with a user-supplied prompt.
 
 Confirms the bot has the bare minimum capability for interacting in the Guild.
 
-`/listprofiles`
+`/listprofiles {user}`
 
-- Show all profiles associated your Discord account
+- Show all profiles associated with a specific Discord account.
 
-Provides a paginated menu of profile names and IDs associated with the user's
-Discord account (and stored in the database).  If none, it encourages the user
-to create a profile with an appropriate command.
+Provides a paginated menu of profile names and IDs associated with a Discord
+account (and stored in the database).  If none, it encourages the user to
+create a profile with an appropriate command.
 
 Pages can be navigated with the provided buttons and will be eventually
 disabled after a timeout.
 
-Only the user requesting the list is allowed to use the navigation buttons.
+Not specifying `user` will cause the menu to show the author's profiles.
+
+Only the command author is allowed to use the navigation buttons.
 
 `/roll`
 
@@ -119,13 +127,25 @@ Generates a brand-new character and profile once daily.  Daily reset occurs at
 midnight UTC.  The character and profile are saved to the user profile that
 initiated the command and will appear in the `/listprofiles` command.
 
-`/showprofile {profile ID}`
+`/showprofile {user} {profile_id}`
 
-- Display a given profile linked to an ID
+- Display either a given profile linked by ID or a selectable list of profiles
 
-Displays the request profile, if it exists.  The can include profiles linked to
-other users if the author knows the profile ID.  Profile Names cannot be used,
-only the unique identifier for a profile (ID) like provided by `/listprofiles`.
+If `profile_id` is specified, the command displays the request profile, if
+it exists.  The can include profiles linked to other users if the author knows
+the profile ID.
+
+Profile Names cannot be used, only the unique identifier for a profile (ID)
+like provided by `/listprofiles`.
+
+If `user` is specified, the command displays a dropdown list of profiles that
+user owns, if any.  Selecting a specific profile will cause it to be posted to
+the channel underneath the dropdown menu.
+
+The dropdown contains `next` and `back` options to allow viewing lists greater
+than 25 characters.  The `cancel` command deletes the dropdown.
+
+the dropdown will deactivate after 100 seconds of inactivity.
 
 `/testget`
 

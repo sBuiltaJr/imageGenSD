@@ -253,6 +253,7 @@ async def hello(interaction: dis.Interaction):
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
+@dac.describe(user="The Discord user owning the profiles lsited by the command.  If none, it defaults to you.")
 async def listprofiles(interaction : dis.Interaction,
                        user        : Optional[dis.User] = None):
     """Returns a pagenated list of profile names and IDs owned by the caller.
@@ -410,6 +411,7 @@ async def roll(interaction: dis.Interaction):
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
+@dac.describe(user="The Discord user owning the profiles lsited by the command.  If none, it defaults to you.")
 @dac.describe(profile_id="The profile ID of the character you'd like to view.  Use /listprofiles to see the name and ID other profiles!")
 async def showprofile(interaction : dis.Interaction,
                       user        : Optional[dis.User] = None,

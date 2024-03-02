@@ -2,16 +2,25 @@
 
 
 #####  Imports  #####
+from ..db import MariadbIfc as mdb
 from abc import ABC, abstractmethod
+import base64 as b64
 import discord as dis
 from enum import IntEnum, verify, UNIQUE
+import io
+import src.utilities.JobFactory as jf
 from typing import Callable, Optional
 import traceback
 
 #####  Package Variables  #####
 
 #Imposed by Discord
-DROPDOWN_ITME_LIMIT = 25
+DROPDOWN_ITEM_LIMIT          = 25
+#limit minus the 3 nav buttons (forward, back, and cancel)
+DROPDOWN_ITEM_LIMIT_WITH_NAV = DROPDOWN_ITEM_LIMIT - 3
+FORWARD_NAV_VALUE            =  1
+BACKWARD_NAV_VALUE           = -1
+CANCEL_NAV_VALUE             =  0
 
 #####  Enum Classes  #####
 
@@ -49,7 +58,7 @@ class DynamicDropdown(ABC, dis.ui.Select):
 
            Output : int - How many pages are required for this list.
         """
-        return ((total_items - 1) // DROPDOWN_ITME_LIMIT) + 1
+        return ((total_items - 1) // DROPDOWN_ITEM_LIMIT) + 1
 
 
 #####  Modeal Factory  Class  ####
@@ -58,18 +67,23 @@ class ShowDropdown(DynamicDropdown):
 
 
     def __init__(self,
-                 ctx  : dis.Interaction,
-                 opts : Optional[list] = None):
+                 ctx      : dis.Interaction,
+                 metadata : dict,
+                 opts     : Optional[dict],
+                 choices  : Optional[list] = None):
 
-        self.choices = opts
-        self.ctx     = ctx
+        self.choices  = choices
+        self.ctx      = ctx
+        self.metadata = metadata
+        self.offset   = 0 if opts == None else int(opts['offset'])
 
-        if opts != None:
+        if choices != None:
 
-            self.pages = self.getTotalPages(total_items=len(opts))
-            options    = [dis.SelectOption(label=opts[x][0],value=opts[x][1]) for x in range(0,23)]
-            options.append(dis.SelectOption(label='Next',value=1))
-            options.append(dis.SelectOption(label='Back',value=-1))
+            self.pages = self.getTotalPages(total_items=len(choices))
+            options    = [dis.SelectOption(label=choices[x].name,value=choices[x].id) for x in range(0, DROPDOWN_ITEM_LIMIT_WITH_NAV)]
+            options.append(dis.SelectOption(label='Next',value=FORWARD_NAV_VALUE))
+            options.append(dis.SelectOption(label='Back',value=BACKWARD_NAV_VALUE))
+            options.append(dis.SelectOption(label='Cancel',value=CANCEL_NAV_VALUE))
 
         super().__init__(placeholder='Select a character to display.', min_values=1, max_values=1, options=options)
 
@@ -80,62 +94,75 @@ class ShowDropdown(DynamicDropdown):
     async def callback(self,
                        interaction: dis.Interaction):
 
-        if self.values[0] == '1':
-            opts = self.choices[1:24]
+        if self.values[0] == str(FORWARD_NAV_VALUE) :
 
-            new_view = DropdownView(ctx=self.ctx,
-                                    type = DropDownTypeEnum.SHOW,
-                                    options=opts)
+            opts = {}
+            choices = self.choices[5:DROPDOWN_ITEM_LIMIT_WITH_NAV+5]
+            opts['offset'] = 5
+
+            new_view = DropdownView(ctx      = self.ctx,
+                                    type     = DropDownTypeEnum.SHOW,
+                                    metadata = self.metadata,
+                                    choices  = choices,
+                                    options  = opts)
 
             await interaction.response.edit_message(view=new_view)
 
-        elif self.values[0] == '-1':
+        elif self.values[0] == str(CANCEL_NAV_VALUE) :
 
-            init_list = [dis.SelectOption(label=self.choices[x][0],value=self.choices[x][1]) for x in range(0,12)]
-            init_list.append(dis.SelectOption(label='Next',value=1))
-            self._underlying.options = init_list
-            self._underlying.options = []
+            message = await self.ctx.original_response()
+            await message.edit(view=None)
+
+        elif self.values[0] == str(BACKWARD_NAV_VALUE) :
+
+            opts = {}
+            choices = self.choices[0:DROPDOWN_ITEM_LIMIT_WITH_NAV]
+            opts['offset'] = 0
+
+            new_view = DropdownView(ctx      = self.ctx,
+                                    type     = DropDownTypeEnum.SHOW,
+                                    metadata = self.metadata,
+                                    choices  = choices,
+                                    options  = opts)
 
             await interaction.response.edit_message(view=self.view)
 
         elif self.values != None:
 
-            embed = dis.Embed()
+            opts = {'id' : self.values[0]}
 
-            favorite = f"<@{self.profile.favorite}>" if self.profile.favorite != 0 else "None. You could be here!"
-
-            embed.add_field(name='Creator', value=f"<@{self.profile.creator}>")
-            embed.add_field(name='Owner', value=f"<@{self.profile.owner}>")
-            embed.add_field(name='Name', value=self.profile.name)
-            embed.add_field(name='Rarity', value=self.profile.rarity.name)
-            embed.add_field(name='Agility', value=self.profile.stats.agility)
-            embed.add_field(name='Defense', value=self.profile.stats.defense)
-            embed.add_field(name='Endurance', value=self.profile.stats.endurance)
-            embed.add_field(name='Luck', value=self.profile.stats.luck)
-            embed.add_field(name='Strength', value=self.profile.stats.strength)
-            embed.add_field(name='Description', value=self.profile.desc)
-            embed.add_field(name='Favorite', value=f"{favorite}")
-            await interaction.response.send_message(f'You selected {self.values[0]}')
+            job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOWPROFILE,
+                                       ctx     = self.ctx,
+                                       options = opts)
+            result = self.metadata['queue'].add(metadata = self.metadata,
+                                                job      = job)
+            await interaction.response.edit_message(content=result)
 
 
 class DropdownView(dis.ui.View):
 
     def __init__(self,
-                 ctx     : dis.Interaction,
-                 type    : DropDownTypeEnum,
-                 options : Optional[list] = None):
+                 ctx      : dis.Interaction,
+                 type     : DropDownTypeEnum,
+                 choices  : Optional[list] = None,
+                 metadata : Optional[dict] = None,
+                 options  : Optional[list] = None):
         super().__init__()
 
         # Adds the dropdown to our view object.
-        self.add_item(DropDownFactory.getDropDown(ctx=ctx,
-                                                  type=type,
-                                                  options=options))
+        self.add_item(DropDownFactory.getDropDown(ctx      = ctx,
+                                                  type     = type,
+                                                  choices  = choices,
+                                                  metadata = metadata,
+                                                  options  = options))
 
 class DropDownFactory:
 
-    def getDropDown(ctx     : dis.Interaction,
-                    type    : DropDownTypeEnum,
-                    options : Optional[dict] = None) -> DynamicDropdown:
+    def getDropDown(ctx      : dis.Interaction,
+                    type     : DropDownTypeEnum,
+                    choices  : Optional[list] = None,
+                    metadata : Optional[dict] = None,
+                    options  : Optional[dict] = None) -> DynamicDropdown:
         """Returns an instance of a drop down type with appropriate options set.
 
            Input: self - Pointer to the current object instance.
@@ -148,8 +175,10 @@ class DropDownFactory:
         match type:
 
             case DropDownTypeEnum.SHOW:
-                return ShowDropdown(ctx=ctx,
-                                    opts=options)
+                return ShowDropdown(ctx      = ctx,
+                                    metadata = metadata,
+                                    choices  = choices,
+                                    opts     = options)
 
             case DropDownTypeEnum.FACTORY:
                 raise NotImplementedError
@@ -159,7 +188,3 @@ class DropDownFactory:
 
             case _:
                 raise NotImplementedError
-
-#Have user select which waifus they want to work in UI prior to jub creation.
-#Create job as a callback option to the Lop and create job then
-#Job updates DB and posts result to channel.

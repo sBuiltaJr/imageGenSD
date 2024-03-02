@@ -42,7 +42,7 @@ daily_mgr      = None
 daily_mgr_th   = None
 db_ifc         = None
 dict_path      = ["","",""]
-IGSD_version   = '0.3.6'
+IGSD_version   = '0.3.7'
 tag_randomizer = None
 #This will be modified in the future to accept user-supplied paths.
 #This file must be loaded prior to the logger to allow for user-provided
@@ -216,15 +216,13 @@ async def generate(interaction: dis.Interaction,
         result = f"Job ignored.  Please do not use words containing: {params['options']['banned_words']} in the positive prompt or {params['options']['banned_neg_words']} in the negative prompt."
     else:
 
-        metadata = {
-                     'ctx'     : interaction,
-                     'db_ifc'  : db_ifc,
-                     'loop'    : IGSD_client.getLoop(),
-                     'post_fn' : post,
-                     'tag_rng' : tag_randomizer
+        metadata = {'ctx'     : interaction,
+                    'db_ifc'  : db_ifc,
+                    'loop'    : IGSD_client.getLoop(),
+                    'post_fn' : post,
+                    'tag_rng' : tag_randomizer
                    }
-        opts = {
-                'cfg_scale' : cfg_scale,
+        opts = {'cfg_scale' : cfg_scale,
                 'height'    : (height - (height % int(params['options']['step_size']))),
                 'n_prompt'  : negative_prompt,
                 'prompt'    : prompt,
@@ -234,16 +232,16 @@ async def generate(interaction: dis.Interaction,
                 'steps'     : steps,
                 'tag_cnt'   : tag_cnt,
                 'width'     : (width  - (width  % int(params['options']['step_size'])))
-        }
+               }
         dis_log.debug(f"Creating a job with metadata {metadata} and options {opts}.")
-        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.GENERATE,
-                                   ctx=interaction,
-                                   options=opts)
+        job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.GENERATE,
+                                   ctx     = interaction,
+                                   options = opts)
         dis_log.debug(f"Posting GENERATE job {job} to the queue.")
-        result = job_queue.add(metadata=metadata,
-                               job=job)
+        result = job_queue.add(metadata = metadata,
+                               job      = job)
 
-        await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
+    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
@@ -275,27 +273,15 @@ async def listprofiles(interaction : dis.Interaction,
 
     if not profiles:
 
-        embed = dis.Embed(title="Owned characters",
-                          description=f"User <@{user_id}> does not own any characters!",
-                          color=0xec1802)
+        embed = dis.Embed(title       = "Owned characters",
+                          description = f"User <@{user_id}> does not own any characters!",
+                          color       = 0xec1802)
         await interaction.response.send_message(content=f"<@{interaction.user.id}>", embed=embed)
 
     else:
-        
+
         short_profiles = [(profiles[x].name,profiles[x].id) for x in range(0,len(profiles))]
         await mp.MenuPagination(interaction, short_profiles).navigate()
-
-@IGSD_client.tree.command()
-@dac.checks.has_permissions(use_application_commands=True)
-async def showprofile2(interaction: dis.Interaction):
-    dis_log  = log.getLogger('discord')
-    profiles = db_ifc.getProfiles(interaction.user.id)
-    dis_log.debug(f"User {interaction.user.id} got profile list {profiles}.")
-    view     = ddf.DropdownView(ctx = interaction,
-                                type = ddf.DropDownTypeEnum.SHOW,
-                                options=profiles)
-    dis_log.debug(f"View is: {view}, {view.children}.")
-    await interaction.response.send_message('test',view=view)
 
 @IGSD_client.event
 async def on_ready():
@@ -339,20 +325,20 @@ async def on_ready():
 
 
     dis_log.debug(f"Creating Queue Manager.")
-    job_queue = qm.Manager(manager_id=1,
-                           opts=params['queue_opts'])
-    worker    = th.Thread(target=job_queue.putJob,
-                          name="Queue mgr",
-                          daemon=True)
+    job_queue = qm.Manager(manager_id = 1,
+                           opts       = params['queue_opts'])
+    worker    = th.Thread(target = job_queue.putJob,
+                          name   = "Queue mgr",
+                          daemon = True)
 
     dis_log.debug(f"Creating DB Interface.")
     db_ifc = mdb.MariadbIfc(options=params['db_opts'])
 
     dis_log.debug(f"Creating Daily Event Manager.")
     daily_mgr    = dem.DailyEventManager(opts=params['daily_opts'])
-    daily_mgr_th = th.Thread(target=daily_mgr.start,
-                             name="Daily Event mgr",
-                             daemon=True)
+    daily_mgr_th = th.Thread(target = daily_mgr.start,
+                             name   = "Daily Event mgr",
+                             daemon = True)
 
     daily_mgr_th.start()
     #Only start the job queue once all other tasks are ready.
@@ -376,12 +362,12 @@ async def post(job      : jf.Job,
 
     if job.getStatusCode() != 200:
 
-        embed = dis.Embed(title='Job Error:',
-                          description=f"Status code: {job.getStatusCode()} Reason: {job.getReason()}",
-                          color=0xec1802)
+        embed = dis.Embed(title       = 'Job Error:',
+                          description = f"Status code: {job.getStatusCode()} Reason: {job.getReason()}",
+                          color       = 0xec1802)
 
-        await metadata['ctx'].channel.send(content=f"<@{job.getUserId()}>",
-                                           embed=embed)
+        await metadata['ctx'].channel.send(content = f"<@{job.getUserId()}>",
+                                           embed   = embed)
 
     else:
 
@@ -405,25 +391,23 @@ async def roll(interaction: dis.Interaction):
         await interaction.response.send_message(f"You have already claimed a daily character, please wait until the daily reset to claim another.", ephemeral=True, delete_after=30.0)
 
     else :
-        metadata = {
-                     'ctx'     : interaction,
-                     'db_ifc'  : db_ifc,
-                     'loop'    : IGSD_client.getLoop(),
-                     'post_fn' : post,
-                     'tag_rng' : tag_randomizer
+        metadata = {'ctx'     : interaction,
+                    'db_ifc'  : db_ifc,
+                    'loop'    : IGSD_client.getLoop(),
+                    'post_fn' : post,
+                    'tag_rng' : tag_randomizer
                    }
-        opts = {
-                'random' : True,
+        opts = {'random' : True,
                 'prompt' : params['options']['prompts'],
                 'seed'   : -1
-        }
+               }
         dis_log.debug(f"Creating a job with metadata {metadata} and options {opts}.")
-        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.ROLL,
-                                   ctx=interaction,
-                                   options=opts)
+        job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.ROLL,
+                                   ctx     = interaction,
+                                   options = opts)
         dis_log.debug(f"Posting ROLL job {job} to the queue.")
-        result = job_queue.add(metadata=metadata,
-                               job=job)
+        result = job_queue.add(metadata = metadata,
+                               job      = job)
 
         await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
@@ -431,7 +415,7 @@ async def roll(interaction: dis.Interaction):
 @dac.checks.has_permissions(use_application_commands=True)
 @dac.describe(profile_id="The profile ID of the character you'd like to view.  Use /listprofiles to see the name and ID other profiles!")
 async def showprofile(interaction : dis.Interaction,
-                      user_id     : Optional[dis.User] = None,
+                      user        : Optional[dis.User] = None,
                       profile_id  : Optional[dac.Range[str, 0, 36]] = None): #The length of a UUID
     """Displays the profile associated with the provided ID.
 
@@ -441,37 +425,39 @@ async def showprofile(interaction : dis.Interaction,
         Output : N/A.
     """
     dis_log  = log.getLogger('discord')
-    metadata = {
-                 'ctx'     : interaction,
-                 'db_ifc'  : db_ifc,
-                 'loop'    : IGSD_client.getLoop(),
-                 'post_fn' : post
+    metadata = {'ctx'     : interaction,
+                'db_ifc'  : db_ifc,
+                'loop'    : IGSD_client.getLoop(),
+                'post_fn' : post,
+                'queue'   : job_queue
                }
 
     if profile_id == None:
 
+        dis_log.debug(f"Creating a SHOW PROFILE view for user {interaction.user.id}.")
         user_id  = interaction.user.id if user == None else user.id
         profiles = db_ifc.getProfiles(user_id)
         dis_log.debug(f"User {user_id} returned profile list {profiles}.")
-        view = ddf.DropdownView(ctx = interaction,
-                                type = ddf.DropDownTypeEnum.SHOW,
-                                options=profiles)
+        view = ddf.DropdownView(ctx      = interaction,
+                                type     = ddf.DropDownTypeEnum.SHOW,
+                                choices  = profiles,
+                                metadata = metadata)
 
         await interaction.response.send_message('Select a profile to view:',view=view)
 
-    opts = {
-            'id' : id,
-    }
+    else:
 
-    dis_log.debug(f"Creating a job with metadata {metadata} and options {opts}.")
-    job = jf.JobFactory.getJob(type=jf.JobTypeEnum.SHOWPROFILE,
-                               ctx=interaction,
-                               options=opts)
-    dis_log.debug(f"Posting SHOW job {job} to the queue.")
-    result = job_queue.add(metadata=metadata,
-                           job=job)
+        opts = {'id' : profile_id}
 
-    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
+        dis_log.debug(f"Creating a job with metadata {metadata} and options {opts}.")
+        job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOWPROFILE,
+                                   ctx     = interaction,
+                                   options = opts)
+        dis_log.debug(f"Posting SHOW job {job} to the queue.")
+        result = job_queue.add(metadata = metadata,
+                               job      = job)
+
+        await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 #This is commented until the failed inheritance issue can be resolved.
 #@IGSD_client.tree.command()
@@ -521,18 +507,17 @@ async def testget(interaction: dis.Interaction):
     """
 
     dis_log  = log.getLogger('discord')
-    metadata = {
-                 'ctx'     : interaction,
-                 'loop'    : IGSD_client.getLoop(),
-                 'post_fn' : post
+    metadata = {'ctx'     : interaction,
+                'loop'    : IGSD_client.getLoop(),
+                'post_fn' : post
                }
     dis_log.debug(f"Creating a job with metadata {metadata}.")
-    job = jf.JobFactory.getJob(type=jf.JobTypeEnum.TESTGET,
-                               ctx=interaction)
+    job = jf.JobFactory.getJob(type = jf.JobTypeEnum.TESTGET,
+                               ctx  = interaction)
 
     dis_log.debug(f"Posting test GET job {job} to the queue.")
-    result = job_queue.add(metadata=metadata,
-                           job=job)
+    result = job_queue.add(metadata = metadata,
+                           job      = job)
 
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
@@ -550,17 +535,16 @@ async def testpost(interaction: dis.Interaction):
     """
 
     dis_log  = log.getLogger('discord')
-    metadata = {
-                 'ctx'     : interaction,
-                 'loop'    : IGSD_client.getLoop(),
-                 'post_fn' : post
+    metadata = {'ctx'     : interaction,
+                'loop'    : IGSD_client.getLoop(),
+                'post_fn' : post
                }
     dis_log.debug(f"Creating a job with metadata {metadata}.")
-    job = jf.JobFactory.getJob(type=jf.JobTypeEnum.TESTPOST,
-                               ctx=interaction)
+    job = jf.JobFactory.getJob(type = jf.JobTypeEnum.TESTPOST,
+                               ctx  = interaction)
     dis_log.debug(f"Posting test PUT job {job} to the queue.")
-    result = job_queue.add(metadata=metadata,
-                           job=job)
+    result = job_queue.add(metadata = metadata,
+                           job      = job)
 
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
@@ -577,17 +561,16 @@ async def testroll(interaction: dis.Interaction):
     """
 
     dis_log  = log.getLogger('discord')
-    metadata = {
-                 'ctx'     : interaction,
-                 'loop'    : IGSD_client.getLoop(),
-                 'post_fn' : post
+    metadata = {'ctx'     : interaction,
+                'loop'    : IGSD_client.getLoop(),
+                'post_fn' : post
                }
     dis_log.debug(f"Creating a job with metadata {metadata}.")
-    job = jf.JobFactory.getJob(type=jf.JobTypeEnum.TESTROLL,
-                               ctx=interaction)
+    job = jf.JobFactory.getJob(type = jf.JobTypeEnum.TESTROLL,
+                               ctx  = interaction)
     dis_log.debug(f"Posting test ROLL job {job} to the queue.")
-    result = job_queue.add(metadata=metadata,
-                           job=job)
+    result = job_queue.add(metadata = metadata,
+                           job      = job)
 
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
@@ -604,18 +587,17 @@ async def testshowprofile(interaction: dis.Interaction):
     """
 
     dis_log  = log.getLogger('discord')
-    metadata = {
-                 'ctx'     : interaction,
-                 'db_ifc'  : db_ifc,
-                 'loop'    : IGSD_client.getLoop(),
-                 'post_fn' : post
+    metadata = {'ctx'     : interaction,
+                'db_ifc'  : db_ifc,
+                'loop'    : IGSD_client.getLoop(),
+                'post_fn' : post
                }
     dis_log.debug(f"Creating a job with metadata {metadata}.")
-    job = jf.JobFactory.getJob(type=jf.JobTypeEnum.TESTSHOW,
-                               ctx=interaction)
+    job = jf.JobFactory.getJob(type = jf.JobTypeEnum.TESTSHOW,
+                               ctx  = interaction)
     dis_log.debug(f"Posting test SHOW job {job} to the queue.")
-    result = job_queue.add(metadata=metadata,
-                           job=job)
+    result = job_queue.add(metadata = metadata,
+                           job      = job)
 
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 

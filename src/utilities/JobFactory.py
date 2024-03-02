@@ -209,7 +209,7 @@ class GenerateJob(Job):
         self.randomize              = bool(options['random'])
         self.result                 = req.Response()
         self.user_id                = ctx.user.id
-        self.profile                = pg.Profile(self.user_id)
+        self.profile                = pg.Profile(opts=pg.getDefaultOptions())
 
     def doWork(self,
                web_url : str):
@@ -261,7 +261,7 @@ class RollJob(Job):
         self.randomize           = bool(options['random'])
         self.result              = req.Response()
         self.user_id             = ctx.user.id
-        self.profile             = pg.Profile(self.user_id)
+        self.profile             = pg.Profile(opts=pg.getDefaultOptions())
 
     def doWork(self,
                web_url : str):

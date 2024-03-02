@@ -271,6 +271,7 @@ async def listprofiles(interaction : dis.Interaction,
     #another arg in the function call.
     user_id = interaction.user.id if user == None else user.id
     profiles = db_ifc.getProfiles(user_id)
+    dis_log.debug(f"Got profiles for list profile: {profiles}.")
 
     if not profiles:
 
@@ -280,8 +281,9 @@ async def listprofiles(interaction : dis.Interaction,
         await interaction.response.send_message(content=f"<@{interaction.user.id}>", embed=embed)
 
     else:
-
-        await mp.MenuPagination(interaction, profiles).navigate()
+        
+        short_profiles = [(profiles[x].name,profiles[x].id) for x in range(0,len(profiles))]
+        await mp.MenuPagination(interaction, short_profiles).navigate()
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
@@ -427,7 +429,7 @@ async def roll(interaction: dis.Interaction):
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
-@dac.describe(user_id="The profile ID of the character you'd like to view.  Use /listprofiles to see the name and ID other profiles!")
+@dac.describe(profile_id="The profile ID of the character you'd like to view.  Use /listprofiles to see the name and ID other profiles!")
 async def showprofile(interaction : dis.Interaction,
                       user_id     : Optional[dis.User] = None,
                       profile_id  : Optional[dac.Range[str, 0, 36]] = None): #The length of a UUID
@@ -446,13 +448,16 @@ async def showprofile(interaction : dis.Interaction,
                  'post_fn' : post
                }
 
-    if id == None:
+    if profile_id == None:
 
-        profiles = db_ifc.getProfiles(interaction.user.id)
-        dis_log.debug(f"User {id} returned profile list {profiles}.")
-        view     = ddf.DropdownView(interaction=interaction,
-                                    options=profiles)
-        dis_log.debug(f"View is: {view}, {view.children}.")
+        user_id  = interaction.user.id if user == None else user.id
+        profiles = db_ifc.getProfiles(user_id)
+        dis_log.debug(f"User {user_id} returned profile list {profiles}.")
+        view = ddf.DropdownView(ctx = interaction,
+                                type = ddf.DropDownTypeEnum.SHOW,
+                                options=profiles)
+
+        await interaction.response.send_message('Select a profile to view:',view=view)
 
     opts = {
             'id' : id,

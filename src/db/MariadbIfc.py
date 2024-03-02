@@ -209,7 +209,7 @@ class MariadbIfc:
             return img[0]
 
     def getProfile(self,
-                   id         : Optional[str] = "ffffffff-ffff-ffff-ffff-fffffffffffe") -> Optional[pg.Profile]:
+                   id : Optional[str] = "ffffffff-ffff-ffff-ffff-fffffffffffe") -> Optional[pg.Profile]:
         """Returns a given profile for a given user.
 
             Input: self - Pointer to the current object instance.
@@ -235,37 +235,7 @@ class MariadbIfc:
         else:
 
             self.db_log.debug(f"Got profile: {result}")
-            #Since profiles are stored as individual elements in the DB for
-            #statistical analysis, the actual profile object needs to be
-            #re-created before it can be returned (since the rest of the code
-            #expects to interact with an object).
-            stats=sc.Stats(rarity=rc.RarityList(int(result[21])),
-                           agility=result[5],
-                           defense=result[6],
-                           endurance=result[7],
-                           luck=result[8],
-                           strength=result[9])
-            self.db_log.debug(f"Made stats: {pic.dumps(stats)}")
-             #TODO: find a way to better map these.  Blah blah factory.
-            profile=pg.Profile(id=result[0],
-                              img_id=result[1],
-                              creator=result[3],
-                              owner=result[4],
-                              affinity=result[10],
-                              battles=result[11],
-                              desc=result[12],
-                              exp=result[13],
-                              favorite=result[14],
-                              history=result[15],
-                              info=result[16],
-                              level=result[17],
-                              losses=result[18],
-                              missions=result[19],
-                              name=result[20],
-                              rarity=rc.RarityList(int(result[21])),
-                              stats=stats,
-                              wins=result[22])
-            self.db_log.debug(f"Made profile: {pic.dumps(profile)}")
+            profile=self.mapQueryToProfile(query=result)
 
         return profile
 
@@ -292,11 +262,57 @@ class MariadbIfc:
         for x in cursor:
 
             self.db_log.debug(f"Adding result: {x}")
-            results.append((x[1],x[0]))
+            results.append(self.mapQueryToProfile(query=x))
 
         self.db_log.debug(f"Got results: {results}")
 
         return results
+
+    def mapQueryToProfile(self,
+                          query : list) -> pg.Profile:
+        """Maps the full return of a profile query to a Profile object.  This is
+           required because the DB stores profiels as their individual elements.
+
+           Input: self - Pointer to the current object instance.
+                  query - a list representing a single profile from the DB.
+
+           Output: Profile - the query converted into a Profile, or the default
+                             profile.
+        """
+        self.db_log.debug(f"Preparing to map query: {query}")
+        stat_opts              = sc.getDefaultOptions()
+        stat_opts['agility']   = query[5]
+        stat_opts['defense']   = query[6]
+        stat_opts['endurance'] = query[7]
+        stat_opts['luck']      = query[8]
+        stat_opts['strength']  = query[9]
+        
+        stats = sc.Stats(rarity=rc.RarityList(int(query[21])),
+                         opts=stat_opts)
+        self.db_log.debug(f"Stats map output was: {pic.dumps(stats)}")
+        prof_opts             = pg.getDefaultOptions()
+        prof_opts['affinity'] = query[10]
+        prof_opts['battles']  = query[11]
+        prof_opts['creator']  = query[3]
+        prof_opts['desc']     = query[12]
+        prof_opts['exp']      = query[13]
+        prof_opts['favorite'] = query[14]
+        prof_opts['history']  = query[15]
+        prof_opts['id']       = query[0]
+        prof_opts['img_id']   = query[1]
+        prof_opts['info']     = query[16]
+        prof_opts['level']    = query[17]
+        prof_opts['losses']   = query[18]
+        prof_opts['missions'] = query[19]
+        prof_opts['name']     = query[20]
+        prof_opts['owner']    = query[4]
+        prof_opts['rarity']   = rc.RarityList(int(query[21]))
+        prof_opts['stats']    = stats
+        prof_opts['wins']     = query[22]
+        profile=pg.Profile(opts=prof_opts)
+        self.db_log.debug(f"Profile map output was: {profile}")
+        
+        return profile
 
     def resetDailyRoll(self):
         """Resets the 'daily' boolean for all user profiles, allowing them to

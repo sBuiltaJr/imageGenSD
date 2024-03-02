@@ -78,6 +78,22 @@ def getDescription(rarity : rc.RarityList = rc.RarityList.COMMON) -> str:
         case _:
             return "A description so bland it shouldn't exist!"
 
+def getDefaultOptions() -> dict:
+    """Returns a default dictionary of options accepted by the Stats class.
+
+       Input: None
+
+       Output: dict - a complete dictionary of default options.
+    """
+    opts = {'agility'   : None,
+            'defense'   : None,
+            'endurance' : None,
+            'luck'      : None,
+            'strength'  : None
+           }
+    
+    return opts
+    
 #####  Helper Classes  #####
 
 #####  Stats Class  #####
@@ -85,14 +101,8 @@ def getDescription(rarity : rc.RarityList = rc.RarityList.COMMON) -> str:
 class Stats:
 
     def __init__(self,
-                 rarity    : rc.RarityList,
-                 #TODO: combine the options into the options dictionary
-                 #in a way to avoid key errors.
-                 agility   : Optional[int] = None,
-                 defense   : Optional[int] = None,
-                 endurance : Optional[int] = None,
-                 luck      : Optional[int] = None,
-                 strength  : Optional[int] = None):
+                 rarity : rc.RarityList,
+                 opts   : dict):
         """Creates a  stats object based on rarity.
 
            Input: self - Pointer to the current object instance.
@@ -103,11 +113,11 @@ class Stats:
         #Starting simple for now, future versions should have luck influence stats?
         self.range     = getStatRange(rarity)
 
-        self.agility   = agility if agility != None else rand.randint(self.range[0], self.range[1])
-        self.defense   = defense if defense != None else rand.randint(self.range[0], self.range[1])
-        self.endurance = endurance if endurance != None else rand.randint(self.range[0], self.range[1])
-        self.luck      = luck if luck != None else rand.randint(self.range[0], self.range[1])
-        self.strength  = strength if strength != None else rand.randint(self.range[0], self.range[1])
+        self.agility   = int(opts['agility'])   if opts['agility']   != None else rand.randint(self.range[0], self.range[1])
+        self.defense   = int(opts['defense'])   if opts['defense']   != None else rand.randint(self.range[0], self.range[1])
+        self.endurance = int(opts['endurance']) if opts['endurance'] != None else rand.randint(self.range[0], self.range[1])
+        self.luck      = int(opts['luck'])      if opts['luck']      != None else rand.randint(self.range[0], self.range[1])
+        self.strength  = int(opts['strength'])  if opts['strength']  != None else rand.randint(self.range[0], self.range[1])
 
     def getStatsList(self) -> list:
         """Returns the object's stats as a list.

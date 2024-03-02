@@ -71,7 +71,7 @@ class ShowDropdown(DynamicDropdown):
             options.append(dis.SelectOption(label='Next',value=1))
             options.append(dis.SelectOption(label='Back',value=-1))
 
-        super().__init__(placeholder='Select a character to display.', min_values=1, max_values=DROPDOWN_ITME_LIMIT, options=options)
+        super().__init__(placeholder='Select a character to display.', min_values=1, max_values=1, options=options)
 
     async def getPage(self,
                       page: int):
@@ -89,23 +89,33 @@ class ShowDropdown(DynamicDropdown):
 
             await interaction.response.edit_message(view=new_view)
 
-        elif self.values[0] == '-1':#-1 in self.values:
+        elif self.values[0] == '-1':
 
-            #self.values = []
             init_list = [dis.SelectOption(label=self.choices[x][0],value=self.choices[x][1]) for x in range(0,12)]
             init_list.append(dis.SelectOption(label='Next',value=1))
             self._underlying.options = init_list
             self._underlying.options = []
 
-            #for x in init_list:
-            #    self.append_option(x)
-            #self.options = init_list
-            #super().__init__(placeholder='Select a character to display.', min_values=1, max_values=DROPDOWN_ITME_LIMIT, options=init_list)
             await interaction.response.edit_message(view=self.view)
 
         elif self.values != None:
 
-            await interaction.response.send_message(f'You selected {self.values}')
+            embed = dis.Embed()
+
+            favorite = f"<@{self.profile.favorite}>" if self.profile.favorite != 0 else "None. You could be here!"
+
+            embed.add_field(name='Creator', value=f"<@{self.profile.creator}>")
+            embed.add_field(name='Owner', value=f"<@{self.profile.owner}>")
+            embed.add_field(name='Name', value=self.profile.name)
+            embed.add_field(name='Rarity', value=self.profile.rarity.name)
+            embed.add_field(name='Agility', value=self.profile.stats.agility)
+            embed.add_field(name='Defense', value=self.profile.stats.defense)
+            embed.add_field(name='Endurance', value=self.profile.stats.endurance)
+            embed.add_field(name='Luck', value=self.profile.stats.luck)
+            embed.add_field(name='Strength', value=self.profile.stats.strength)
+            embed.add_field(name='Description', value=self.profile.desc)
+            embed.add_field(name='Favorite', value=f"{favorite}")
+            await interaction.response.send_message(f'You selected {self.values[0]}')
 
 
 class DropdownView(dis.ui.View):

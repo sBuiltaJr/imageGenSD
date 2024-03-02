@@ -12,6 +12,9 @@ from typing import Literal, Optional
 
 #####  Package Variables  #####
 
+DEFAULT_OWNER = 170331989436661760
+DEFAULT_ID    = "ffffffff-ffff-ffff-ffff-fffffffffffe"
+
 #####  Profile Class  #####
 
 #This definition must come before GetDefaultProfile so it can be referenced.
@@ -19,52 +22,34 @@ class Profile:
 
     #Optional Name?  description?
     def __init__(self,
-                 owner    : int,
-                 #TODO: combine the options into the options dictionary
-                 #in a way to avoid key errors.
-                 affinity : Optional[int]           = None,
-                 battles  : Optional[int]           = None,
-                 creator  : Optional[int]           = None,
-                 desc     : Optional[str]           = None,
-                 exp      : Optional[int]           = None,
-                 favorite : Optional[int]           = None,
-                 history  : Optional[dict]          = None,
-                 id       : Optional[int]           = None,
-                 img_id   : Optional[int]           = None,
-                 info     : Optional[dict]          = None,
-                 level    : Optional[int]           = None,
-                 losses   : Optional[int]           = None,
-                 missions : Optional[int]           = None,
-                 name     : Optional[str]           = None,
-                 rarity   : Optional[rc.RarityList] = None,
-                 stats    : Optional[sc.Stats]      = None,
-                 wins     : Optional[int]           = None):
+                 opts : dict):
         """Creates a profile intended to attaching to an IGSD-generated image.
 
            Input: self - Pointer to the current object instance.
+                  opts - a dict of values to set in the profile.
 
            Output: None - Throws exceptions on error.
         """
 
-        self.affinity = affinity if affinity != None else 0
-        self.battles  = battles if battles != None else 0
-        self.creator  = creator if creator != None else owner
-        self.exp      = exp if exp != None else 0
-        self.favorite = favorite if favorite != None else 0
-        self.id       = id if id != None else "ffffffff-ffff-ffff-ffff-fffffffffffe"
-        self.img_id   = img_id if img_id != None else None #Separate to prevent laoded profiles from eating memory
-        self.info     = info if info != None else None #Get IGSD image info before profile?
-        self.level    = level if level != None else 0
-        self.losses   = losses if losses != None else 0
-        self.history  = history if history != None else None
-        self.missions = missions if missions != None else 0
-        self.name     = nr.getRandomName() if name == None else name
-        self.owner    = owner
-        self.rarity   = rc.Rarity.generateRarity(self) if rarity == None else rarity
-        self.stats    = sc.Stats(self.rarity) if stats == None else stats
-        self.wins     = wins if wins != None else 0
+        self.affinity = int(opts['affinity']) if opts['affinity'] != None else 0
+        self.battles  = int(opts['battles'])  if opts['battles']  != None else 0
+        self.exp      = int(opts['exp'])      if opts['exp']      != None else 0
+        self.favorite = int(opts['favorite']) if opts['favorite'] != None else 0
+        self.history  = opts['history']       if opts['history']  != None else None
+        self.id       = str(opts['id'])       if opts['id']       != None else DEFAULT_ID
+        self.img_id   = str(opts['img_id'])   if opts['img_id']   != None else None #Separate to prevent laoded profiles from eating memory
+        self.info     = opts['info']          if opts['info']     != None else None
+        self.level    = int(opts['level'])    if opts['level']    != None else 0
+        self.losses   = int(opts['losses'])   if opts['losses']   != None else 0
+        self.missions = int(opts['missions']) if opts['missions'] != None else 0
+        self.name     = nr.getRandomName()    if opts['name']     == None else opts['name']
+        self.owner    =  int(opts['owner'])   if opts['owner']    != None else DEFAULT_OWNER
+        self.rarity   = rc.Rarity.generateRarity(self) if opts['rarity'] == None else opts['rarity']
+        self.wins     = int(opts['wins'])     if opts['wins']     != None else 0
         #The items below rely on items above.
-        self.desc     = desc if desc != None else sc.getDescription(self.rarity)
+        self.stats    = sc.Stats(rarity=self.rarity, opts=sc.getDefaultOptions()) if opts['stats'] == None else opts['stats']
+        self.creator  = int(opts['creator'])  if opts['creator'] != None else self.owner
+        self.desc     = opts['desc']          if opts['desc']    != None else sc.getDescription(self.rarity)
 
 #####  Package Functions  #####
 
@@ -131,26 +116,72 @@ def getDefaultProfile() -> Profile:
        Output: Profile - a profile with set defaults.
     """
 
-    default = Profile(owner=170331989436661760,
-                      affinity=0,
-                      battles=0,
-                      creator=170331989436661760,
-                      desc="A poor defenseless bot doing its best.",
-                      exp=0,
-                      favorite=170331989436661760,
-                      id=170331989436661760,
-                      info=None,
-                      losses=0,
-                      name="IGSD Mascot",
-                      rarity=rc.RarityList.CUSTOM,
-                      stats=sc.Stats(rarity=rc.RarityList.CUSTOM,
-                                     agility=1,
-                                     defense=1,
-                                     endurance=1,
-                                     luck=1,
-                                     strength=1),
-                      wins=0)
+    default = Profile(opts = getMascotOptions())
 
     return default
+
+def getDefaultOptions() -> dict:
+    """Returns a default dictionary of options accepted by the Profile class.
+
+       Input: None
+
+       Output: dict - a complete dictionary of default options.
+    """
+    opts = {'affinity' : None,
+            'battles'  : None,
+            'creator'  : None,
+            'desc'     : None,
+            'exp'      : None,
+            'favorite' : None,
+            'history'  : None,
+            'id'       : None,
+            'img_id'   : None,
+            'info'     : None,
+            'level'    : None,
+            'losses'   : None,
+            'missions' : None,
+            'name'     : None,
+            'owner'    : None,
+            'rarity'   : None,
+            'stats'    : None,
+            'wins'     : None
+           }
+
+    return opts
+
+def getMascotOptions() -> dict:
+    """Returns a default dictionary of options suited for the Mascot profile.
+
+       Input: None
+
+       Output: dict - a complete dictionary of default options.
+    """
+    base_stats = sc.getDefaultOptions()
+    base_stats.update((x,1) for x in iter(base_stats))
+
+    opts = {'affinity' : None,
+            'battles'  : None,
+            'creator'  : DEFAULT_OWNER,
+            'desc'     : "A poor defenseless bot doing its best.",
+            'exp'      : None,
+            'favorite' : DEFAULT_OWNER,
+            'history'  : None,
+            'id'       : DEFAULT_OWNER,
+            'img_id'   : DEFAULT_ID,
+            'info'     : None,
+            'level'    : None,
+            'losses'   : None,
+            'missions' : None,
+            'name'     : "IGSD Mascot",
+            'owner'    : DEFAULT_OWNER,
+            'rarity'   : rc.RarityList.CUSTOM,
+            'stats'    : sc.Stats(rarity=rc.RarityList.CUSTOM,
+                                  opts=base_stats),
+            'wins'     : None
+           }
+
+    return opts
+
+
 
 

@@ -146,6 +146,43 @@ IGSD_client = IGSDClient(intents=intents)
 
 #####  Package Functions  #####
 
+@IGSD_client.tree.command()
+@dac.checks.has_permissions(use_application_commands=True)
+@dac.describe(tier="Which tier to manage character assignments in.  If none, it defaults to looping through the tiers, starting at 1.")
+async def assignkeygen(interaction : dis.Interaction,
+                       tier        : Optional[dac.Range[int, 1, 6]] = None):
+    """Creates a dropdown for assigning characters to the Key Generation job.
+
+        Input  : interaction - the interaction context from Discord.
+
+        Output : N/A.
+    """
+    dis_log  = log.getLogger('discord')
+    metadata = {'ctx'     : interaction,
+                'db_ifc'  : db_ifc,
+                'loop'    : IGSD_client.getLoop(),
+                'post_fn' : post,
+                'queue'   : job_queue
+               }
+
+    profiles = db_ifc.getUnoccupiedProfiles(interaction.user.id)
+    dis_log.debug(f"Got profiles for assign Key Gen: {profiles}.")
+
+    if not profiles:
+    
+        await interaction.response.send_message('You need a character first!  Use the /roll command to get one, or free existing profiles from their assignments!', ephemeral=True, delete_after=9.0)
+
+    else:
+
+        dis_log.debug(f"Creating a ASSIGN KEY GEN view for user {interaction.user.id}.")
+
+        view = ddf.DropdownView(ctx      = interaction,
+                                type     = ddf.DropDownTypeEnum.ASSIGN_KEY_GEN,
+                                choices  = profiles,
+                                metadata = metadata)
+
+        await interaction.response.send_message('Select a profile to view:',view=view)
+
 def bannedWordsFound(prompt: str, banned_words: str) -> bool:
     """Tests if banded words exist in the provided parameters.  This is written
        as a separate function to allow future updates to the banned word list
@@ -641,3 +678,12 @@ def Startup():
 
 if __name__ == '__main__':
     Startup()
+
+
+#/assignresearch
+#/assignCrafting?
+#/assignWorker?
+#/CreateTeam
+#/assignDungeon
+#/hospital
+#/shop

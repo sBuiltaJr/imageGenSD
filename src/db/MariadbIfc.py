@@ -74,11 +74,8 @@ class MariadbIfc:
             MariadbIfc.__instance = self
 
             self.args      = options
-            self.db_cmds   = {}
+            self.cmds      = {}
             self.con       = None
-            self.pict_cmds = {}
-            self.prof_cmds = {}
-            self.user_cmds = {}
 
             self.db_log = log.getLogger('mariadb')
             self.db_log.setLevel(options['log_lvl'])
@@ -97,16 +94,25 @@ class MariadbIfc:
             self.db_log.addHandler(logHandler)
 
             try:
-
-                self.db_log.debug(f"paths are: {pl.Path('src/db/db_commands.json').absolute()} {pl.Path('src/db/queries/picture_queries.json').absolute()} {pl.Path('src/db/queries/profile_queries.json').absolute()} {pl.Path('src/db/queries/user_queries.json').absolute()}")
-                json_file      = open(pl.Path("src/db/db_commands.json").absolute())
-                self.db_cmds   = json.load(json_file)
-                json_file      = open(pl.Path("src/db/queries/picture_queries.json").absolute())
-                self.pict_cmds = json.load(json_file)
-                json_file      = open(pl.Path("src/db/queries/profile_queries.json").absolute())
-                self.prof_cmds = json.load(json_file)
-                json_file      = open(pl.Path("src/db/queries/user_queries.json").absolute())
-                self.user_cmds = json.load(json_file)
+                paths = { 'db'   : pl.Path('src/db/db_commands.json').absolute(),
+                          'econ' : pl.Path('src/db/queries/economy_queries.json').absolute(),
+                          'keyg' : pl.Path('src/db/queries/keygen_queries.json').absolute(),
+                          'pic'  : pl.Path('src/db/queries/picture_queries.json').absolute(),
+                          'prof' : pl.Path('src/db/queries/profile_queries.json').absolute(),
+                          'user' : pl.Path('src/db/queries/user_queries.json').absolute()}
+                self.db_log.debug(f"paths are: {paths['db']} {paths['econ']} {paths['keyg']} {paths['pic']} {paths['prof']} {paths['user']}")
+                json_file         = open(paths['db'])
+                self.cmds['db']   = json.load(json_file)
+                json_file         = open(paths['econ'])
+                self.cmds['econ'] = json.load(json_file)
+                json_file         = open(paths['keyg'])
+                self.cmds['keyg'] = json.load(json_file)
+                json_file         = open(paths['pic'])
+                self.cmds['pic']  = json.load(json_file)
+                json_file         = open(paths['prof'])
+                self.cmds['prof'] = json.load(json_file)
+                json_file         = open(paths['user'])
+                self.cmds['user'] = json.load(json_file)
 
             #Sure, it's more pythonic to use with and limit exceptions cases,
             #but making a case here for every possible exception type is dumb.
@@ -121,7 +127,7 @@ class MariadbIfc:
                 raise PermissionError(f"Unable to access mariaDB server!")
 
             self.db_log.info(f"Successfully connected to database: host: {options['host']} port: {options['port']} username: {options['user_name']} db: {options['database']}")
-            self.db_log.debug(f"Loaded commands: {self.db_cmds} {self.pict_cmds} {self.prof_cmds} {self.user_cmds}")
+            self.db_log.debug(f"Loaded commands: {self.cmds['db']} {self.cmds['pic']} {self.cmds['econ']} {self.cmds['keyg']} {self.cmds['prof']} {self.cmds['user']}")
 
     def createNewUser(self,
                       id : str) -> bool:
@@ -138,27 +144,29 @@ class MariadbIfc:
 
         #TODO: Better user/profile management.
         self.db_log.info(f"Checking if user {id} exists")
-        cmd = (self.user_cmds['get_user']) % (id)
+        cmd = (self.cmds['user']['get_user']) % (id)
         self.db_log.debug(f"Executing get user command: {cmd}")
         cursor.execute(cmd)
         user_profile = cursor.fetchone()
 
         if user_profile == None:
 
-            cmd = (self.user_cmds['put_new']) % (id)
+            cmd = (self.cmds['user']['put_new']) % (id)
             self.db_log.debug(f"Preparing to create user: {cmd}")
             cursor.execute(cmd)
             self.db_log.info(f"Created user")
 
-            cmd = (self.user_cmds['put_new']) % (id)
+            cmd = (self.cmds['econ']['put_new']) % (id)
             self.db_log.debug(f"Preparing to create user: {cmd}")
             cursor.execute(cmd)
             self.db_log.info(f"Updated user's economy entries.")
 
-        else:
+            cmd = (self.cmds['keyg']['put_new']) % (id)
+            self.db_log.debug(f"Preparing to create user: {cmd}")
+            cursor.execute(cmd)
+            self.db_log.info(f"Updated user's keygen worker entries.")
 
-            result = bool(user_profile[int(self.user_cmds['daily_index'])])
-            self.db_log.debug(f"User's daily value: {result}")
+            result = True
 
         return result
 
@@ -177,11 +185,12 @@ class MariadbIfc:
 
         if not self.createNewUser(id) :
 
-            cmd = (self.user_cmds['get_user']) % (id)
+            cmd = (self.cmds['user']['get_user']) % (id)
             self.db_log.debug(f"Executing get user command: {cmd}")
             cursor.execute(cmd)
+            user_profile = cursor.fetchone()
 
-            result = bool(user_profile[int(self.user_cmds['daily_index'])])
+            result = bool(user_profile[int(self.cmds['user']['daily_index'])])
             self.db_log.debug(f"User's daily value: {result}")
 
         return result
@@ -208,7 +217,7 @@ class MariadbIfc:
 
             self.db_log.info(f"Getting picture ID")
 
-            cmd = (self.prof_cmds['get_profile']) % (profile_id)
+            cmd = (self.cmds['prof']['get_profile']) % (profile_id)
             self.db_log.debug(f"Executing get profile command {cmd}")
             cursor.execute(cmd)
 
@@ -220,7 +229,7 @@ class MariadbIfc:
                 return ""
 
         self.db_log.info(f"Getting picture.")
-        cmd = (self.pict_cmds['get_image']) % (picture_id if picture_id != None else profile[int(self.prof_cmds['pic_id_index'])])
+        cmd = (self.cmds['pic']['get_image']) % (picture_id if picture_id != None else profile[int(self.cmds['prof']['pic_id_index'])])
         self.db_log.debug(f"Executing get picture command {cmd}")
         cursor.execute(cmd)
         #The cursor object doesn't appear to actually provide a better way
@@ -229,7 +238,7 @@ class MariadbIfc:
 
         if (img == None):
 
-            self.db_log.warning(f"Picture ID {profile[int(self.prof_cmds['pic_id_index'])]} not found!")
+            self.db_log.warning(f"Picture ID {profile[int(self.cmds['prof']['pic_id_index'])]} not found!")
             return ""
 
         else:
@@ -252,7 +261,7 @@ class MariadbIfc:
         result     = None
 
         self.db_log.info(f"Getting profile")
-        cursor.execute((self.prof_cmds['get_profile']) % id)
+        cursor.execute((self.cmds['prof']['get_profile']) % id)
         #The cursor object doesn't appear to actually provide a better way
         #to determine if the cursor has a result.
         result = cursor.fetchone()
@@ -282,7 +291,7 @@ class MariadbIfc:
         results    = []
 
         self.db_log.info(f"Getting profiles for user {user_id}")
-        cmd = (self.prof_cmds['get_owned_profs']) % (user_id)
+        cmd = (self.cmds['prof']['get_owned_profs']) % (user_id)
         self.db_log.debug(f"Executing command: {cmd}")
         cursor.execute(cmd)
 
@@ -293,7 +302,7 @@ class MariadbIfc:
 
         self.db_log.debug(f"Got results: {results}")
 
-        return
+        return results
 
     def getUnoccupiedProfiles(self,
                               user_id : int) -> list:
@@ -309,7 +318,7 @@ class MariadbIfc:
         results    = []
 
         self.db_log.info(f"Getting unoccupied profiles for user {user_id}")
-        cmd = (self.prof_cmds['get_unoccupied_profs']) % (user_id)
+        cmd = (self.cmds['prof']['get_unoccupied_profs']) % (user_id)
         self.db_log.debug(f"Executing command: {cmd}")
         cursor.execute(cmd)
 
@@ -381,7 +390,7 @@ class MariadbIfc:
         result     = None
 
         self.db_log.warning(f"Preparing to reset daily rolls.")
-        cmd = (self.user_cmds['reset_daily'])
+        cmd = (self.cmds['user']['reset_daily'])
         self.db_log.debug(f"Executing daily roll reset command: {cmd}")
 
         try:
@@ -415,7 +424,7 @@ class MariadbIfc:
         result     = None
 
 
-        cursor.execute((self.prof_cmds['get_profile']) % id)
+        cursor.execute((self.cmds['prof']['get_profile']) % id)
         #The cursor object doesn't appear to actually provide a better way
         #to determine if the cursor has a result.
         for x in cursor:
@@ -426,7 +435,7 @@ class MariadbIfc:
         if (result != None):
 
             #Is this is a test command?
-            if (x[0] == self.db_cmds['default_id']):
+            if (x[0] == self.cmds['db']['default_id']):
 
                 self.db_log.warning(f"Rolled the test profile: {x}")
 
@@ -438,14 +447,14 @@ class MariadbIfc:
 
         else:
 
-            cmd = (self.prof_cmds['put_new']) % (self.db_cmds['default_id'], id, entry.creator, entry.stats.agility, entry.stats.defense, entry.stats.endurance, entry.stats.luck, entry.stats.strength, entry.desc, entry.favorite, json.dumps(entry.info), entry.name, entry.rarity.value)
+            cmd = (self.cmds['prof']['put_new']) % (self.cmds['db']['default_id'], id, entry.creator, entry.stats.agility, entry.stats.defense, entry.stats.endurance, entry.stats.luck, entry.stats.strength, entry.desc, entry.favorite, json.dumps(entry.info), entry.name, entry.rarity.value)
             self.db_log.debug(f"Preparing to add profile: {cmd}")
             cursor.execute(cmd)
             #We don't actually know the GUID until we get it back from the DB.
             pr_uid=cursor.fetchone()
             self.db_log.info(f"Stored profile with UID {pr_uid}")
 
-            cmd = (self.pict_cmds['put_new']) % ('0x' + str(pr_uid[0]).replace('-',''), pr_uid[1], json.dumps(entry.info), img)
+            cmd = (self.cmds['pic']['put_new']) % ('0x' + str(pr_uid[0]).replace('-',''), pr_uid[1], json.dumps(entry.info), img)
             self.db_log.debug(f"Preparing to add picture: {cmd}")
             cursor.execute(cmd)
             pi_uid=cursor.fetchone()
@@ -453,13 +462,13 @@ class MariadbIfc:
 
             #It's only possible to link the picture to the profile after its
             #UUID is generated.
-            cmd = (self.prof_cmds['put_img_id']) % (pi_uid[0], pr_uid[0])
+            cmd = (self.cmds['prof']['put_img_id']) % (pi_uid[0], pr_uid[0])
             self.db_log.debug(f"Updating Profile to reference picture UUID: {cmd}")
             cursor.execute(cmd)
             self.db_log.info(f"Linked picture id {pi_uid[0]} to profile {pr_uid[0]}")
 
             #This needs to be last to get both UIDs.
-            cmd = (self.user_cmds['get_owned']) % (id)
+            cmd = (self.cmds['user']['get_owned']) % (id)
             self.db_log.debug(f"Getting user {id}'s owned dict: {cmd}")
             cursor.execute(cmd)
             str_owned = cursor.fetchone()
@@ -482,14 +491,14 @@ class MariadbIfc:
             owned[key] = pi_uid[0]
             self.db_log.debug(f"Associated profile {pr_uid[0]} with user {id} as: {owned[key]}")
 
-            cmd = (self.user_cmds['set_owned']) % (json.dumps(owned), id)
+            cmd = (self.cmds['user']['set_owned']) % (json.dumps(owned), id)
             self.db_log.debug(f"Updating user {id} owned dict: {cmd}")
             cursor.execute(cmd)
             self.db_log.info(f"Updated user {id}'s owned dict")
 
             #Finally, now that the roll has been fully saved and connected to
             #the user's profile, mark their daily roll as complete.
-            cmd = (self.user_cmds['set_daily_roll']) % (id)
+            cmd = (self.cmds['user']['set_daily_roll']) % (id)
             self.db_log.debug(f"Updating user {id} owned dict: {cmd}")
             cursor.execute(cmd)
             self.db_log.info(f"Updated user {id}'s owned dict")
@@ -527,23 +536,23 @@ class MariadbIfc:
 
             #The interface requries the cursor.
             cursor = self.con.cursor(buffered=False)
-            cursor.execute((self.db_cmds['create_db']) % self.args['database'])
+            cursor.execute((self.cmds['db']['create_db']) % self.args['database'])
             self.con.database = self.args['database']
 
             #It does pain me a little to write out a loop.
-            cursor.execute(self.db_cmds['create_table'] + self.pict_cmds['table_fmt'])
-            cursor.execute(self.db_cmds['create_table'] + self.prof_cmds['table_fmt'])
-            cursor.execute(self.db_cmds['create_table'] + self.user_cmds['table_fmt'])
+            cursor.execute(self.cmds['db']['create_table'] + self.cmds['pic']['table_fmt'])
+            cursor.execute(self.cmds['db']['create_table'] + self.cmds['prof']['table_fmt'])
+            cursor.execute(self.cmds['db']['create_table'] + self.cmds['user']['table_fmt'])
 
             #The script actually interacts with the Tables to truly confirm the
             #permissions, instead of just relying on the GRANT table, to avoid
             #having to parse the output and guess some of the parameters.
-            cursor.execute(self.pict_cmds['del_default'])
-            cursor.execute(self.pict_cmds['make_def_tst'])
-            cursor.execute(self.prof_cmds['del_default'])
-            cursor.execute(self.prof_cmds['make_def_tst'])
-            cursor.execute(self.user_cmds['del_default'])
-            cursor.execute(self.user_cmds['make_def_tst'])
+            cursor.execute(self.cmds['pic']['del_default'])
+            cursor.execute(self.cmds['pic']['make_def_tst'])
+            cursor.execute(self.cmds['prof']['del_default'])
+            cursor.execute(self.cmds['prof']['make_def_tst'])
+            cursor.execute(self.cmds['user']['del_default'])
+            cursor.execute(self.cmds['user']['make_def_tst'])
 
         except mariadb.OperationalError as err:
 

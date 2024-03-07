@@ -449,7 +449,7 @@ async def roll(interaction: dis.Interaction):
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
 @dac.describe(user="The Discord user owning the profiles lsited by the command.  If none, it defaults to you.")
-@dac.describe(profile_id="The profile ID of the character you'd like to view.  Use /listprofiles to see the name and ID other profiles!")
+@dac.describe(profile_id="The profile ID of the character you'd like to view.  Use /listprofiles to see the name and ID for profiles!")
 async def showprofile(interaction : dis.Interaction,
                       user        : Optional[dis.User] = None,
                       profile_id  : Optional[dac.Range[str, 0, 36]] = None): #The length of a UUID

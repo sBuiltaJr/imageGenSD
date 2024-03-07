@@ -120,16 +120,17 @@ def getDefaultProfile() -> Profile:
 
     return default
 
-def getDefaultOptions() -> dict:
+def getDefaultOptions(creator : Optional[int] = None,
+                      owner   : Optional[int] = None) -> dict:
     """Returns a default dictionary of options accepted by the Profile class.
 
-       Input: None
+       Input: id - an optional Discord user ID to assign to a profile.
 
        Output: dict - a complete dictionary of default options.
     """
     opts = {'affinity' : None,
             'battles'  : None,
-            'creator'  : None,
+            'creator'  : creator,
             'desc'     : None,
             'exp'      : None,
             'favorite' : None,
@@ -141,7 +142,7 @@ def getDefaultOptions() -> dict:
             'losses'   : None,
             'missions' : None,
             'name'     : None,
-            'owner'    : None,
+            'owner'    : owner,
             'rarity'   : None,
             'stats'    : None,
             'wins'     : None

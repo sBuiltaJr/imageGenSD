@@ -1,4 +1,4 @@
 {
-	"put_new"   : "INSERT INTO IGSDUsers VALUES ('%s');",
+	"put_new"   : "INSERT INTO IGSDUsers VALUES ('%s', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);",
 	"table_fmt" : "IGSDKeygenWorkers (u_ID BIGINT UNSIGNED NOT NULL UNIQUE PRIMARY KEY, level_1_slot_1 UUID, level_1_slot_2 UUID, level_1_slot_3 UUID, level_1_slot_4 UUID, level_1_slot_5 UUID, level_2_slot_1 UUID, level_2_slot_2 UUID, level_2_slot_3 UUID, level_2_slot_4 UUID, level_2_slot_5 UUID, level_3_slot_1 UUID, level_3_slot_2 UUID, level_3_slot_3 UUID, level_3_slot_4 UUID, level_3_slot_5 UUID, level_4_slot_1 UUID, level_4_slot_2 UUID, level_4_slot_3 UUID, level_4_slot_4 UUID, level_4_slot_5 UUID, level_5_slot_1 UUID, level_5_slot_2 UUID, level_5_slot_3 UUID, level_5_slot_4 UUID, level_5_slot_5 UUID, level_6_slot_1 UUID, level_6_slot_2 UUID, level_6_slot_3 UUID, level_6_slot_4 UUID, level_6_slot_5 UUID);"
 }

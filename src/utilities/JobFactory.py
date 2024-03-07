@@ -99,6 +99,7 @@ class Job(ABC):
         embed.add_field(name='Strength', value=self.profile.stats.strength)
         embed.add_field(name='Description', value=self.profile.desc)
         embed.add_field(name='Favorite', value=f"{favorite}")
+        embed.add_field(name='Profile ID', value=self.profile.id)
 
         return embed
 

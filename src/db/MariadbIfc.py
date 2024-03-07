@@ -123,14 +123,14 @@ class MariadbIfc:
             self.db_log.info(f"Successfully connected to database: host: {options['host']} port: {options['port']} username: {options['user_name']} db: {options['database']}")
             self.db_log.debug(f"Loaded commands: {self.db_cmds} {self.pict_cmds} {self.prof_cmds} {self.user_cmds}")
 
-    def dailyDone(self,
-                  id  : Optional[str] = "x'fffffffffffffffffffffffffffffffe'") -> bool:
-        """Returns whether a user has already completed their daily actions.
+    def createNewUser(self,
+                      id : str) -> bool:
+        """Creates a new user profile in all assocaited tables, if needed.
 
             Input: self - Pointer to the current object instance.
-                   id - The user to look-up, defaults to the test user.
+                   id - The user's Discord ID, to act as their DB key.
 
-            Output: bool - True if the user has already done their dailies.
+            Output: bool - True if a user was created.
         """
         cursor = self.con.cursor(buffered=False)
         cmd    = ""
@@ -150,7 +150,36 @@ class MariadbIfc:
             cursor.execute(cmd)
             self.db_log.info(f"Created user")
 
+            cmd = (self.user_cmds['put_new']) % (id)
+            self.db_log.debug(f"Preparing to create user: {cmd}")
+            cursor.execute(cmd)
+            self.db_log.info(f"Updated user's economy entries.")
+
         else:
+
+            result = bool(user_profile[int(self.user_cmds['daily_index'])])
+            self.db_log.debug(f"User's daily value: {result}")
+
+        return result
+
+    def dailyDone(self,
+                  id  : Optional[str] = "x'fffffffffffffffffffffffffffffffe'") -> bool:
+        """Returns whether a user has already completed their daily actions.
+
+            Input: self - Pointer to the current object instance.
+                   id - The user to look-up, defaults to the test user.
+
+            Output: bool - True if the user has already done their dailies.
+        """
+        cursor = self.con.cursor(buffered=False)
+        cmd    = ""
+        result = False
+
+        if not self.createNewUser(id) :
+
+            cmd = (self.user_cmds['get_user']) % (id)
+            self.db_log.debug(f"Executing get user command: {cmd}")
+            cursor.execute(cmd)
 
             result = bool(user_profile[int(self.user_cmds['daily_index'])])
             self.db_log.debug(f"User's daily value: {result}")
@@ -264,7 +293,7 @@ class MariadbIfc:
 
         self.db_log.debug(f"Got results: {results}")
 
-        return 
+        return
 
     def getUnoccupiedProfiles(self,
                               user_id : int) -> list:
@@ -311,7 +340,7 @@ class MariadbIfc:
         stat_opts['endurance'] = query[7]
         stat_opts['luck']      = query[8]
         stat_opts['strength']  = query[9]
-        
+
         stats = sc.Stats(rarity=rc.RarityList(int(query[21])),
                          opts=stat_opts)
         self.db_log.debug(f"Stats map output was: {pic.dumps(stats)}")
@@ -336,7 +365,7 @@ class MariadbIfc:
         prof_opts['wins']     = query[22]
         profile=pg.Profile(opts=prof_opts)
         self.db_log.debug(f"Profile map output was: {profile}")
-        
+
         return profile
 
     def resetDailyRoll(self):

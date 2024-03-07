@@ -34,39 +34,8 @@ class DropDownTypeEnum(IntEnum):
 #####  Abstract Classes  #####
 class DynamicDropdown(ABC, dis.ui.Select):
 
-    async def on_timeout(self):
-        """Handles the timeout interaction inherent to discord interactions.
-
-           Input : self - a pointer to the current object.
-
-           Output : None.
-        """
-        # remove buttons on timeout
-        message = await self.interaction.original_response()
-        await message.edit(view=None)
-
-    async def interaction_check(self,
-                                interaction : dis.Interaction) -> bool:
-        """Validates an interaction to ensure the message author is the only
-           person attempting to navigate through the pages.
-
-           Input : self - a pointer to the current object.
-                   interaction - the interaction spawning this object.
-
-           Output : bool - True if the author sent this interaction.
-        """
-
-        if interaction.user == self.interaction.user:
-
-            return True
-
-        else:
-
-            emb = dis.Embed(description = f"Only the author of the command can perform this action.",
-                            color       = 16711680)
-
-            await interaction.response.send_message(embed=emb, ephemeral=True, delete_after=9.0)
-            return False
+    async def doWork(self):
+        pass
 
 
 #####  Drop Down Factory  Class  ####
@@ -268,6 +237,7 @@ class DropdownView(dis.ui.View):
 
            Output : None.
         """
+        self.interaction = ctx
 
         super().__init__(timeout=100)
 
@@ -276,6 +246,40 @@ class DropdownView(dis.ui.View):
                                                   type     = type,
                                                   metadata = metadata,
                                                   options  = options))
+
+    async def on_timeout(self):
+        """Handles the timeout interaction inherent to discord interactions.
+
+           Input : self - a pointer to the current object.
+
+           Output : None.
+        """
+        # remove buttons on timeout
+        message = await self.interaction.original_response()
+        await message.edit(view=None)
+
+    async def interaction_check(self,
+                                interaction : dis.Interaction) -> bool:
+        """Validates an interaction to ensure the message author is the only
+           person attempting to navigate through the pages.
+
+           Input : self - a pointer to the current object.
+                   interaction - the interaction spawning this object.
+
+           Output : bool - True if the author sent this interaction.
+        """
+
+        if interaction.user == self.interaction.user:
+
+            return True
+
+        else:
+
+            emb = dis.Embed(description = f"Only the author of the command can perform this action.",
+                            color       = 16711680)
+
+            await interaction.response.send_message(embed=emb, ephemeral=True, delete_after=9.0)
+            return False
 
 class DropDownFactory:
 

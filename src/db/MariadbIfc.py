@@ -372,6 +372,7 @@ class MariadbIfc:
         prof_opts['rarity']   = rc.RarityList(int(query[21]))
         prof_opts['stats']    = stats
         prof_opts['wins']     = query[22]
+        prof_opts['occupied'] = query[23]
         profile=pg.Profile(opts=prof_opts)
         self.db_log.debug(f"Profile map output was: {profile}")
 

@@ -43,7 +43,8 @@ class Profile:
         self.losses   = int(opts['losses'])   if opts['losses']   != None else 0
         self.missions = int(opts['missions']) if opts['missions'] != None else 0
         self.name     = nr.getRandomName()    if opts['name']     == None else opts['name']
-        self.owner    =  int(opts['owner'])   if opts['owner']    != None else DEFAULT_OWNER
+        self.occupied = int(opts['occupied']) if opts['occupied'] != None else False
+        self.owner    = int(opts['owner'])    if opts['owner']    != None else DEFAULT_OWNER
         self.rarity   = rc.Rarity.generateRarity(self) if opts['rarity'] == None else opts['rarity']
         self.wins     = int(opts['wins'])     if opts['wins']     != None else 0
         #The items below rely on items above.
@@ -142,6 +143,7 @@ def getDefaultOptions(creator : Optional[int] = None,
             'losses'   : None,
             'missions' : None,
             'name'     : None,
+            'occupied' : False,
             'owner'    : owner,
             'rarity'   : None,
             'stats'    : None,
@@ -174,6 +176,7 @@ def getMascotOptions() -> dict:
             'losses'   : None,
             'missions' : None,
             'name'     : "IGSD Mascot",
+            'occupied' : False,
             'owner'    : DEFAULT_OWNER,
             'rarity'   : rc.RarityList.CUSTOM,
             'stats'    : sc.Stats(rarity=rc.RarityList.CUSTOM,

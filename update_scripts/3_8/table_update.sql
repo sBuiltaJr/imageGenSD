@@ -65,3 +65,13 @@ CREATE TABLE IF NOT EXISTS IGSDKeygenWorkers (u_ID           BIGINT UNSIGNED NOT
 											  level_6_slot_5 UUID);
 
 INSERT IGNORE INTO IGSDKeygenWorkers (u_ID) SELECT u_ID FROM IGSDUsers;
+
+
+CREATE TABLE IF NOT EXISTS  IGSDInventory (u_ID         BIGINT UNSIGNED NOT NULL UNIQUE PRIMARY KEY,
+                                           l1_key_count INT UNSIGNED NOT NULL DEFAULT 0,
+										   l2_key_count INT UNSIGNED NOT NULL DEFAULT 0,
+										   l3_key_count INT UNSIGNED NOT NULL DEFAULT 0,
+										   l4_key_count INT UNSIGNED NOT NULL DEFAULT 0,
+										   l5_key_count INT UNSIGNED NOT NULL DEFAULT 0);
+
+INSERT IGNORE INTO IGSDInventory (u_ID) SELECT u_ID FROM IGSDUsers;

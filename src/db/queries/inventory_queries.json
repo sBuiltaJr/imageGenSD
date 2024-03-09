@@ -1,0 +1,6 @@
+{
+	"del_default"  : "DELETE FROM IGSDInventory WHERE (u_ID = 1) LIMIT 1;",
+	"make_def_tst" : "INSERT INTO IGSDInventory VALUES (1,0, 0, 0, 0, 0);",
+	"put_new"      : "INSERT INTO IGSDInventory VALUES ('%s',0, 0, 0, 0, 0);",
+	"table_fmt"    : "IGSDInventory (u_ID BIGINT UNSIGNED NOT NULL UNIQUE PRIMARY KEY, l1_key_count INT UNSIGNED NOT NULL DEFAULT 0, l2_key_count INT UNSIGNED NOT NULL DEFAULT 0, l3_key_count INT UNSIGNED NOT NULL DEFAULT 0, l4_key_count INT UNSIGNED NOT NULL DEFAULT 0, l5_key_count INT UNSIGNED NOT NULL DEFAULT 0)"
+}

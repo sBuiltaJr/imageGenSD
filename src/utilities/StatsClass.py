@@ -52,11 +52,7 @@ def getRangeAverageList() -> list:
        Output: list - an iterable list of all the range averages.
     """
 
-    rarities = rc.RarityList.getStandardNameList()
-    #This cannot be done inside the generator because of note 4 on the Mutable
-    #Sequences Types table.
-    rarities.reverse()
-    return [stat.mean(getStatRange(x)) for x in rarities]
+    return [stat.mean(getStatRange(x)) for x in rc.RarityList.getStandardNameList()]
 
 
 def getDescription(rarity : rc.RarityList = rc.RarityList.COMMON) -> str:

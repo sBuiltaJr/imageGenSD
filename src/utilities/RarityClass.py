@@ -21,13 +21,13 @@ class RarityList(Enum):
 
     @classmethod
     def getStandardNameList(cls) -> list:
-        """Returns the rarities as an iterable list starting wtih the rarest.
+        """Returns the rarities as an iterable list starting with common.
 
            Input: self - A class instance reference.
 
            Output: List - An iterable list of rarities.
         """
-        return [cls.LEGENDARY, cls.ULTRA_RARE, cls.SUPER_RARE, cls.RARE, cls.UNCOMMON, cls.COMMON]
+        return [ cls.COMMON, cls.UNCOMMON, cls.RARE, cls.SUPER_RARE, cls.ULTRA_RARE, cls.LEGENDARY]
 
     @classmethod
     def getProbabilityList(cls) -> list:
@@ -41,7 +41,7 @@ class RarityList(Enum):
         #65% common 25% uncommon, 8.25% rare, 1.35% SR, .35% UR, .05% Legendary
         #Or, listed as summs from common to Legendary:
         #[65.0, 90.0, 98.25, 99.60, 99.95, 100.0]
-        return [0.0005, 0.0035, 0.0135, 0.0825, 0.25, 0.65]
+        return  [0.65, 0.25, 0.0825, 0.0135, 0.0035, 0.0005]
 
 
 #####  Rarity Class  #####

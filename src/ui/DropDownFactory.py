@@ -9,6 +9,7 @@ import discord as dis
 from enum import IntEnum, verify, UNIQUE
 import io
 import src.utilities.JobFactory as jf
+import src.utilities.StatsClass as sc
 from typing import Callable, Optional
 import traceback
 
@@ -34,15 +35,27 @@ class DropDownTypeEnum(IntEnum):
 #####  Abstract Classes  #####
 class DynamicDropdown(ABC, dis.ui.Select):
 
-    async def getFavorited(self):
-        pass
-
     async def getByRarity(self):
         pass
 
     async def getBySearchParameter(self):
         pass
 
+    async def getFavorited(self):
+        pass
+
+    @abstractmethod
+    def trimByGatingCriteria(self,
+                             choices : Optional[list] = None,
+                             opts    : Optional[dict] = None):
+        """Trimms the existing choices list by some defined criteria.
+
+           Input : self - a pointer to the current object.
+                   options - what critera to trim by.
+
+           Output : None.
+        """
+        pass
 
 #####  Drop Down Factory  Class  ####
 
@@ -66,10 +79,12 @@ class KeyGenDropdown(DynamicDropdown):
            Output : None.
         """
 
-        self.choices     = choices
         self.interaction = ctx
         self.metadata    = metadata
-        self.offset      = 0 if opts == None else int(opts['offset'])
+        self.offset      = 0 if 'offset' not in opts  else int(opts['offset'])
+        self.tier        = int(opts['tier']) if 'tier' in opts else 0
+
+        self.trimByGatingCriteria(choices=choices)
 
         #Note: this check isn't part of an __init__ mixin because the Select
         #__init__ doesn't pass arguments through Super, and because the 'slice'
@@ -86,7 +101,7 @@ class KeyGenDropdown(DynamicDropdown):
 
             slice = range(0, len(self.choices) - self.offset)
 
-        options = [dis.SelectOption(label=choices[self.offset + x].name,value=choices[self.offset + x].id) for x in slice]
+        options = [dis.SelectOption(label=self.choices[self.offset + x].name,value=self.choices[self.offset + x].id) for x in slice]
         options.append(dis.SelectOption(label='Next',   value=FORWARD_NAV_VALUE))
         options.append(dis.SelectOption(label='Back',   value=BACKWARD_NAV_VALUE))
         options.append(dis.SelectOption(label='Cancel', value=CANCEL_NAV_VALUE))
@@ -107,7 +122,7 @@ class KeyGenDropdown(DynamicDropdown):
 
         if self.values[0] == str(FORWARD_NAV_VALUE) or self.values[0] == str(BACKWARD_NAV_VALUE) :
 
-            opts           = {}
+            opts           = {'tier' : self.tier}
             next           = self.offset + DROPDOWN_ITEM_LIMIT_WITH_NAV * int(self.values[0])
             opts['offset'] = next if next >= 0 and next < len(self.choices) else self.offset
 
@@ -134,6 +149,20 @@ class KeyGenDropdown(DynamicDropdown):
             result = self.metadata['queue'].add(metadata = self.metadata,
                                                 job      = job)
             await interaction.response.edit_message(content=result)
+
+    #Note: this view gates by occupied == True and stats_avg >= range average
+    def trimByGatingCriteria(self,
+                             choices : Optional[list] = None,
+                             opts    : Optional[dict] = None):
+
+        self.choices = []
+
+        for choice in choices:
+
+            if not choice.occupied and choice.stats.average >= sc.getRangeAverageList()[self.tier] and choice not in self.choices :
+
+                self.choices.append(choice)
+
 
 class ShowDropdown(DynamicDropdown):
 
@@ -223,6 +252,11 @@ class ShowDropdown(DynamicDropdown):
             result = self.metadata['queue'].add(metadata = self.metadata,
                                                 job      = job)
             await interaction.response.edit_message(content=result)
+
+    def trimByGatingCriteria(self,
+                             choices : Optional[list] = None,
+                             opts    : Optional[dict] = None):
+        pass
 
 class DropdownView(dis.ui.View):
 

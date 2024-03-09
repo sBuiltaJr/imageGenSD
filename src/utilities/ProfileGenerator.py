@@ -31,26 +31,26 @@ class Profile:
            Output: None - Throws exceptions on error.
         """
 
-        self.affinity = int(opts['affinity']) if opts['affinity'] != None else 0
-        self.battles  = int(opts['battles'])  if opts['battles']  != None else 0
-        self.exp      = int(opts['exp'])      if opts['exp']      != None else 0
-        self.favorite = int(opts['favorite']) if opts['favorite'] != None else 0
-        self.history  = opts['history']       if opts['history']  != None else None
-        self.id       = str(opts['id'])       if opts['id']       != None else DEFAULT_ID
-        self.img_id   = str(opts['img_id'])   if opts['img_id']   != None else None #Separate to prevent laoded profiles from eating memory
-        self.info     = opts['info']          if opts['info']     != None else None
-        self.level    = int(opts['level'])    if opts['level']    != None else 0
-        self.losses   = int(opts['losses'])   if opts['losses']   != None else 0
-        self.missions = int(opts['missions']) if opts['missions'] != None else 0
-        self.name     = nr.getRandomName()    if opts['name']     == None else opts['name']
-        self.occupied = int(opts['occupied']) if opts['occupied'] != None else False
-        self.owner    = int(opts['owner'])    if opts['owner']    != None else DEFAULT_OWNER
+        self.affinity = int(opts['affinity'])  if opts['affinity'] != None else 0
+        self.battles  = int(opts['battles'])   if opts['battles']  != None else 0
+        self.exp      = int(opts['exp'])       if opts['exp']      != None else 0
+        self.favorite = int(opts['favorite'])  if opts['favorite'] != None else 0
+        self.history  = opts['history']        if opts['history']  != None else None
+        self.id       = str(opts['id'])        if opts['id']       != None else DEFAULT_ID
+        self.img_id   = str(opts['img_id'])    if opts['img_id']   != None else None #Separate to prevent laoded profiles from eating memory
+        self.info     = opts['info']           if opts['info']     != None else None
+        self.level    = int(opts['level'])     if opts['level']    != None else 0
+        self.losses   = int(opts['losses'])    if opts['losses']   != None else 0
+        self.missions = int(opts['missions'])  if opts['missions'] != None else 0
+        self.name     = nr.getRandomName()     if opts['name']     == None else opts['name']
+        self.occupied = bool(opts['occupied']) if opts['occupied'] != None else False
+        self.owner    = int(opts['owner'])     if opts['owner']    != None else DEFAULT_OWNER
         self.rarity   = rc.Rarity.generateRarity(self) if opts['rarity'] == None else opts['rarity']
-        self.wins     = int(opts['wins'])     if opts['wins']     != None else 0
+        self.wins     = int(opts['wins'])      if opts['wins']     != None else 0
         #The items below rely on items above.
         self.stats    = sc.Stats(rarity=self.rarity, opts=sc.getDefaultOptions()) if opts['stats'] == None else opts['stats']
-        self.creator  = int(opts['creator'])  if opts['creator'] != None else self.owner
-        self.desc     = opts['desc']          if opts['desc']    != None else sc.getDescription(self.rarity)
+        self.creator  = int(opts['creator']) if opts['creator'] != None else self.owner
+        self.desc     = opts['desc']         if opts['desc']    != None else sc.getDescription(self.rarity)
 
 #####  Package Functions  #####
 

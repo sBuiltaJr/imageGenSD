@@ -148,12 +148,13 @@ IGSD_client = IGSDClient(intents=intents)
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
-@dac.describe(tier="Which tier to manage character assignments in.  If none, it defaults to looping through the tiers, starting at 1.")
+@dac.describe(tier="Which tier to manage character assignments in.  1 mean 'common', 6 means 'legendary'.") #TODO: cycle through the tiers?
 async def assignkeygen(interaction : dis.Interaction,
                        tier        : Optional[dac.Range[int, 1, 6]] = None):
     """Creates a dropdown for assigning characters to the Key Generation job.
 
         Input  : interaction - the interaction context from Discord.
+                 tier - what rarity tier to assign for (1-based for teh average user)
 
         Output : N/A.
     """
@@ -179,7 +180,8 @@ async def assignkeygen(interaction : dis.Interaction,
         view = ddf.DropdownView(ctx      = interaction,
                                 type     = ddf.DropDownTypeEnum.ASSIGN_KEY_GEN,
                                 choices  = profiles,
-                                metadata = metadata)
+                                metadata = metadata,
+                                options  = {'tier' : tier-1})
 
         await interaction.response.send_message('Select a profile to view:',view=view)
 

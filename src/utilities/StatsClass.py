@@ -2,9 +2,9 @@
 
 
 #####  Imports  #####
-from . import RarityClass as rc
 import logging as log
 import random as rand
+import src.utilities.RarityClass as rc
 import statistics as stat
 from typing import Literal, Optional
 
@@ -43,6 +43,20 @@ def getStatRange(rarity : rc.RarityList) -> tuple:
 
         case _:
             return ( 0,   1)
+
+def getRangeAverageList() -> list:
+    """Returns a list of the average values for the stat ranges.
+
+       Input: N/A.
+
+       Output: list - an iterable list of all the range averages.
+    """
+
+    rarities = rc.RarityList.getStandardNameList()
+    #This cannot be done inside the generator because of note 4 on the Mutable
+    #Sequences Types table.
+    rarities.reverse()
+    return [stat.mean(getStatRange(x)) for x in rarities]
 
 
 def getDescription(rarity : rc.RarityList = rc.RarityList.COMMON) -> str:

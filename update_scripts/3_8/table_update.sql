@@ -1,8 +1,11 @@
 USE IGSD;
 
-ALTER TABLE IGSDProfiles ADD COLUMN IF NOT EXISTS occupied BOOLEAN;
+ALTER TABLE IGSDProfiles ADD COLUMN IF NOT EXISTS occupied BOOLEAN DEFAULT False;
+ALTER TABLE IGSDProfiles ADD COLUMN IF NOT EXISTS stats_avg FLOAT DEFAULT 0.0;
 
-ALTER TABLE IGSDProfiles ALTER occupied SET DEFAULT False;
+UPDATE IGSDProfiles SET stats_avg = (agility + defense + endurance + luck + strength)/5.0 WHERE stats_avg = 0.0;
+
+/*ALTER TABLE IGSDProfiles ALTER occupied SET DEFAULT False;*/
 
 CREATE TABLE IF NOT EXISTS IGSDEconomy (u_ID           BIGINT UNSIGNED NOT NULL UNIQUE PRIMARY KEY,
                                         builder_count  INT UNSIGNED NOT NULL DEFAULT 0,

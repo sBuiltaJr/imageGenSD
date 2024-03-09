@@ -92,6 +92,7 @@ class Job(ABC):
         embed.add_field(name='Owner', value=f"<@{self.profile.owner}>")
         embed.add_field(name='Name', value=self.profile.name)
         embed.add_field(name='Rarity', value=self.profile.rarity.name)
+        embed.add_field(name='Stats Average', value=f"{self.profile.stats.average:.2f}")
         embed.add_field(name='Agility', value=self.profile.stats.agility)
         embed.add_field(name='Defense', value=self.profile.stats.defense)
         embed.add_field(name='Endurance', value=self.profile.stats.endurance)

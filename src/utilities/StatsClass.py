@@ -2,9 +2,10 @@
 
 
 #####  Imports  #####
+from . import RarityClass as rc
 import logging as log
 import random as rand
-from . import RarityClass as rc
+import statistics as stat
 from typing import Literal, Optional
 
 
@@ -86,14 +87,15 @@ def getDefaultOptions() -> dict:
        Output: dict - a complete dictionary of default options.
     """
     opts = {'agility'   : None,
+            'average'   : None,
             'defense'   : None,
             'endurance' : None,
             'luck'      : None,
             'strength'  : None
            }
-    
+
     return opts
-    
+
 #####  Helper Classes  #####
 
 #####  Stats Class  #####
@@ -118,6 +120,8 @@ class Stats:
         self.endurance = int(opts['endurance']) if opts['endurance'] != None else rand.randint(self.range[0], self.range[1])
         self.luck      = int(opts['luck'])      if opts['luck']      != None else rand.randint(self.range[0], self.range[1])
         self.strength  = int(opts['strength'])  if opts['strength']  != None else rand.randint(self.range[0], self.range[1])
+        #The items below rely on items above.
+        self.average   = float(opts['average']) if opts['average']   != None else stat.mean(self.getStatsList())
 
     def getStatsList(self) -> list:
         """Returns the object's stats as a list.

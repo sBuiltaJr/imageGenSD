@@ -262,7 +262,7 @@ async def generate(interaction: dis.Interaction,
                 'prompt'    : prompt,
                 'random'    : random,
                 'sampler'   : sampler,
-                'seed'      : -1,
+                'seed'      : seed,
                 'steps'     : steps,
                 'tag_cnt'   : tag_cnt,
                 'width'     : (width  - (width  % int(params['options']['step_size'])))

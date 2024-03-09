@@ -157,12 +157,12 @@ class MariadbIfc:
             self.db_log.info(f"Created user")
 
             cmd = (self.cmds['econ']['put_new']) % (id)
-            self.db_log.debug(f"Preparing to create user: {cmd}")
+            self.db_log.debug(f"Preparing to create user econ entry: {cmd}")
             cursor.execute(cmd)
             self.db_log.info(f"Updated user's economy entries.")
 
             cmd = (self.cmds['keyg']['put_new']) % (id)
-            self.db_log.debug(f"Preparing to create user: {cmd}")
+            self.db_log.debug(f"Preparing to create user keygen entry: {cmd}")
             cursor.execute(cmd)
             self.db_log.info(f"Updated user's keygen worker entries.")
 
@@ -345,6 +345,7 @@ class MariadbIfc:
         self.db_log.debug(f"Preparing to map query: {query}")
         stat_opts              = sc.getDefaultOptions()
         stat_opts['agility']   = query[5]
+        stat_opts['average']   = float(query[24])
         stat_opts['defense']   = query[6]
         stat_opts['endurance'] = query[7]
         stat_opts['luck']      = query[8]
@@ -448,11 +449,12 @@ class MariadbIfc:
 
         else:
 
-            cmd = (self.cmds['prof']['put_new']) % (self.cmds['db']['default_id'], id, entry.creator, entry.stats.agility, entry.stats.defense, entry.stats.endurance, entry.stats.luck, entry.stats.strength, entry.desc, entry.favorite, json.dumps(entry.info), entry.name, entry.rarity.value)
+            cmd = (self.cmds['prof']['put_new']) % (self.cmds['db']['default_id'], id, entry.creator, entry.stats.agility, entry.stats.defense, entry.stats.endurance, entry.stats.luck, entry.stats.strength, entry.desc, entry.favorite, json.dumps(entry.info), entry.name, entry.rarity.value, entry.stats.average)
             self.db_log.debug(f"Preparing to add profile: {cmd}")
             cursor.execute(cmd)
             #We don't actually know the GUID until we get it back from the DB.
             pr_uid=cursor.fetchone()
+            profile.id = pr_uid[0]
             self.db_log.info(f"Stored profile with UID {pr_uid}")
 
             cmd = (self.cmds['pic']['put_new']) % ('0x' + str(pr_uid[0]).replace('-',''), pr_uid[1], json.dumps(entry.info), img)
@@ -533,29 +535,31 @@ class MariadbIfc:
             self.db_log.error(f"Error connecting to mariadb: {err}")
             return all_ok
 
-        try:
+        #try:
 
-            #The interface requries the cursor.
-            cursor = self.con.cursor(buffered=False)
-            cursor.execute((self.cmds['db']['create_db']) % self.args['database'])
-            self.con.database = self.args['database']
+        #The interface requries the cursor.
+        cursor = self.con.cursor(buffered=False)
+        cursor.execute((self.cmds['db']['create_db']) % self.args['database'])
+        self.con.database = self.args['database']
 
-            #It does pain me a little to write out a loop.
-            cursor.execute(self.cmds['db']['create_table'] + self.cmds['pic']['table_fmt'])
-            cursor.execute(self.cmds['db']['create_table'] + self.cmds['prof']['table_fmt'])
-            cursor.execute(self.cmds['db']['create_table'] + self.cmds['user']['table_fmt'])
+        #It does pain me a little to write out a loop.
+        cursor.execute(self.cmds['db']['create_table'] + self.cmds['econ']['table_fmt'])
+        cursor.execute(self.cmds['db']['create_table'] + self.cmds['keyg']['table_fmt'])
+        cursor.execute(self.cmds['db']['create_table'] + self.cmds['pic']['table_fmt'])
+        cursor.execute(self.cmds['db']['create_table'] + self.cmds['prof']['table_fmt'])
+        cursor.execute(self.cmds['db']['create_table'] + self.cmds['user']['table_fmt'])
 
-            #The script actually interacts with the Tables to truly confirm the
-            #permissions, instead of just relying on the GRANT table, to avoid
-            #having to parse the output and guess some of the parameters.
-            cursor.execute(self.cmds['pic']['del_default'])
-            cursor.execute(self.cmds['pic']['make_def_tst'])
-            cursor.execute(self.cmds['prof']['del_default'])
-            cursor.execute(self.cmds['prof']['make_def_tst'])
-            cursor.execute(self.cmds['user']['del_default'])
-            cursor.execute(self.cmds['user']['make_def_tst'])
+        #The script actually interacts with the Tables to truly confirm the
+        #permissions, instead of just relying on the GRANT table, to avoid
+        #having to parse the output and guess some of the parameters.
+        cursor.execute(self.cmds['pic']['del_default'])
+        cursor.execute(self.cmds['pic']['make_def_tst'])
+        cursor.execute(self.cmds['prof']['del_default'])
+        cursor.execute(self.cmds['prof']['make_def_tst'])
+        cursor.execute(self.cmds['user']['del_default'])
+        cursor.execute(self.cmds['user']['make_def_tst'])
 
-        except mariadb.OperationalError as err:
+        """except mariadb.OperationalError as err:
 
             self.db_log.error(f"Unable to access database: {err}")
             return all_ok
@@ -568,7 +572,7 @@ class MariadbIfc:
         except mariadb.Error as err:
 
             self.db_log.error(f"Error running mariadb commands: {err=}")
-            return all_ok
+            return all_ok"""
 
         all_ok = True;
 

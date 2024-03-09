@@ -34,7 +34,13 @@ class DropDownTypeEnum(IntEnum):
 #####  Abstract Classes  #####
 class DynamicDropdown(ABC, dis.ui.Select):
 
-    async def doWork(self):
+    async def getFavorited(self):
+        pass
+
+    async def getByRarity(self):
+        pass
+
+    async def getBySearchParameter(self):
         pass
 
 

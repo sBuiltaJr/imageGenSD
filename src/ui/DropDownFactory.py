@@ -79,7 +79,9 @@ class KeyGenDropdown(DynamicDropdown):
            Output : None.
         """
 
+        self.db          = mdb.MariadbIfc.getInstance(options=None)
         self.interaction = ctx
+        self.limit       = int(opts['limit'])
         self.metadata    = metadata
         self.offset      = 0 if 'offset' not in opts  else int(opts['offset'])
         self.tier        = int(opts['tier']) if 'tier' in opts else 0
@@ -106,7 +108,7 @@ class KeyGenDropdown(DynamicDropdown):
         options.append(dis.SelectOption(label='Back',   value=BACKWARD_NAV_VALUE))
         options.append(dis.SelectOption(label='Cancel', value=CANCEL_NAV_VALUE))
 
-        super().__init__(placeholder='Select a character to display.', min_values=1, max_values=1, options=options)
+        super().__init__(placeholder='Select a character to display.', min_values=1, max_values=self.limit, options=options)
 
     async def callback(self,
                        interaction: dis.Interaction):
@@ -122,7 +124,8 @@ class KeyGenDropdown(DynamicDropdown):
 
         if self.values[0] == str(FORWARD_NAV_VALUE) or self.values[0] == str(BACKWARD_NAV_VALUE) :
 
-            opts           = {'tier' : self.tier}
+            opts           = {'limit' : self.limit,
+                              'tier'  : self.tier}
             next           = self.offset + DROPDOWN_ITEM_LIMIT_WITH_NAV * int(self.values[0])
             opts['offset'] = next if next >= 0 and next < len(self.choices) else self.offset
 
@@ -141,14 +144,11 @@ class KeyGenDropdown(DynamicDropdown):
 
         elif self.values != None:
 
-            opts = {'id' : self.values[0]}
+            result = self.db.assignKeyGenWork(user_id     = self.interaction.user.id,
+                                              profile_ids = self.values,
+                                              tier        = self.tier)
 
-            job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOWPROFILE,
-                                       ctx     = self.interaction,
-                                       options = opts)
-            result = self.metadata['queue'].add(metadata = self.metadata,
-                                                job      = job)
-            await interaction.response.edit_message(content=result)
+            await interaction.response.edit_message(content=result,view=None)
 
     #Note: this view gates by occupied == True and stats_avg >= range average
     def trimByGatingCriteria(self,

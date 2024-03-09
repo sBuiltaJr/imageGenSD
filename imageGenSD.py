@@ -166,24 +166,32 @@ async def assignkeygen(interaction : dis.Interaction,
                 'queue'   : job_queue
                }
 
-    profiles = db_ifc.getUnoccupiedProfiles(interaction.user.id)
+    profiles = db_ifc.getUnoccupiedProfiles(user_id = interaction.user.id)
     dis_log.debug(f"Got profiles for assign Key Gen: {profiles}.")
 
-    if not profiles:
-    
+    options = db_ifc.getKeyGenParams(user_id = interaction.user.id)
+    dis_log.debug(f"Got Key Gen parameters: {options}.")
+
+    if not profiles or 'count' not in options:
+
         await interaction.response.send_message('You need a character first!  Use the /roll command to get one, or free existing profiles from their assignments!', ephemeral=True, delete_after=9.0)
+
+    elif int(options['count']) >= int(options['limit']):
+
+        await interaction.response.send_message("You've assigned all possible workers!  Either remove a worker or research more slots.", ephemeral=True, delete_after=9.0)
 
     else:
 
+        options['tier'] = tier-1
         dis_log.debug(f"Creating a ASSIGN KEY GEN view for user {interaction.user.id}.")
 
         view = ddf.DropdownView(ctx      = interaction,
                                 type     = ddf.DropDownTypeEnum.ASSIGN_KEY_GEN,
                                 choices  = profiles,
                                 metadata = metadata,
-                                options  = {'tier' : tier-1})
+                                options  = options)
 
-        await interaction.response.send_message('Select a profile to view:',view=view)
+        await interaction.response.send_message(f'Select a profile to assign to keygen work for tier {tier}:',view=view)
 
 def bannedWordsFound(prompt: str, banned_words: str) -> bool:
     """Tests if banded words exist in the provided parameters.  This is written

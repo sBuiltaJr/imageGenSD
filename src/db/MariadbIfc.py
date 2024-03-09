@@ -11,6 +11,7 @@ import json
 import logging as log
 import logging.handlers as lh
 import mariadb
+from mariadb.constants import *
 import os
 import pathlib as pl
 import pickle as pic
@@ -132,6 +133,72 @@ class MariadbIfc:
             self.db_log.info(f"Successfully connected to database: host: {options['host']} port: {options['port']} username: {options['user_name']} db: {options['database']}")
             self.db_log.debug(f"Loaded commands: {self.db_cmds} {self.cmds['pic']} {self.cmds['econ']} {paths['inv']} {self.cmds['keyg']} {self.cmds['prof']} {self.cmds['user']}")
 
+    def assignKeyGenWork(self,
+                         user_id     : int,
+                         profile_ids : list,
+                         tier        : int) -> str:
+        """Assigns a given list of profile IDs to the 'KeyGen' work action,
+           including updating the relevatn profile and econ table entries.
+
+            Input: self - Pointer to the current object instance.
+                   user_id - The Discord user assocaited with the action.
+                   profile_ids - a (verified) lsit of IDs to assign to work.
+                   tier - what level of work is being assigned.
+
+            Output: str - The assignment result.
+        """
+        cmd        = ""
+        cursor     = self.con.cursor(buffered=False)
+        key        = f'get_tier_{tier}'
+        #This is a workaround to the cursor interpreting None as 'None'
+        new_entry  = [INDICATOR.NULL,INDICATOR.NULL,INDICATOR.NULL,INDICATOR.NULL,INDICATOR.NULL, user_id]
+        result     = "Failed assignment for characters in tier {tier}!"
+        worker_cnt = 0
+
+        cmd = (self.cmds['keyg'][key]) % (user_id)
+        self.db_log.debug(f"Getting current user keygen allocation: {cmd}")
+        cursor.execute(cmd)
+        #This is returned as a tuple, so either way it has to be converted to a
+        #list at some point.
+        current_alloc = cursor.fetchone()
+        self.db_log.debug(f"Current user keygen allocation is: {len(current_alloc)}, {current_alloc.count(None)}, {current_alloc}")
+
+        slot_offset = len(current_alloc) - current_alloc.count(None)
+
+        #The remove function ensures that any existing workers always occupy
+        #the front slots (and that empty slots are at the end)
+        for worker in range(0, slot_offset):
+
+            new_entry[worker] = current_alloc[worker]
+            worker_cnt += 1
+
+        for slot in range(0, len(profile_ids)) :
+
+            new_entry[slot + slot_offset] = profile_ids[slot
+            worker_cnt += 1
+
+            cmd = (self.cmds['prof']['put_occupied']) % (profile_ids[slot])
+            self.db_log.debug(f"Preparing to mark a profile as occupied: {cmd}")
+            cursor.execute(cmd)
+            #Set worker occupied, update tier outside of loop, update econ stats
+
+        key = f'put_tier_{tier}'
+        data = tuple(new_entry)
+        cmd = (self.cmds['keyg'][key]) % (new_entry[0], new_entry[1], new_entry[2], new_entry[3], new_entry[4], user_id)
+        self.db_log.debug(f"Updating user's keygen work list for tier {tier}: {cmd}")
+        #This must be done as implemented due to how the mariadb python cursor
+        #handles (or rather, doesn't handle) NULL entries. See
+        #https://mariadb-corporation.github.io/mariadb-connector-python/usage.html#using-indicators
+        cursor.execute(self.cmds['keyg'][key], data)
+
+        cmd = (self.cmds['econ']['put_keygen_count']) % (worker_cnt, user_id)
+        self.db_log.debug(f"Updating user's econ keygen count: {cmd}")
+        cursor.execute(cmd)
+
+        result = f"Assigned the chosen characters to keygen work in tier {tier + 1}!"
+
+        return result
+
     def createNewUser(self,
                       id : str) -> bool:
         """Creates a new user profile in all assocaited tables, if needed.
@@ -141,8 +208,8 @@ class MariadbIfc:
 
             Output: bool - True if a user was created.
         """
-        cursor = self.con.cursor(buffered=False)
         cmd    = ""
+        cursor = self.con.cursor(buffered=False)
         result = False
 
         #TODO: Better user/profile management.
@@ -182,8 +249,8 @@ class MariadbIfc:
 
             Output: bool - True if the user has already done their dailies.
         """
-        cursor = self.con.cursor(buffered=False)
         cmd    = ""
+        cursor = self.con.cursor(buffered=False)
         result = False
 
         if not self.createNewUser(id) :
@@ -211,10 +278,10 @@ class MariadbIfc:
 
             Output: The image associated with the profile, if any.
         """
-        cursor     = self.con.cursor(buffered=False)
-        cmd        = ""
-        result     = None
-        pic_id     = 0
+        cmd    = ""
+        cursor = self.con.cursor(buffered=False)
+        result = None
+        pic_id = 0
 
         if picture_id == None:
 
@@ -258,10 +325,10 @@ class MariadbIfc:
 
             Output: str - The profile object found by the search, if any.
         """
-        cursor     = self.con.cursor(buffered=False)
-        cmd        = ""
-        profile    = None
-        result     = None
+        cmd     = ""
+        cursor  = self.con.cursor(buffered=False)
+        profile = None
+        result  = None
 
         self.db_log.info(f"Getting profile")
         cursor.execute((self.cmds['prof']['get_profile']) % id)
@@ -289,9 +356,9 @@ class MariadbIfc:
 
             Output: list - A list of all profiles found, if any.  None if not.
         """
-        cursor     = self.con.cursor(buffered=False)
-        cmd        = ""
-        results    = []
+        cmd     = ""
+        cursor  = self.con.cursor(buffered=False)
+        results = []
 
         self.db_log.info(f"Getting profiles for user {user_id}")
         cmd = (self.cmds['prof']['get_owned_profs']) % (user_id)
@@ -307,6 +374,35 @@ class MariadbIfc:
 
         return results
 
+    def getKeyGenParams(self,
+                        user_id : int) -> dict:
+        """Returns the Keygen parameters for a given user (limit, count, etc).
+
+            Input: self - Pointer to the current object instance.
+                   user_id - user ID to interrogate for their keygen limit.
+
+            Output: dict - the current user keygen stats.
+        """
+        cmd    = ""
+        cursor = self.con.cursor(buffered=False)
+        results = {}
+
+        self.db_log.info(f"Getting keygen worker limit for user {user_id}")
+        cmd = (self.cmds['econ']['get_keygen_params']) % (user_id)
+        self.db_log.debug(f"Executing command: {cmd}")
+        cursor.execute(cmd)
+
+        result = cursor.fetchone()
+
+        if result:
+
+            #This mapping is to minimize code changes if the paramaters change.
+            results = {'count' : result[0],
+                       'level' : result[1],
+                       'limit' : result[2]}
+
+        return results
+
     def getUnoccupiedProfiles(self,
                               user_id : int) -> list:
         """Returns all profiles not marked as 'occupied' for a given user.
@@ -316,9 +412,9 @@ class MariadbIfc:
 
             Output: list - A list of all profiles found, if any.  None if not.
         """
-        cursor     = self.con.cursor(buffered=False)
-        cmd        = ""
-        results    = []
+        cmd     = ""
+        cursor  = self.con.cursor(buffered=False)
+        results = []
 
         self.db_log.info(f"Getting unoccupied profiles for user {user_id}")
         cmd = (self.cmds['prof']['get_unoccupied_profs']) % (user_id)
@@ -390,9 +486,9 @@ class MariadbIfc:
 
             Output: N/A.
         """
-        cursor     = self.con.cursor(buffered=False)
-        cmd        = ""
-        result     = None
+        cmd    = ""
+        cursor = self.con.cursor(buffered=False)
+        result = None
 
         self.db_log.warning(f"Preparing to reset daily rolls.")
         cmd = (self.cmds['user']['reset_daily'])
@@ -421,8 +517,8 @@ class MariadbIfc:
 
             Output: N/A.
         """
-        cursor     = self.con.cursor(buffered=False)
         cmd        = ""
+        cursor     = self.con.cursor(buffered=False)
         entry      = profile
         entry.info = info
         owned      = None
@@ -509,6 +605,20 @@ class MariadbIfc:
             cursor.execute(cmd)
             self.db_log.info(f"Updated user {id}'s owned dict")
 
+            #Also, create other user table entries if they don't exist.
+            cmd = (self.cmds['econ']['put_new']) % (id)
+            self.db_log.debug(f"Creating user {id}'s econ table if it doesn't exist: {cmd}")
+            cursor.execute(cmd)
+            self.db_log.info(f"Creatied user {id}'s econ table if it didn't exist")
+            cmd = (self.cmds['keyg']['put_new']) % (id)
+            self.db_log.debug(f"Creating user {id}'s key gen table if it doesn't exist: {cmd}")
+            cursor.execute(cmd)
+            self.db_log.info(f"Creatied user {id}'s key gen table if it didn't exist")
+            cmd = (self.cmds['inv']['put_new']) % (id)
+            self.db_log.debug(f"Creating user {id}'s ivnentory table if it doesn't exist: {cmd}")
+            cursor.execute(cmd)
+            self.db_log.info(f"Creatied user {id}'s inventory table if it didn't exist")
+
     def validateInstall(self) -> bool:
         """Validates all the database components are accessable and usable by
            the script.
@@ -545,12 +655,14 @@ class MariadbIfc:
             cursor.execute((self.db_cmds['create_db']) % self.args['database'])
             self.con.database = self.args['database']
 
-            #It does pain me a little to write out a loop.
-            for value in self.cmds.values():
-                self.db_log.error(f"value is: {value}")
-                cursor.execute(self.db_cmds['create_table'] + value['table_fmt'])
-                cursor.execute(value['del_default'])
-                cursor.execute(value['make_def_tst'])
+            for table in self.cmds.values():
+
+                #The script actually interacts with the Tables to confirm the
+                #permissions, instead of just relying on the GRANT table, to
+                #avoid parsing it and having to guess some of the parameters.
+                cursor.execute(self.db_cmds['create_table'] + table['table_fmt'])
+                cursor.execute(table['del_default'])
+                cursor.execute(table['make_def_tst'])
 
         except mariadb.OperationalError as err:
 

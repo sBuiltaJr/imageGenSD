@@ -142,13 +142,22 @@ class KeyGenDropdown(DynamicDropdown):
             message = await self.interaction.original_response()
             await message.edit(view=None)
 
-        elif self.values != None:
+        elif self.values != None :
+
+            names = ""
+
+            for choice in self.choices :
+
+                #If only the select object also tracked choice IDs.
+                if choice.id in self.values :
+
+                    names += choice.name + ", "
 
             result = self.db.assignKeyGenWork(user_id     = self.interaction.user.id,
                                               profile_ids = self.values,
                                               tier        = self.tier)
 
-            await interaction.response.edit_message(content=result,view=None)
+            await interaction.response.edit_message(content=f"Assigned the chosen characters: {names}to keygen work in tier {self.tier + 1}!",view=None)
 
     #Note: this view gates by occupied == True and stats_avg >= range average
     def trimByGatingCriteria(self,

@@ -136,7 +136,7 @@ class MariadbIfc:
     def assignKeyGenWork(self,
                          user_id     : int,
                          profile_ids : list,
-                         tier        : int) -> str:
+                         tier        : int):
         """Assigns a given list of profile IDs to the 'KeyGen' work action,
            including updating the relevatn profile and econ table entries.
 
@@ -145,14 +145,13 @@ class MariadbIfc:
                    profile_ids - a (verified) lsit of IDs to assign to work.
                    tier - what level of work is being assigned.
 
-            Output: str - The assignment result.
+            Output: N/A.
         """
         cmd        = ""
         cursor     = self.con.cursor(buffered=False)
         key        = f'get_tier_{tier}'
         #This is a workaround to the cursor interpreting None as 'None'
         new_entry  = [INDICATOR.NULL,INDICATOR.NULL,INDICATOR.NULL,INDICATOR.NULL,INDICATOR.NULL, user_id]
-        result     = "Failed assignment for characters in tier {tier}!"
         worker_cnt = 0
 
         cmd = (self.cmds['keyg'][key]) % (user_id)
@@ -174,7 +173,7 @@ class MariadbIfc:
 
         for slot in range(0, len(profile_ids)) :
 
-            new_entry[slot + slot_offset] = profile_ids[slot
+            new_entry[slot + slot_offset] = profile_ids[slot]
             worker_cnt += 1
 
             cmd = (self.cmds['prof']['put_occupied']) % (profile_ids[slot])
@@ -182,9 +181,9 @@ class MariadbIfc:
             cursor.execute(cmd)
             #Set worker occupied, update tier outside of loop, update econ stats
 
-        key = f'put_tier_{tier}'
+        key  = f'put_tier_{tier}'
         data = tuple(new_entry)
-        cmd = (self.cmds['keyg'][key]) % (new_entry[0], new_entry[1], new_entry[2], new_entry[3], new_entry[4], user_id)
+        cmd  = (self.cmds['keyg'][key]) % (new_entry[0], new_entry[1], new_entry[2], new_entry[3], new_entry[4], user_id)
         self.db_log.debug(f"Updating user's keygen work list for tier {tier}: {cmd}")
         #This must be done as implemented due to how the mariadb python cursor
         #handles (or rather, doesn't handle) NULL entries. See
@@ -194,10 +193,6 @@ class MariadbIfc:
         cmd = (self.cmds['econ']['put_keygen_count']) % (worker_cnt, user_id)
         self.db_log.debug(f"Updating user's econ keygen count: {cmd}")
         cursor.execute(cmd)
-
-        result = f"Assigned the chosen characters to keygen work in tier {tier + 1}!"
-
-        return result
 
     def createNewUser(self,
                       id : str) -> bool:

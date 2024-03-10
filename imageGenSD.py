@@ -180,7 +180,7 @@ async def assignkeygen(interaction : dis.Interaction,
 
     elif int(options['tier']) < tier:
 
-        await interaction.response.send_message("You don't have access to this tier yet!  Start some /research and /building to upgrade!", ephemeral=True, delete_after=9.0)
+        await interaction.response.send_message(f"You don't have access to this tier yet!  Right now you can access tier {options['tier'] + 1}. Start some /research and /building to upgrade!", ephemeral=True, delete_after=9.0)
 
     elif int(options[f'tier_{tier}']['offset']) >= int(options[f'limit_t{tier}']):
 

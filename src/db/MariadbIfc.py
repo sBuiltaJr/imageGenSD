@@ -219,7 +219,7 @@ class MariadbIfc:
             self.db_log.debug(f"Preparing to create user econ entry: {cmd}")
             cursor.execute(cmd)
             self.db_log.info(f"Updated user's economy entries.")
-            
+
             cmd = (self.cmds['inv']['put_new']) % (id)
             self.db_log.debug(f"Creating user {id}'s ivnentory table: {cmd}")
             cursor.execute(cmd)
@@ -411,20 +411,9 @@ class MariadbIfc:
         #dict at some point.
         result = cursor.fetchone()
         self.db_log.debug(f"Current user keygen allocation is: {result}")
-        workers = {'tier_0' : {'workers' : [result[ 0], result[ 1],result[ 2],result[ 3],result[ 4]]},
-                   'tier_1' : {'workers' : [result[ 5], result[ 6],result[ 7],result[ 8],result[ 9]]},
-                   'tier_2' : {'workers' : [result[10], result[11],result[12],result[13],result[14]]},
-                   'tier_3' : {'workers' : [result[15], result[16],result[27],result[28],result[29]]},
-                   'tier_4' : {'workers' : [result[20], result[21],result[22],result[23],result[24]]},
-                   'tier_5' : {'workers' : [result[25], result[26],result[27],result[28],result[29]]}}
-        workers['tier_0']['offset'] = len(workers['tier_0']['workers']) - workers['tier_0']['workers'].count(None)
-        workers['tier_1']['offset'] = len(workers['tier_1']['workers']) - workers['tier_1']['workers'].count(None)
-        workers['tier_2']['offset'] = len(workers['tier_2']['workers']) - workers['tier_2']['workers'].count(None)
-        workers['tier_3']['offset'] = len(workers['tier_3']['workers']) - workers['tier_3']['workers'].count(None)
-        workers['tier_4']['offset'] = len(workers['tier_4']['workers']) - workers['tier_4']['workers'].count(None)
-        workers['tier_5']['offset'] = len(workers['tier_5']['workers']) - workers['tier_5']['workers'].count(None)
+        workers = self.mapQueryToKeyGenInfo(query=result)
         self.db_log.debug(f"Worker stats are: {workers}")
-        
+
         results |= workers
 
         return results
@@ -456,13 +445,38 @@ class MariadbIfc:
 
         return results
 
-    def mapQueryToProfile(self,
-                          query : list) -> pg.Profile:
-        """Maps the full return of a profile query to a Profile object.  This is
-           required because the DB stores profiels as their individual elements.
+    def mapQueryToKeyGenInfo(self,
+                             query : tuple) -> dict:
+        """Maps the elements of a key gen row to a managable dictionary.  This
+           is to help higher-level code parse the row data easier.
 
            Input: self - Pointer to the current object instance.
-                  query - a list representing a single profile from the DB.
+                  query - a tuple representing a single keygen row from the DB.
+
+           Output: dict - a dict of the results grouped by tier.
+        """
+        workers = {'tier_0' : {'workers' : [query[ 0], query[ 1],query[ 2],query[ 3],query[ 4]]},
+                   'tier_1' : {'workers' : [query[ 5], query[ 6],query[ 7],query[ 8],query[ 9]]},
+                   'tier_2' : {'workers' : [query[10], query[11],query[12],query[13],query[14]]},
+                   'tier_3' : {'workers' : [query[15], query[16],query[27],query[28],query[29]]},
+                   'tier_4' : {'workers' : [query[20], query[21],query[22],query[23],query[24]]},
+                   'tier_5' : {'workers' : [query[25], query[26],query[27],query[28],query[29]]}}
+        workers['tier_0']['offset'] = len(workers['tier_0']['workers']) - workers['tier_0']['workers'].count(None)
+        workers['tier_1']['offset'] = len(workers['tier_1']['workers']) - workers['tier_1']['workers'].count(None)
+        workers['tier_2']['offset'] = len(workers['tier_2']['workers']) - workers['tier_2']['workers'].count(None)
+        workers['tier_3']['offset'] = len(workers['tier_3']['workers']) - workers['tier_3']['workers'].count(None)
+        workers['tier_4']['offset'] = len(workers['tier_4']['workers']) - workers['tier_4']['workers'].count(None)
+        workers['tier_5']['offset'] = len(workers['tier_5']['workers']) - workers['tier_5']['workers'].count(None)
+
+        return workers
+
+    def mapQueryToProfile(self,
+                          query : tuple) -> pg.Profile:
+        """Maps the full return of a profile query to a Profile object.  This is
+           required because the DB stores profiles as their individual elements.
+
+           Input: self - Pointer to the current object instance.
+                  query - a tuple representing a single profile from the DB.
 
            Output: Profile - the query converted into a Profile, or the default
                              profile.
@@ -630,6 +644,56 @@ class MariadbIfc:
             self.db_log.debug(f"Updating user {id} owned dict: {cmd}")
             cursor.execute(cmd)
             self.db_log.info(f"Updated user {id}'s owned dict")
+
+    def updateDailyKeyGenWork(self):
+        """Creates keys for all users that have assigned workers to keygen
+           creation before daily reset.
+
+            Input: N/A
+
+            Output: N/A.
+        """
+        cmd    = ""
+        cursor = self.con.cursor(buffered=False)
+        result = None
+
+        self.db_log.warning(f"Preparing to update daily Key Gen counts.")
+
+        try:
+
+            #TODO: find the sordid single-line statement capable of doing this,
+            #instead of by-user.  The current user list is small enough that
+            #the waste is okay, but it should be corrected.
+            cmd = (self.cmds['keyg']['get_dailys'])
+            self.db_log.debug(f"Executing update daily Key Gen counts command: {cmd}")
+            cursor.execute(cmd)
+            
+            #Yes, this must be done this way because the subsequent cursor
+            #interactions will delete the query results.
+            results = cursor.fetchall()
+            self.db_log.debug(f"Found users to udpate: {results}")
+
+            #Reminder that the cursor returns all results as tuples.
+            for usr in results:
+
+
+                cmd = (self.cmds['keyg']['get_tier_all']) % (usr[0])
+                self.db_log.debug(f"Getting current user keygen worker allocation: {cmd}")
+                cursor.execute(cmd)
+
+                result = cursor.fetchone()
+                self.db_log.debug(f"Current user keygen allocation is: {result}")
+                workers = self.mapQueryToKeyGenInfo(query=result)
+                self.db_log.debug(f"Worker stats are: {workers}")
+                
+                cmd = (self.cmds['inv']['put_daily']) % (workers['tier_0']['offset'], workers['tier_1']['offset'], workers['tier_2']['offset'], workers['tier_3']['offset'], workers['tier_4']['offset'], workers['tier_5']['offset'], usr[0])
+                self.db_log.debug(f"Updating users keys with new values: {cmd}")
+                cursor.execute(cmd)
+                self.db_log.info(f"Updated user {usr[0]}'s keys")
+
+        except Exception as err:
+
+            self.db_log.error(f"Failed to update daily Keygen List!: {err=}")
 
     def validateInstall(self) -> bool:
         """Validates all the database components are accessable and usable by

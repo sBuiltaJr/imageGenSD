@@ -42,7 +42,7 @@ daily_mgr      = None
 daily_mgr_th   = None
 db_ifc         = None
 dict_path      = ["","",""]
-IGSD_version   = '0.3.7'
+IGSD_version   = '0.3.8'
 tag_randomizer = None
 #This will be modified in the future to accept user-supplied paths.
 #This file must be loaded prior to the logger to allow for user-provided
@@ -150,7 +150,7 @@ IGSD_client = IGSDClient(intents=intents)
 @dac.checks.has_permissions(use_application_commands=True)
 @dac.describe(tier="Which tier to manage character assignments in.  1 mean 'common', 6 means 'legendary'.") #TODO: cycle through the tiers?
 async def assignkeygen(interaction : dis.Interaction,
-                       tier        : Optional[dac.Range[int, 1, 6]] = None):
+                       tier        : Optional[dac.Range[int, 1, 6]] = 1):
     """Creates a dropdown for assigning characters to the Key Generation job.
 
         Input  : interaction - the interaction context from Discord.
@@ -165,6 +165,8 @@ async def assignkeygen(interaction : dis.Interaction,
                 'post_fn' : post,
                 'queue'   : job_queue
                }
+    #one-based counting is purely for user convenience.
+    tier -= 1
 
     profiles = db_ifc.getUnoccupiedProfiles(user_id = interaction.user.id)
     dis_log.debug(f"Got profiles for assign Key Gen: {profiles}.")
@@ -176,13 +178,17 @@ async def assignkeygen(interaction : dis.Interaction,
 
         await interaction.response.send_message('You need a character first!  Use the /roll command to get one, or free existing profiles from their assignments!', ephemeral=True, delete_after=9.0)
 
-    elif int(options['count']) >= int(options['limit']):
+    elif int(options['tier']) < tier:
 
-        await interaction.response.send_message("You've assigned all possible workers!  Either remove a worker or research more slots.", ephemeral=True, delete_after=9.0)
+        await interaction.response.send_message("You don't have access to this tier yet!  Start some /research and /building to upgrade!", ephemeral=True, delete_after=9.0)
+
+    elif int(options[f'tier_{tier}']['offset']) >= int(options[f'limit_t{tier}']):
+
+        await interaction.response.send_message(f"You've assigned all possible workers for tier {tier + 1}!  Either remove a worker or research more slots.", ephemeral=True, delete_after=9.0)
 
     else:
 
-        options['tier'] = tier-1
+        options['tier'] = tier
         dis_log.debug(f"Creating a ASSIGN KEY GEN view for user {interaction.user.id}.")
 
         view = ddf.DropdownView(ctx      = interaction,
@@ -191,7 +197,7 @@ async def assignkeygen(interaction : dis.Interaction,
                                 metadata = metadata,
                                 options  = options)
 
-        await interaction.response.send_message(f'Select a profile to assign to keygen work for tier {tier}:',view=view)
+        await interaction.response.send_message(f'Select a profile to assign to keygen work for tier {tier + 1}:',view=view)
 
 def bannedWordsFound(prompt: str, banned_words: str) -> bool:
     """Tests if banded words exist in the provided parameters.  This is written

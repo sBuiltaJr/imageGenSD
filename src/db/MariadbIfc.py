@@ -134,46 +134,40 @@ class MariadbIfc:
             self.db_log.debug(f"Loaded commands: {self.db_cmds} {self.cmds['pic']} {self.cmds['econ']} {paths['inv']} {self.cmds['keyg']} {self.cmds['prof']} {self.cmds['user']}")
 
     def assignKeyGenWork(self,
-                         user_id     : int,
+                         count       : int,
                          profile_ids : list,
-                         tier        : int):
+                         tier        : int,
+                         tier_data   : dict,
+                         user_id     : int):
         """Assigns a given list of profile IDs to the 'KeyGen' work action,
            including updating the relevatn profile and econ table entries.
 
             Input: self - Pointer to the current object instance.
-                   user_id - The Discord user assocaited with the action.
+                   count - the User's total worker count of this type of work.
                    profile_ids - a (verified) lsit of IDs to assign to work.
                    tier - what level of work is being assigned.
+                   tier_data - the worker data for this tier.
+                   user_id - The Discord user assocaited with the action.
 
             Output: N/A.
         """
         cmd        = ""
         cursor     = self.con.cursor(buffered=False)
-        key        = f'get_tier_{tier}'
+        key        = f'put_tier_{tier}'
         #This is a workaround to the cursor interpreting None as 'None'
         new_entry  = [INDICATOR.NULL,INDICATOR.NULL,INDICATOR.NULL,INDICATOR.NULL,INDICATOR.NULL, user_id]
-        worker_cnt = 0
-
-        cmd = (self.cmds['keyg'][key]) % (user_id)
-        self.db_log.debug(f"Getting current user keygen allocation: {cmd}")
-        cursor.execute(cmd)
-        #This is returned as a tuple, so either way it has to be converted to a
-        #list at some point.
-        current_alloc = cursor.fetchone()
-        self.db_log.debug(f"Current user keygen allocation is: {len(current_alloc)}, {current_alloc.count(None)}, {current_alloc}")
-
-        slot_offset = len(current_alloc) - current_alloc.count(None)
+        worker_cnt = count
 
         #The remove function ensures that any existing workers always occupy
         #the front slots (and that empty slots are at the end)
-        for worker in range(0, slot_offset):
+        for worker in range(0, tier_data['offset']):
 
-            new_entry[worker] = current_alloc[worker]
+            new_entry[worker] = tier_data['workers'][worker]
             worker_cnt += 1
 
         for slot in range(0, len(profile_ids)) :
 
-            new_entry[slot + slot_offset] = profile_ids[slot]
+            new_entry[slot + tier_data['offset']] = profile_ids[slot]
             worker_cnt += 1
 
             cmd = (self.cmds['prof']['put_occupied']) % (profile_ids[slot])
@@ -181,8 +175,8 @@ class MariadbIfc:
             cursor.execute(cmd)
             #Set worker occupied, update tier outside of loop, update econ stats
 
-        key  = f'put_tier_{tier}'
         data = tuple(new_entry)
+        self.db_log.debug(f"Data is: {data}")
         cmd  = (self.cmds['keyg'][key]) % (new_entry[0], new_entry[1], new_entry[2], new_entry[3], new_entry[4], user_id)
         self.db_log.debug(f"Updating user's keygen work list for tier {tier}: {cmd}")
         #This must be done as implemented due to how the mariadb python cursor
@@ -225,6 +219,11 @@ class MariadbIfc:
             self.db_log.debug(f"Preparing to create user econ entry: {cmd}")
             cursor.execute(cmd)
             self.db_log.info(f"Updated user's economy entries.")
+            
+            cmd = (self.cmds['inv']['put_new']) % (id)
+            self.db_log.debug(f"Creating user {id}'s ivnentory table: {cmd}")
+            cursor.execute(cmd)
+            self.db_log.info(f"Creatied user {id}'s inventory table")
 
             cmd = (self.cmds['keyg']['put_new']) % (id)
             self.db_log.debug(f"Preparing to create user keygen entry: {cmd}")
@@ -371,7 +370,8 @@ class MariadbIfc:
 
     def getKeyGenParams(self,
                         user_id : int) -> dict:
-        """Returns the Keygen parameters for a given user (limit, count, etc).
+        """Returns the Keygen parameters and current assigned workers for a
+           given user (limit, count, worker ids, etc).
 
             Input: self - Pointer to the current object instance.
                    user_id - user ID to interrogate for their keygen limit.
@@ -388,13 +388,44 @@ class MariadbIfc:
         cursor.execute(cmd)
 
         result = cursor.fetchone()
+        self.db_log.debug(f"Got result: {result}")
 
         if result:
 
             #This mapping is to minimize code changes if the paramaters change.
-            results = {'count' : result[0],
-                       'level' : result[1],
-                       'limit' : result[2]}
+            results = {'count'    : result[0],
+                       'tier'     : result[1],
+                       'limit_t0' : result[2],
+                       'limit_t1' : result[3],
+                       'limit_t2' : result[4],
+                       'limit_t3' : result[5],
+                       'limit_t4' : result[6],
+                       'limit_t5' : result[7]}
+
+        workers = {}
+
+        cmd = (self.cmds['keyg']['get_tier_all']) % (user_id)
+        self.db_log.debug(f"Getting current user keygen worker allocation: {cmd}")
+        cursor.execute(cmd)
+        #This is returned as a tuple, so either way it has to be converted to a
+        #dict at some point.
+        result = cursor.fetchone()
+        self.db_log.debug(f"Current user keygen allocation is: {result}")
+        workers = {'tier_0' : {'workers' : [result[ 0], result[ 1],result[ 2],result[ 3],result[ 4]]},
+                   'tier_1' : {'workers' : [result[ 5], result[ 6],result[ 7],result[ 8],result[ 9]]},
+                   'tier_2' : {'workers' : [result[10], result[11],result[12],result[13],result[14]]},
+                   'tier_3' : {'workers' : [result[15], result[16],result[27],result[28],result[29]]},
+                   'tier_4' : {'workers' : [result[20], result[21],result[22],result[23],result[24]]},
+                   'tier_5' : {'workers' : [result[25], result[26],result[27],result[28],result[29]]}}
+        workers['tier_0']['offset'] = len(workers['tier_0']['workers']) - workers['tier_0']['workers'].count(None)
+        workers['tier_1']['offset'] = len(workers['tier_1']['workers']) - workers['tier_1']['workers'].count(None)
+        workers['tier_2']['offset'] = len(workers['tier_2']['workers']) - workers['tier_2']['workers'].count(None)
+        workers['tier_3']['offset'] = len(workers['tier_3']['workers']) - workers['tier_3']['workers'].count(None)
+        workers['tier_4']['offset'] = len(workers['tier_4']['workers']) - workers['tier_4']['workers'].count(None)
+        workers['tier_5']['offset'] = len(workers['tier_5']['workers']) - workers['tier_5']['workers'].count(None)
+        self.db_log.debug(f"Worker stats are: {workers}")
+        
+        results |= workers
 
         return results
 
@@ -599,20 +630,6 @@ class MariadbIfc:
             self.db_log.debug(f"Updating user {id} owned dict: {cmd}")
             cursor.execute(cmd)
             self.db_log.info(f"Updated user {id}'s owned dict")
-
-            #Also, create other user table entries if they don't exist.
-            cmd = (self.cmds['econ']['put_new']) % (id)
-            self.db_log.debug(f"Creating user {id}'s econ table if it doesn't exist: {cmd}")
-            cursor.execute(cmd)
-            self.db_log.info(f"Creatied user {id}'s econ table if it didn't exist")
-            cmd = (self.cmds['keyg']['put_new']) % (id)
-            self.db_log.debug(f"Creating user {id}'s key gen table if it doesn't exist: {cmd}")
-            cursor.execute(cmd)
-            self.db_log.info(f"Creatied user {id}'s key gen table if it didn't exist")
-            cmd = (self.cmds['inv']['put_new']) % (id)
-            self.db_log.debug(f"Creating user {id}'s ivnentory table if it doesn't exist: {cmd}")
-            cursor.execute(cmd)
-            self.db_log.info(f"Creatied user {id}'s inventory table if it didn't exist")
 
     def validateInstall(self) -> bool:
         """Validates all the database components are accessable and usable by

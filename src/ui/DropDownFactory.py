@@ -81,10 +81,14 @@ class KeyGenDropdown(DynamicDropdown):
 
         self.db          = mdb.MariadbIfc.getInstance(options=None)
         self.interaction = ctx
-        self.limit       = int(opts['limit'])
         self.metadata    = metadata
         self.offset      = 0 if 'offset' not in opts  else int(opts['offset'])
         self.tier        = int(opts['tier']) if 'tier' in opts else 0
+        self.limit_key   = f'limit_t{self.tier}'
+        self.limit       = int(opts[self.limit_key])
+        self.tier_count  = opts['count']
+        self.tier_key    = f'tier_{self.tier}'
+        self.tier_data   = opts[self.tier_key]
 
         self.trimByGatingCriteria(choices=choices)
 
@@ -108,7 +112,7 @@ class KeyGenDropdown(DynamicDropdown):
         options.append(dis.SelectOption(label='Back',   value=BACKWARD_NAV_VALUE))
         options.append(dis.SelectOption(label='Cancel', value=CANCEL_NAV_VALUE))
 
-        super().__init__(placeholder='Select a character to display.', min_values=1, max_values=self.limit, options=options)
+        super().__init__(placeholder='Select a character to display.', min_values=1, max_values=(self.limit - self.tier_data['offset']), options=options)
 
     async def callback(self,
                        interaction: dis.Interaction):
@@ -124,13 +128,15 @@ class KeyGenDropdown(DynamicDropdown):
 
         if self.values[0] == str(FORWARD_NAV_VALUE) or self.values[0] == str(BACKWARD_NAV_VALUE) :
 
-            opts           = {'limit' : self.limit,
-                              'tier'  : self.tier}
+            opts           = {'count'        : self.tier_count,
+                              self.limit_key : self.limit,
+                              'tier'         : self.tier,
+                              self.tier_key  : self.tier_data }
             next           = self.offset + DROPDOWN_ITEM_LIMIT_WITH_NAV * int(self.values[0])
             opts['offset'] = next if next >= 0 and next < len(self.choices) else self.offset
 
             new_view = DropdownView(ctx      = self.interaction,
-                                    type     = DropDownTypeEnum.SHOW,
+                                    type     = DropDownTypeEnum.ASSIGN_KEY_GEN,
                                     metadata = self.metadata,
                                     choices  = self.choices,
                                     options  = opts)
@@ -148,14 +154,16 @@ class KeyGenDropdown(DynamicDropdown):
 
             for choice in self.choices :
 
-                #If only the select object also tracked choice IDs.
+                #If only the select object also tracked choice labels.
                 if choice.id in self.values :
 
                     names += choice.name + ", "
 
-            result = self.db.assignKeyGenWork(user_id     = self.interaction.user.id,
+            result = self.db.assignKeyGenWork(count       = self.tier_count,
                                               profile_ids = self.values,
-                                              tier        = self.tier)
+                                              tier        = self.tier,
+                                              tier_data   = self.tier_data,
+                                              user_id     = self.interaction.user.id)
 
             await interaction.response.edit_message(content=f"Assigned the chosen characters: {names}to keygen work in tier {self.tier + 1}!",view=None)
 

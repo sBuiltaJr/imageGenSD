@@ -83,7 +83,7 @@ class KeyGenDropdown(DynamicDropdown):
         self.db          = metadata['db_ifc']
         self.interaction = ctx
         self.metadata    = metadata
-        self.offset      = 0 if 'count' not in opts  else int(opts['count'])
+        self.offset      = 0 if 'count' not in opts else int(opts['count'])
         self.tier        = int(opts['tier']) if 'tier' in opts else 0
         self.limit_key   = f'limit_t{self.tier}'
         self.limit       = int(opts[self.limit_key])
@@ -136,11 +136,11 @@ class KeyGenDropdown(DynamicDropdown):
             
         elif str(FORWARD_NAV_VALUE) in self.values or str(BACKWARD_NAV_VALUE) in self.values:
 
-            opts           = {'total'        : self.tier_count,
-                              self.limit_key : self.limit,
-                              'tier'         : self.tier,
-                              self.tier_key  : self.tier_data}
-            next           = self.offset + DROPDOWN_ITEM_LIMIT_WITH_NAV * int(self.values[0])
+            opts          = {'total'        : self.tier_count,
+                             self.limit_key : self.limit,
+                             'tier'         : self.tier,
+                             'workers'      : {self.tier_key : self.tier_data}}
+            next          = self.offset + DROPDOWN_ITEM_LIMIT_WITH_NAV * int(self.values[0])
             opts['count'] = next if next >= 0 and next < len(self.choices) else self.offset
 
             new_view = DropdownView(ctx      = self.interaction,

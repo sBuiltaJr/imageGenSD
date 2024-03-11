@@ -170,10 +170,9 @@ class MariadbIfc:
             new_entry[slot + tier_data['count']] = profile_ids[slot]
             worker_cnt += 1
 
-            cmd = (self.cmds['prof']['put_occupied']) % (profile_ids[slot])
+            cmd = (self.cmds['prof']['put_occupied']) % (True, profile_ids[slot])
             self.db_log.debug(f"Preparing to mark a profile as occupied: {cmd}")
             cursor.execute(cmd)
-            #Set worker occupied, update tier outside of loop, update econ stats
 
         data = tuple(new_entry)
 
@@ -588,11 +587,39 @@ class MariadbIfc:
         cmd        = ""
         cursor     = self.con.cursor(buffered=False)
         key        = f'put_tier_{tier}'
-        #This is a workaround to the cursor interpreting None as 'None'
-        new_entry  = [INDICATOR.NULL,INDICATOR.NULL,INDICATOR.NULL,INDICATOR.NULL,INDICATOR.NULL, user_id]
-        worker_cnt = count
+        new_entry  = tier_data['workers']
 
-        pass
+        #This sorting is necessary to ensure only the lowest slots are filled.
+        for id in profile_ids:
+
+            new_entry.remove(id)
+
+        for null in range(0, len(profile_ids)) :
+
+            #This is a workaround to the cursor interpreting None as 'None'
+            new_entry.append(INDICATOR.NULL)
+
+        new_entry.append(user_id)
+
+        data = tuple(new_entry)
+
+        cmd  = (self.cmds['keyg'][key]) % (new_entry[0], new_entry[1], new_entry[2], new_entry[3], new_entry[4], user_id)
+        self.db_log.debug(f"Updating user's keygen work list for tier {tier}: {cmd}")
+        #This must be done as implemented due to how the mariadb python cursor
+        #handles (or rather, doesn't handle) NULL entries. See
+        #https://mariadb-corporation.github.io/mariadb-connector-python/usage.html#using-indicators
+        cursor.execute(self.cmds['keyg'][key], data)
+
+        cmd = (self.cmds['econ']['put_keygen_count']) % (count - len(profile_ids), user_id)
+        self.db_log.debug(f"Updating user's econ keygen count: {cmd}")
+
+        #Only update occupied after clearing the work table in case the command
+        #fails somehow, ensuring that the table won't have ghost workers.
+        for slot in range(0, len(profile_ids)) :
+
+            cmd = (self.cmds['prof']['put_occupied']) % (False, profile_ids[slot])
+            self.db_log.debug(f"Preparing to mark a profile as unoccupied: {cmd}")
+            cursor.execute(cmd)
 
     def resetDailyRoll(self):
         """Resets the 'daily' boolean for all user profiles, allowing them to

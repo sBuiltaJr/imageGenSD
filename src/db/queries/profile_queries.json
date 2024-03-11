@@ -1,5 +1,6 @@
 {
     "del_default"          : "DELETE FROM IGSDProfiles WHERE (pr_ID = 'ffffffff-ffff-ffff-ffff-fffffffffffe') LIMIT 1;",
+    "get_all_workers"      : "SELECT * FROM IGSDProfiles WHERE (pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s OR pr_ID=%s);",
     "get_owner"            : "SELECT owner FROM IGSDProfiles WHERE pr_ID = %s;",
     "get_image"            : "SELECT picture FROM IGSDPictures WHERE pi_ID = %s;",
     "get_owned_profs"      : "SELECT * FROM IGSDProfiles WHERE (owner = %s) ORDER BY name;",

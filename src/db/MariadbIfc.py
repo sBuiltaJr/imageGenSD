@@ -140,7 +140,7 @@ class MariadbIfc:
                          tier_data   : dict,
                          user_id     : int):
         """Assigns a given list of profile IDs to the 'KeyGen' work action,
-           including updating the relevatn profile and econ table entries.
+           including updating the relevant profile and econ table entries.
 
             Input: self - Pointer to the current object instance.
                    count - the User's total worker count of this type of work.
@@ -160,14 +160,14 @@ class MariadbIfc:
 
         #The remove function ensures that any existing workers always occupy
         #the front slots (and that empty slots are at the end)
-        for worker in range(0, tier_data['offset']):
+        for worker in range(0, tier_data['count']):
 
             new_entry[worker] = tier_data['workers'][worker]
             worker_cnt += 1
 
         for slot in range(0, len(profile_ids)) :
 
-            new_entry[slot + tier_data['offset']] = profile_ids[slot]
+            new_entry[slot + tier_data['count']] = profile_ids[slot]
             worker_cnt += 1
 
             cmd = (self.cmds['prof']['put_occupied']) % (profile_ids[slot])
@@ -176,7 +176,7 @@ class MariadbIfc:
             #Set worker occupied, update tier outside of loop, update econ stats
 
         data = tuple(new_entry)
-        self.db_log.debug(f"Data is: {data}")
+
         cmd  = (self.cmds['keyg'][key]) % (new_entry[0], new_entry[1], new_entry[2], new_entry[3], new_entry[4], user_id)
         self.db_log.debug(f"Updating user's keygen work list for tier {tier}: {cmd}")
         #This must be done as implemented due to how the mariadb python cursor
@@ -393,16 +393,16 @@ class MariadbIfc:
         if result:
 
             #This mapping is to minimize code changes if the paramaters change.
-            results = {'count'    : result[0],
-                       'tier'     : result[1],
-                       'limit_t0' : result[2],
-                       'limit_t1' : result[3],
-                       'limit_t2' : result[4],
-                       'limit_t3' : result[5],
-                       'limit_t4' : result[6],
-                       'limit_t5' : result[7]}
+            results = {'total'        : result[0],
+                       'current_tier' : result[1],
+                       'limit_t0'     : result[2],
+                       'limit_t1'     : result[3],
+                       'limit_t2'     : result[4],
+                       'limit_t3'     : result[5],
+                       'limit_t4'     : result[6],
+                       'limit_t5'     : result[7]}
 
-        workers = {}
+        prof = {}
 
         cmd = (self.cmds['keyg']['get_tier_all']) % (user_id)
         self.db_log.debug(f"Getting current user keygen worker allocation: {cmd}")
@@ -411,10 +411,59 @@ class MariadbIfc:
         #dict at some point.
         result = cursor.fetchone()
         self.db_log.debug(f"Current user keygen allocation is: {result}")
-        workers = self.mapQueryToKeyGenInfo(query=result)
-        self.db_log.debug(f"Worker stats are: {workers}")
+        prof['workers'] = self.mapQueryToKeyGenInfo(query=result)
+        self.db_log.debug(f"Worker stats are: {prof['workers']}")
 
-        results |= workers
+        results |= prof
+
+        return results
+
+    def getKeyGenProfiles(self,
+                          tier_data : dict,
+                          user_id   : int) -> list:
+        """Returns all profiles assigned to key gen work for a given user.
+
+            Input: self - Pointer to the current object instance.
+                   tier_data - the key gen parameters for the user.
+                   user_id - user ID to interrogate for profiles.
+
+            Output: list - A list of all profiles found, if any.  None if not.
+        """
+        cmd     = ""
+        cursor  = self.con.cursor(buffered=False)
+        #This is a workaround to the cursor interpreting None as 'None'.
+        ids    = [INDICATOR.NULL for x in range(0, int(self.cmds['keyg']['max_workers']))]
+        index   = 0
+        results = []
+
+        #It would be nice if I could give the cursor a list as if it were a
+        #SELECT statement or JOIN.
+        for tier in tier_data['workers'].values():
+
+            for id in range(0, int(tier['count'])):
+
+                ids[index] = tier['workers'][id]
+
+                #The downside of actually using the object as an iterable is
+                #the the loop has to manually track its current position.
+                index += 1
+
+        data = tuple(ids)
+        self.db_log.debug(f"IDs are: {ids}")
+
+        cmd  = (self.cmds['prof']['get_all_workers']) % data
+        self.db_log.debug(f"Getting all of a user's keygen profiles: {cmd}")
+        #This must be done as implemented due to how the mariadb python cursor
+        #handles (or rather, doesn't handle) NULL entries. See
+        #https://mariadb-corporation.github.io/mariadb-connector-python/usage.html#using-indicators
+        cursor.execute(self.cmds['prof']['get_all_workers'], data)
+
+        for x in cursor:
+
+            self.db_log.debug(f"Adding result: {x}")
+            results.append(self.mapQueryToProfile(query=x))
+
+        self.db_log.debug(f"Got results: {results}")
 
         return results
 
@@ -461,12 +510,12 @@ class MariadbIfc:
                    'tier_3' : {'workers' : [query[15], query[16],query[27],query[28],query[29]]},
                    'tier_4' : {'workers' : [query[20], query[21],query[22],query[23],query[24]]},
                    'tier_5' : {'workers' : [query[25], query[26],query[27],query[28],query[29]]}}
-        workers['tier_0']['offset'] = len(workers['tier_0']['workers']) - workers['tier_0']['workers'].count(None)
-        workers['tier_1']['offset'] = len(workers['tier_1']['workers']) - workers['tier_1']['workers'].count(None)
-        workers['tier_2']['offset'] = len(workers['tier_2']['workers']) - workers['tier_2']['workers'].count(None)
-        workers['tier_3']['offset'] = len(workers['tier_3']['workers']) - workers['tier_3']['workers'].count(None)
-        workers['tier_4']['offset'] = len(workers['tier_4']['workers']) - workers['tier_4']['workers'].count(None)
-        workers['tier_5']['offset'] = len(workers['tier_5']['workers']) - workers['tier_5']['workers'].count(None)
+        workers['tier_0']['count'] = len(workers['tier_0']['workers']) - workers['tier_0']['workers'].count(None)
+        workers['tier_1']['count'] = len(workers['tier_1']['workers']) - workers['tier_1']['workers'].count(None)
+        workers['tier_2']['count'] = len(workers['tier_2']['workers']) - workers['tier_2']['workers'].count(None)
+        workers['tier_3']['count'] = len(workers['tier_3']['workers']) - workers['tier_3']['workers'].count(None)
+        workers['tier_4']['count'] = len(workers['tier_4']['workers']) - workers['tier_4']['workers'].count(None)
+        workers['tier_5']['count'] = len(workers['tier_5']['workers']) - workers['tier_5']['workers'].count(None)
 
         return workers
 
@@ -517,6 +566,33 @@ class MariadbIfc:
         self.db_log.debug(f"Profile map output was: {profile}")
 
         return profile
+
+    def removeKeyGenWork(self,
+                         count       : int,
+                         profile_ids : list,
+                         tier        : int,
+                         tier_data   : dict,
+                         user_id     : int):
+        """Remvoes a given list of profile IDs to the 'KeyGen' work action,
+           including updating the relevant profile and econ table entries.
+
+            Input: self - Pointer to the current object instance.
+                   count - the User's total worker count of this type of work.
+                   profile_ids - a (verified) lsit of IDs to remove from work.
+                   tier - what level of work is being removed from.
+                   tier_data - the worker data for this tier.
+                   user_id - The Discord user assocaited with the action.
+
+            Output: N/A.
+        """
+        cmd        = ""
+        cursor     = self.con.cursor(buffered=False)
+        key        = f'put_tier_{tier}'
+        #This is a workaround to the cursor interpreting None as 'None'
+        new_entry  = [INDICATOR.NULL,INDICATOR.NULL,INDICATOR.NULL,INDICATOR.NULL,INDICATOR.NULL, user_id]
+        worker_cnt = count
+
+        pass
 
     def resetDailyRoll(self):
         """Resets the 'daily' boolean for all user profiles, allowing them to
@@ -667,7 +743,7 @@ class MariadbIfc:
             cmd = (self.cmds['keyg']['get_dailys'])
             self.db_log.debug(f"Executing update daily Key Gen counts command: {cmd}")
             cursor.execute(cmd)
-            
+
             #Yes, this must be done this way because the subsequent cursor
             #interactions will delete the query results.
             results = cursor.fetchall()
@@ -685,8 +761,8 @@ class MariadbIfc:
                 self.db_log.debug(f"Current user keygen allocation is: {result}")
                 workers = self.mapQueryToKeyGenInfo(query=result)
                 self.db_log.debug(f"Worker stats are: {workers}")
-                
-                cmd = (self.cmds['inv']['put_daily']) % (workers['tier_0']['offset'], workers['tier_1']['offset'], workers['tier_2']['offset'], workers['tier_3']['offset'], workers['tier_4']['offset'], workers['tier_5']['offset'], usr[0])
+
+                cmd = (self.cmds['inv']['put_daily']) % (workers['tier_0']['count'], workers['tier_1']['count'], workers['tier_2']['count'], workers['tier_3']['count'], workers['tier_4']['count'], workers['tier_5']['count'], usr[0])
                 self.db_log.debug(f"Updating users keys with new values: {cmd}")
                 cursor.execute(cmd)
                 self.db_log.info(f"Updated user {usr[0]}'s keys")

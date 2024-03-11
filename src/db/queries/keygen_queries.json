@@ -1,4 +1,5 @@
 {
+	"del_default"  : "DELETE FROM IGSDKeyGenWorkers WHERE (u_ID = 1) LIMIT 1;",
 	"get_all"      : "SELECT * FROM IGSDKeyGenWorkers;",
 	"get_dailys"   : "SELECT u_ID FROM IGSDKeyGenWorkers WHERE (SELECT COALESCE(tier_0_slot_1, tier_0_slot_2, tier_0_slot_3, tier_0_slot_4, tier_0_slot_5, tier_1_slot_1, tier_1_slot_2, tier_1_slot_3, tier_1_slot_4, tier_1_slot_5, tier_2_slot_1, tier_2_slot_2, tier_2_slot_3, tier_2_slot_4, tier_2_slot_5, tier_3_slot_1, tier_3_slot_2, tier_3_slot_3, tier_3_slot_4, tier_3_slot_5,tier_4_slot_1, tier_4_slot_2, tier_4_slot_3, tier_4_slot_4, tier_4_slot_5, tier_5_slot_1, tier_5_slot_2, tier_5_slot_3, tier_5_slot_4, tier_5_slot_5)) IS NOT NULL;",
 	"get_tier_all" : "SELECT tier_0_slot_1, tier_0_slot_2, tier_0_slot_3, tier_0_slot_4, tier_0_slot_5, tier_1_slot_1, tier_1_slot_2, tier_1_slot_3, tier_1_slot_4, tier_1_slot_5, tier_2_slot_1, tier_2_slot_2, tier_2_slot_3, tier_2_slot_4, tier_2_slot_5, tier_3_slot_1, tier_3_slot_2, tier_3_slot_3, tier_3_slot_4, tier_3_slot_5,tier_4_slot_1, tier_4_slot_2, tier_4_slot_3, tier_4_slot_4, tier_4_slot_5, tier_5_slot_1, tier_5_slot_2, tier_5_slot_3, tier_5_slot_4, tier_5_slot_5 FROM IGSDKeyGenWorkers WHERE (u_ID = %s);",
@@ -8,8 +9,8 @@
 	"get_tier_3"   : "SELECT tier_3_slot_1, tier_3_slot_2, tier_3_slot_3, tier_3_slot_4, tier_3_slot_5 FROM IGSDKeyGenWorkers WHERE (u_ID = %s);",
 	"get_tier_4"   : "SELECT tier_4_slot_1, tier_4_slot_2, tier_4_slot_3, tier_4_slot_4, tier_4_slot_5 FROM IGSDKeyGenWorkers WHERE (u_ID = %s);",
 	"get_tier_5"   : "SELECT tier_5_slot_1, tier_5_slot_2, tier_5_slot_3, tier_5_slot_4, tier_5_slot_5 FROM IGSDKeyGenWorkers WHERE (u_ID = %s);",
-	"del_default"  : "DELETE FROM IGSDKeyGenWorkers WHERE (u_ID = 1) LIMIT 1;",
 	"make_def_tst" : "INSERT INTO IGSDKeyGenWorkers VALUES (1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);",
+	"max_workers"  : "30",
 	"put_new"      : "INSERT IGNORE INTO IGSDKeyGenWorkers VALUES ('%s', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);",
 	"put_tier_0"   : "UPDATE IGSDKeyGenWorkers SET tier_0_slot_1=%s, tier_0_slot_2=%s, tier_0_slot_3=%s, tier_0_slot_4=%s, tier_0_slot_5=%s WHERE (u_ID = %s);",
 	"put_tier_1"   : "UPDATE IGSDKeyGenWorkers SET tier_1_slot_1=%s, tier_1_slot_2=%s, tier_1_slot_3=%s, tier_1_slot_4=%s, tier_1_slot_5=%s WHERE (u_ID = %s);",

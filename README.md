@@ -82,9 +82,31 @@ The bot will run in the terminal until killed with a `Ctrl+C` or similar.
 
 Test results are stored in `covhtml` located at the top-level directory.
 
+## To upgrade the database tables for a new version of IGSD
+
+`mariadb -u root -p < table_update.sql`
+
+You will need to use the password defined in the project's `config` file.
+
+Upgrade scripts can be found under the `update_scripts` folder and must be run
+in numeric order (e.g. `3.8` before `3.9`).
+
 ## Supported commands
 
 Note: All command require a user to have at least slash command privileges.
+
+`assignkeygen {tier}`
+
+- Assign at least one Character Profile to Key Generation work.
+
+Allows a user to fill key generation work slots with as many character
+profiles as is allowed by their economy settings.  Multiple characters can be
+assigned in a single action.  Selections will not be preserved across
+drop-down pages if a user tries to both select a profile and navigate to a new
+page in the same action.
+
+`tier` indicates which tier should be managed, with 1 as the lowest and 6 as
+the highest.  The command defaults to tier 1 if no selection is provided.
 
 `/generate {randomize} {tag_cnt} {prompt} {negative_prompt} {height} {width} {steps} {seed} {cfg_scale} {sampler}`
 
@@ -118,6 +140,17 @@ disabled after a timeout.
 Not specifying `user` will cause the menu to show the author's profiles.
 
 Only the command author is allowed to use the navigation buttons.
+
+`removekeygen( {tier}`
+
+- Remove at least one Character Profile from Key Generation work.
+
+Allows a user to free key generation work slots from as many character
+profiles as is allowed by their economy settings.  Multiple characters can be
+removed in a single action.
+
+`tier` indicates which tier should be managed, with 1 as the lowest and 6 as
+the highest.  The command defaults to tier 1 if no selection is provided.
 
 `/roll`
 

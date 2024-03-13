@@ -16,6 +16,7 @@ import json
 import pathlib as pl
 import re
 import requests as req
+import statistics as stat
 from typing import Callable, Optional, Any
 import unittest
 from unittest import IsolatedAsyncioTestCase as iatc
@@ -452,6 +453,42 @@ class TestRarityClass(unittest.TestCase):
 
         self.assertIn(value, rc.RarityList)
 
+    def testGetStandardNameList(self):
+        """Verifies that the getStandardNameList function returns the specific
+           list of standard expected names for the rarity class.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        rarity_list = rc.RarityList.getStandardNameList()
+
+        self.assertIn(rc.RarityList.COMMON,     rarity_list)
+        self.assertIn(rc.RarityList.UNCOMMON,   rarity_list)
+        self.assertIn(rc.RarityList.RARE,       rarity_list)
+        self.assertIn(rc.RarityList.SUPER_RARE, rarity_list)
+        self.assertIn(rc.RarityList.ULTRA_RARE, rarity_list)
+        self.assertIn(rc.RarityList.LEGENDARY,  rarity_list)
+
+    def testGetProbabilityList(self):
+        """Verifies that the getProbabilityList function returns the specific
+           lsit of standard probabilities for the rarity class.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        rarity_list = rc.RarityList.getProbabilityList()
+
+        self.assertIn(0.65,   rarity_list)
+        self.assertIn(0.25,   rarity_list)
+        self.assertIn(0.0825, rarity_list)
+        self.assertIn(0.0135, rarity_list)
+        self.assertIn(0.0035, rarity_list)
+        self.assertIn(0.0005, rarity_list)
+
     def testRarityClassBuilds(self):
         """A simple verification that the Rarity class will build correctly if
            given valid inputs.
@@ -482,9 +519,9 @@ class TestStatsClass(unittest.TestCase):
             stats = sc.Stats(rarity = rarity,
                              opts   = sc.getDefaultOptions())
 
-            range = stats.getStatsList()
+            stats_range = stats.getStatsList()
 
-            for stat in range:
+            for stat in stats_range:
 
                 self.assertTrue(isinstance(stat, int))
                 self.assertGreaterEqual(stat, sc.getStatRange(rarity)[0])
@@ -500,12 +537,12 @@ class TestStatsClass(unittest.TestCase):
         """
         for rarity in rc.RarityList:
 
-           range = sc.getStatRange(rarity = rarity)
+           stats_range = sc.getStatRange(rarity = rarity)
 
-           self.assertTrue(isinstance(range, tuple))
-           self.assertTrue(isinstance(range[0], int))
-           self.assertTrue(isinstance(range[1], int))
-           self.assertLess(range[0], range[1])
+           self.assertTrue(isinstance(stats_range, tuple))
+           self.assertTrue(isinstance(stats_range[0], int))
+           self.assertTrue(isinstance(stats_range[1], int))
+           self.assertLess(stats_range[0], stats_range[1])
 
     def testGetValidDescription(self):
         """Verifies that the GetValidDescription function returns valid values
@@ -517,9 +554,9 @@ class TestStatsClass(unittest.TestCase):
         """
         for rarity in rc.RarityList:
 
-           range = sc.getDescription(rarity = rarity)
+           rarity_range = sc.getDescription(rarity = rarity)
 
-           self.assertTrue(isinstance(range, str))
+           self.assertTrue(isinstance(rarity_range, str))
 
     def testStatsClassBuildsBasic(self):
         """A simple verification that the Stats class will build correctly if
@@ -553,6 +590,29 @@ class TestStatsClass(unittest.TestCase):
             stats = sc.Stats(rarity = rarity,
                              opts   = opts)
             self.assertTrue(True)
+
+    def testStatsClassGetRangeAverageList(self):
+        """Verifies that the getRangeAverageList function returns valid values
+           for all possible values of the rarity class Enum.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+        expected_averages = []
+
+        for rarity in rc.RarityList.getStandardNameList():
+
+            rarity_range = sc.getStatRange(rarity)
+            expected_averages.append(stat.mean(rarity_range))
+
+        averages = sc.getRangeAverageList()
+
+        self.assertEqual(len(expected_averages), len(averages))
+
+        for index in range(0, len(averages)) :
+
+            self.assertAlmostEqual(averages[index], expected_averages[index], places=2)
 
 
 #####  Tag Randomizer Class  #####

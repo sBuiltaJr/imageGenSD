@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 DEFAULT_DISPLAY_NAME = "UNIT TESTER 9000"
 DEFAULT_GUILD_ID     = 1111111111
 DEFAULT_PROFILE_ID   = 1234567890
+DEFAULT_UUID         = "ffffffff-ffff-ffff-ffff-fffffffffffe"
 
 
 #####  Mock Database Interface Class  #####
@@ -104,6 +105,27 @@ class MockDb():
 
 class MockDbInterface():
 
+    def assignKeyGenWork(self,
+                         count       : int,
+                         profile_ids : list,
+                         tier        : int,
+                         tier_data   : dict,
+                         user_id     : int):
+        """A bare minimum mock to ensure test compatability.
+           Note: a quick of the current implementation requires throwing an
+                 exception to exit the 'while True' loop in the function.
+
+           Input: self - Pointer to the current object instance.
+                  count - the User's total worker count of this type of work.
+                  profile_ids - a (verified) lsit of IDs to assign to work.
+                  tier - what level of work is being assigned.
+                  tier_data - the worker data for this tier.
+                  user_id - The Discord user assocaited with the action.
+
+           Output: N/A
+        """
+        pass
+
     def dailyDone(self,
                   id : int) ->bool:
         """A bare minimum mock to ensure test compatability.
@@ -164,8 +186,17 @@ class MockDbInterface():
 
             return None
 
-    def resetDailyRoll(self,
-                       options : dict) ->bool:
+    def resetDailyRoll(self) ->bool:
+        """A bare minimum mock to ensure test compatability.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: N/A
+        """
+
+        pass
+
+    def updateDailyKeyGenWork(self) ->bool:
         """A bare minimum mock to ensure test compatability.
            Note: a quick of the current implementation requires throwing an
                  exception to exit the 'while True' loop in the function.
@@ -175,7 +206,28 @@ class MockDbInterface():
            Output: N/A
         """
 
-        raise NotImplementedError
+        pass
+
+    def removeKeyGenWork(self,
+                             count       : int,
+                             profile_ids : list,
+                             tier        : int,
+                             tier_data   : dict,
+                             user_id     : int):
+        """A bare minimum mock to ensure test compatability.
+           Note: a quick of the current implementation requires throwing an
+                 exception to exit the 'while True' loop in the function.
+
+           Input: self - Pointer to the current object instance.
+                  count - the User's total worker count of this type of work.
+                  profile_ids - a (verified) lsit of IDs to remove from work.
+                  tier - what level of work is being removed from.
+                  tier_data - the worker data for this tier.
+                  user_id - The Discord user assocaited with the action.
+
+           Output: N/A
+        """
+        pass
 
     def saveRoll(self,
                  id      : int,

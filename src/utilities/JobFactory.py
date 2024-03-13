@@ -197,21 +197,21 @@ class GenerateJob(Job):
            Output: N/A.
         """
 
-        self.guild                  = ctx.guild_id
-        self.post_data              = pg.getDefaultJobData()
-        self.post_data['cfg_scale'] = options['cfg_scale']
-        self.post_data['height']    = options['height']
-        self.post_data['n_prompt']  = options['n_prompt']
-        self.post_data['prompt']    = options['prompt']
-        self.post_data['random']    = options['random']
-        self.post_data['sampler']   = options['sampler']
-        self.post_data['seed']      = options['seed']
-        self.post_data['steps']     = options['steps']
-        self.post_data['tag_cnt']   = options['tag_cnt']
-        self.post_data['width']     = options['width']
-        self.randomize              = bool(options['random'])
-        self.result                 = req.Response()
-        self.user_id                = ctx.user.id
+        self.guild                     = ctx.guild_id
+        self.post_data                 = pg.getDefaultJobData()
+        self.post_data['cfg_scale']    = options['cfg_scale']
+        self.post_data['height']       = options['height']
+        self.post_data['n_prompt']     = options['n_prompt']
+        self.post_data['prompt']       = options['prompt']
+        self.post_data['random']       = options['random']
+        self.post_data['sampler_name'] = options['sampler']
+        self.post_data['seed']         = options['seed']
+        self.post_data['steps']        = options['steps']
+        self.post_data['tag_cnt']      = options['tag_cnt']
+        self.post_data['width']        = options['width']
+        self.randomize                 = bool(options['random'])
+        self.result                    = req.Response()
+        self.user_id                   = ctx.user.id
 
     def doWork(self,
                web_url : str):

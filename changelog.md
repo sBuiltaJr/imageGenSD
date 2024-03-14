@@ -1,3 +1,51 @@
+# Version 0.3.7
+
+## Highlights
+
+- Added Unit Tests for most code.
+- Converted the `/showprofile` command to a dynamic dropdown for easier use and future expansion.
+- Modified how `MariadbIfc.py` returns profiles.
+- Enabled players to list/show other players owned characters.
+
+### Specific Changes
+
+- Added a dependency for `coverage.py` for code coverage.
+- Created `RunUnitTests.py` to execute all unit tests.
+	- Added unit test cases in the `scr/` folder, as required based on relative imports in relevant files.
+	- Unit tests can be invoked via `/path/to/venv/python RunUnitTests.py`
+	- Test results are stored in `covhtml` located at the top-level directory.
+- Added a `ui/` folder for containing files realted to Discord UI elements.
+	- Moved `MenuPagination.py` to the `/ui` folder for better logical grouping.
+		- Moved the `getPage` function into the `MenuPagination` class.
+		- Modified the `get_owned_profs` query to return all components of all owned profiles for a given user.
+- Updated `getProfiles` to return a list of complete profiles rather than one customized to `/listprofiles`.
+	- Created a common formatting function for mapping Query results to profile and stats objects. 
+	- Updated `getProfile` to use the common formatting function.
+- Refactored the `Stats` and `Profile` classes to accept a dictionary of options instead of individual parameters.
+	- Added `get` functions to provide default options for each class.
+-Created `DropDownFactory.py` for generating DropDown menu options for various commands.
+	- Added a `ShowDropdown` Class for use with the `/shwoprifle` command.
+		- The dropdown object posts any requests to the job queue (like any other command).
+	- Added Unit Tests for the `DropDownFactory.py` file.
+	- Created a base class for future dropdown menu types.
+	- Added the ability to navigate between pagianted lists of profiles within the dropdown menu.
+		- A user selects `next` from the dropdown to see the next list of profiles.
+		- A user selects `back` from the dropdown to see the previous list of profiles.
+		- A user selects `cancel` to disable the dropdown.
+		- the dropdown automatically disables after 100 seconds of inactivity.
+		- The dropdown does not dynamically add new profiles generated after the dropdown was created.
+- Modified the `/showprofile` command for better functionality and to use the dropdown factory.
+	- Added a user argument to view profiles from a specific user.
+		- If not given a user argument nor a specific profile ID, the command selects from the author's profiles.
+- Modified the `/listprofiles` command to accept a user argument.
+	- If supplied a user, the command will show a paginated list of all profiles that user owns.
+	- If not supplied a user, the command will show a paginated list of all profiles the command author owns.
+-Fixed minor formatting errors/typos across files.
+
+### Notes
+
+- The current unit tests do not provide 100% code coverage yet.
+
 # Version 0.3.6
 
 ## Highlights
@@ -6,7 +54,6 @@
 - Split the Tag Randomizer into its own log file.
 - Minor code cleanup as a result of the job factory.
 
-### Specific Changes
 
 - Created TagFactory.py to create specific jobs based on slash command.
 	- Replaced all slash commands using the queue with a factory equivalent.

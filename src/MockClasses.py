@@ -7,8 +7,9 @@ from typing import Callable, Optional, Any
 import unittest
 from unittest.mock import MagicMock
 
-DEFAULT_GUILD_ID   = 1111111111
-DEFAULT_PROFILE_ID = 1234567890
+DEFAULT_DISPLAY_NAME = "UNIT TESTER 9000"
+DEFAULT_GUILD_ID     = 1111111111
+DEFAULT_PROFILE_ID   = 1234567890
 
 
 #####  Mock Database Interface Class  #####
@@ -195,24 +196,6 @@ class MockDbInterface():
         pass
 
 
-#####  Mock GetPage Class  #####
-
-class MockGetPage():
-
-    async def get_page(self,
-                       index : int):
-        """A bare minimum mock to ensure test compatability.
-
-           Input: self - Pointer to the current object instance.
-                  index - which page to get.
-
-           Output: dis-Embed - a default Eiscord embed object.
-                   int - a valid value of pages for a menu.
-        """
-
-        return dis.Embed(), index
-
-
 #####  Mock Interaction Class  #####
 
 class MockInteraction():
@@ -252,6 +235,7 @@ class MockInteraction():
     class InteractionResponse():
 
         async def send_message(self,
+                               content      : Optional[str]       = None,
                                delete_after : Optional[float]     = None,
                                embed        : Optional[dis.Embed] = None,
                                ephemeral    : Optional[bool]      = None,
@@ -270,8 +254,9 @@ class MockInteraction():
             pass
 
         async def edit_message(self,
-                               embed        : Optional[dis.Embed] = None,
-                               view         : Optional[Any]       = None):
+                               content : Optional[str]       = None,
+                               embed   : Optional[dis.Embed] = None,
+                               view    : Optional[Any]       = None):
             """A bare minimum mock to ensure test compatability.
 
                Input: self - Pointer to the current object instance.
@@ -293,7 +278,8 @@ class MockInteraction():
                Output: none.
             """
 
-            self.id = DEFAULT_PROFILE_ID
+            self.id           = DEFAULT_PROFILE_ID
+            self.display_name = DEFAULT_DISPLAY_NAME
 
     def __init__(self):
         """A bare minimum mock to ensure test compatability.

@@ -52,7 +52,7 @@ class Job(ABC):
 
     def _getEmbedBaseForGenerate(self,
                                  info : dict) -> dis.Embed:
-        """Returns a Dsicord embed object formatted for generate-style posts.
+        """Returns a Discord embed object formatted for generate-style posts.
 
            Input: self - Pointer to the current object instance.
                   info - a dict of all the relevent embed parameters.
@@ -77,7 +77,7 @@ class Job(ABC):
         return embed
 
     def _getEmbedBaseForProfiles(self) -> dis.Embed:
-        """Returns a Dsicord embed object formatted for profile-style posts.
+        """Returns a Discord embed object formatted for profile-style posts.
 
            Input: self - Pointer to the current object instance.
                   info - a dict of all the relevent embed parameters.
@@ -209,7 +209,7 @@ class GenerateJob(Job):
         self.randomize              = bool(options['random'])
         self.result                 = req.Response()
         self.user_id                = ctx.user.id
-        self.profile                = pg.Profile(self.user_id)
+        self.profile                = pg.Profile(opts=pg.getDefaultOptions())
 
     def doWork(self,
                web_url : str):
@@ -261,7 +261,7 @@ class RollJob(Job):
         self.randomize           = bool(options['random'])
         self.result              = req.Response()
         self.user_id             = ctx.user.id
-        self.profile             = pg.Profile(self.user_id)
+        self.profile             = pg.Profile(opts=pg.getDefaultOptions())
 
     def doWork(self,
                web_url : str):

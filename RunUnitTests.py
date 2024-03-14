@@ -17,6 +17,7 @@ cov = coverage.Coverage()
 cov.start()
 from src import DbTests as dt
 from src import ManagersTests as mt
+from src import UiTests as uit
 from src import UtilitiesTests as ut
 
 #####  Test Class  #####
@@ -32,7 +33,7 @@ def testUtilities():
     suite  = unt.TestSuite()
     result = unt.TestResult()
     runner = unt.TextTestRunner()
-    
+
     #TODO: convert name randomizer into an instantiated class to avoid mock destroying the package
     #for all tests post-mock.
     suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ut.TestNameRandomizer))
@@ -44,11 +45,13 @@ def testUtilities():
     suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=mt.TestQueueManager))
 
     suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ut.TestJobFactory))
-    suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ut.TestMenuPagination))
     suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ut.TestProfileGenerator))
     suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ut.TestRarityClass))
     suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ut.TestStatsClass))
     suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ut.TestTagRandomizer))
+
+    suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=uit.TestMenuPagination))
+    suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=uit.TestDropdownFactory))
 
     print(runner.run(suite))
 

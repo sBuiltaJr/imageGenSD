@@ -6,7 +6,6 @@
 
 from . import MockClasses as mc
 from .utilities import JobFactory as jf
-from .utilities import MenuPagination as mp
 from .utilities import NameRandomizer as nr
 from .utilities import ProfileGenerator as pg
 from .utilities import RarityClass as rc
@@ -52,7 +51,7 @@ class TestJobFactory(iatc):
         """
 
         with self.assertRaises(NotImplementedError):
-            job = jf.JobFactory.getJob(type=8, ctx=self.interaction)
+            job = jf.JobFactory.getJob(type=-1, ctx=self.interaction)
 
     async def testRunGenerateJobFlow(self):
         """Verifies that the GenerateJob object returned from the Job Factory
@@ -306,171 +305,6 @@ class TestJobFactory(iatc):
         self.assertTrue(True)
 
 
-#####  Menu Pagination Class  #####
-
-class TestMenuPagination(iatc):
-
-
-    async def asyncSetUp(self):
-        """Method called to prepare the test fixture. This is called after
-           setUp(). This is called immediately before calling the test method;
-           other than AssertionError or SkipTest, any exception raised by this
-           method will be considered an error rather than a test failure. The
-           default implementation does nothing.
-
-           Input: self - Pointer to the current object instance.
-
-           Output: none.
-        """
-
-        self.interaction   = mc.MockInteraction()
-        self.mock_get_page = mc.MockGetPage()
-        self.get_page      = self.mock_get_page.get_page
-
-        with patch('discord.ui.View') as mc.MockView, patch('discord.ui.Button') as mc.MockUiButton:
-
-            self.uut = mp.MenuPagination(interaction=self.interaction,
-                                         get_page=self.get_page)
-
-    async def testInteractionCheckPasses(self):
-        """Verifies that the interaction_check function verifies only the post
-           author is allowed to interact with menu buttons.
-
-           Input: self - Pointer to the current object instance.
-
-           Output: none.
-        """
-
-        result = await self.uut.interaction_check(interaction=self.interaction)
-
-        self.assertTrue(result)
-
-    async def testInteractionCheckFails(self):
-        """Verifies that the interaction_check function verifies that users
-           other than the author are not allowed to interact with menu buttons.
-
-           Input: self - Pointer to the current object instance.
-
-           Output: none.
-        """
-
-        uut_interaction = mc.MockInteraction()
-
-        result = await self.uut.interaction_check(interaction=uut_interaction)
-
-        self.assertFalse(result)
-
-    async def testNavigatePassesOnOnePage(self):
-        """Verifies that the navigate function works for a 1-page navigation.
-
-           Input: self - Pointer to the current object instance.
-
-           Output: none.
-        """
-        self.uut.index = 1
-
-        await self.uut.navigate()
-
-        self.assertTrue(True)
-
-    async def testNavigatePassesOnManyPages(self):
-        """Verifies that the navigate function works for a >1-page navigation.
-
-           Input: self - Pointer to the current object instance.
-
-           Output: none.
-        """
-        self.uut.index = 10
-
-        await self.uut.navigate()
-
-        self.assertTrue(True)
-
-    async def testEditPagePasses(self):
-        """Verifies that the editPage function works.
-
-           Input: self - Pointer to the current object instance.
-
-           Output: none.
-        """
-
-        uut_interaction = mc.MockInteraction()
-
-        await self.uut.editPage(interaction=uut_interaction)
-
-        self.assertTrue(True)
-
-    async def testUpdateButtonsSinglePasses(self):
-        """Verifies that the updateButtons function works with a single page.
-
-           Input: self - Pointer to the current object instance.
-
-           Output: none.
-        """
-
-        self.uut.total_pages = 1
-        self.uut.index       = 1
-        self.uut.updateButtons()
-
-        self.assertTrue(self.uut.children[0].disabled)
-        self.assertTrue(self.uut.children[1].disabled)
-        self.assertTrue(self.uut.children[2].emoji.name == "⏮️")
-
-    async def testUpdateButtonsSinglePassesWithDifferentIndex(self):
-        """Verifies that the updateButtons function works with a single page
-           but not an equal number of total pages.
-
-           Input: self - Pointer to the current object instance.
-
-           Output: none.
-        """
-
-        self.uut.total_pages = 1
-        self.uut.index       = 0
-        self.uut.updateButtons()
-
-        self.assertFalse(self.uut.children[0].disabled)
-        self.assertFalse(self.uut.children[1].disabled)
-        self.assertTrue(self.uut.children[2].emoji.name == "⏭️")
-
-    async def testOnTimeoutPasses(self):
-        """Verifies that the on_timeout function works.
-
-           Input: self - Pointer to the current object instance.
-
-           Output: none.
-        """
-
-        await self.uut.on_timeout()
-
-        self.assertTrue(True)
-
-    async def testGetTotalPagesGivesValidValues(self):
-        """Verifies that the getTotalPages function returns valid values of the
-           correct type when given valid inputs.
-
-           Input: self - Pointer to the current object instance.
-
-           Output: none.
-        """
-
-        pages = self.uut.getTotalPages(total_items    = 0,
-                                       items_per_page = 1)
-        self.assertEqual(pages, 0)
-
-        pages = self.uut.getTotalPages(total_items    = 1,
-                                       items_per_page = 1)
-        self.assertEqual(pages, 1)
-
-        pages = self.uut.getTotalPages(total_items    = 10,
-                                       items_per_page = 1)
-        self.assertEqual(pages, 10)
-
-        pages = self.uut.getTotalPages(total_items    = 100,
-                                       items_per_page = 10)
-        self.assertEqual(pages, 10)
-
-
 #####  Name Randomizer Class  #####
 
 class TestNameRandomizer(unittest.TestCase):
@@ -550,7 +384,7 @@ class TestProfileGenerator(unittest.TestCase):
         nr.getRandomName.return_value = "Default Sally"
         owner                         = 1234567890
 
-        profile = pg.Profile(owner=owner)
+        profile = pg.Profile(opts=pg.getDefaultOptions())
 
         self.assertEqual(profile.name, "Default Sally")
 
@@ -566,25 +400,7 @@ class TestProfileGenerator(unittest.TestCase):
         nr.getRandomName              = MagicMock()
         nr.getRandomName.return_value = "Default Sally"
 
-        rarity  = rc.Rarity().generateRarity()
-        profile = pg.Profile(owner    = 1234567890,
-                             affinity = 1,
-                             battles  = 1,
-                             creator  = 1,
-                             desc     = "Default Description",
-                             exp      = 1,
-                             favorite = 1,
-                             history  = {},
-                             id       = 1,
-                             img_id   = 1,
-                             info     = {},
-                             level    = 1,
-                             losses   = 1,
-                             missions = 1,
-                             name     = "Default Sally",
-                             rarity   = rarity,
-                             stats    = sc.Stats(rarity),
-                             wins     = 1)
+        profile = pg.Profile(opts=pg.getMascotOptions())
 
         self.assertNotEqual(profile, None)
 
@@ -663,7 +479,8 @@ class TestStatsClass(unittest.TestCase):
         """
         for rarity in rc.RarityList:
 
-            stats = sc.Stats(rarity)
+            stats = sc.Stats(rarity = rarity,
+                             opts   = sc.getDefaultOptions())
 
             range = stats.getStatsList()
 
@@ -683,14 +500,15 @@ class TestStatsClass(unittest.TestCase):
         """
         for rarity in rc.RarityList:
 
-           range = sc.getStatRange(rarity)
+           range = sc.getStatRange(rarity = rarity)
+
            self.assertTrue(isinstance(range, tuple))
            self.assertTrue(isinstance(range[0], int))
            self.assertTrue(isinstance(range[1], int))
            self.assertLess(range[0], range[1])
 
     def testGetValidDescription(self):
-        """Verifies that the GetValidDescriptiog function returns valid values
+        """Verifies that the GetValidDescription function returns valid values
            for all possible values of the rarity class Enum.
 
            Input: self - Pointer to the current object instance.
@@ -699,7 +517,8 @@ class TestStatsClass(unittest.TestCase):
         """
         for rarity in rc.RarityList:
 
-           range = sc.getDescription(rarity)
+           range = sc.getDescription(rarity = rarity)
+
            self.assertTrue(isinstance(range, str))
 
     def testStatsClassBuildsBasic(self):
@@ -713,7 +532,8 @@ class TestStatsClass(unittest.TestCase):
 
         for rarity in rc.RarityList:
 
-            stats = sc.Stats(rarity)
+            stats = sc.Stats(rarity = rarity,
+                             opts   = sc.getDefaultOptions())
             self.assertTrue(True)
 
     def testStatsClassBuildsWithParams(self):
@@ -727,12 +547,11 @@ class TestStatsClass(unittest.TestCase):
 
         for rarity in rc.RarityList:
 
-            stats = sc.Stats(rarity    = rarity,
-                             agility   = 1,
-                             defense   = 1,
-                             endurance = 1,
-                             luck      = 1,
-                             strength  = 1)
+            opts   = sc.getDefaultOptions()
+            opts.update((x,1) for x in iter(opts))
+
+            stats = sc.Stats(rarity = rarity,
+                             opts   = opts)
             self.assertTrue(True)
 
 

@@ -185,7 +185,3 @@ def getMascotOptions() -> dict:
            }
 
     return opts
-
-
-
-

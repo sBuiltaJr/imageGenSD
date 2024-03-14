@@ -148,6 +148,20 @@ IGSD_client = IGSDClient(intents=intents)
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
+async def about(interaction : dis.Interaction):
+    """Displays the bot version and invite link.
+
+        Input  : interaction - the interaction context from Discord.
+
+        Output : N/A.
+    """
+    dis_log  = log.getLogger('discord')
+    
+    await interaction.response.send_message(f"This is bot version {IGSD_version}!  Invite me to your server with [this link](https://discord.com/api/oauth2/authorize?client_id=1084600126913388564&permissions=534723816512&scope=bot)!", ephemeral=True, delete_after=30.0)
+
+
+@IGSD_client.tree.command()
+@dac.checks.has_permissions(use_application_commands=True)
 @dac.describe(tier="Which tier to manage character assignments in.  1 mean 'common', 6 means 'legendary'.") #TODO: cycle through the tiers?
 async def assignkeygen(interaction : dis.Interaction,
                        tier        : Optional[dac.Range[int, 1, 6]] = 1):

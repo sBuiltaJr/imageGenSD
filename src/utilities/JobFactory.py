@@ -92,6 +92,8 @@ class Job(ABC):
         embed.add_field(name='Owner', value=f"<@{self.profile.owner}>")
         embed.add_field(name='Name', value=self.profile.name)
         embed.add_field(name='Rarity', value=self.profile.rarity.name)
+        embed.add_field(name='Occupied', value=self.profile.occupied)
+        embed.add_field(name='Stats Average', value=f"{self.profile.stats.average:.2f}")
         embed.add_field(name='Agility', value=self.profile.stats.agility)
         embed.add_field(name='Defense', value=self.profile.stats.defense)
         embed.add_field(name='Endurance', value=self.profile.stats.endurance)
@@ -99,6 +101,7 @@ class Job(ABC):
         embed.add_field(name='Strength', value=self.profile.stats.strength)
         embed.add_field(name='Description', value=self.profile.desc)
         embed.add_field(name='Favorite', value=f"{favorite}")
+        embed.add_field(name='Profile ID', value=self.profile.id)
 
         return embed
 
@@ -194,22 +197,21 @@ class GenerateJob(Job):
            Output: N/A.
         """
 
-        self.guild                  = ctx.guild_id
-        self.post_data              = pg.getDefaultJobData()
-        self.post_data['cfg_scale'] = options['cfg_scale']
-        self.post_data['height']    = options['height']
-        self.post_data['n_prompt']  = options['n_prompt']
-        self.post_data['prompt']    = options['prompt']
-        self.post_data['random']    = options['random']
-        self.post_data['sampler']   = options['sampler']
-        self.post_data['seed']      = options['seed']
-        self.post_data['steps']     = options['steps']
-        self.post_data['tag_cnt']   = options['tag_cnt']
-        self.post_data['width']     = options['width']
-        self.randomize              = bool(options['random'])
-        self.result                 = req.Response()
-        self.user_id                = ctx.user.id
-        self.profile                = pg.Profile(opts=pg.getDefaultOptions())
+        self.guild                     = ctx.guild_id
+        self.post_data                 = pg.getDefaultJobData()
+        self.post_data['cfg_scale']    = options['cfg_scale']
+        self.post_data['height']       = options['height']
+        self.post_data['n_prompt']     = options['n_prompt']
+        self.post_data['prompt']       = options['prompt']
+        self.post_data['random']       = options['random']
+        self.post_data['sampler_name'] = options['sampler']
+        self.post_data['seed']         = options['seed']
+        self.post_data['steps']        = options['steps']
+        self.post_data['tag_cnt']      = options['tag_cnt']
+        self.post_data['width']        = options['width']
+        self.randomize                 = bool(options['random'])
+        self.result                    = req.Response()
+        self.user_id                   = ctx.user.id
 
     def doWork(self,
                web_url : str):
@@ -261,7 +263,8 @@ class RollJob(Job):
         self.randomize           = bool(options['random'])
         self.result              = req.Response()
         self.user_id             = ctx.user.id
-        self.profile             = pg.Profile(opts=pg.getDefaultOptions())
+        self.profile             = pg.Profile(opts=pg.getDefaultOptions(creator = self.user_id,
+                                                                        owner   = self.user_id))
 
     def doWork(self,
                web_url : str):

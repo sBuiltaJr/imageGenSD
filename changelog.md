@@ -1,3 +1,64 @@
+# Version 0.3.8
+
+## Highlights
+
+- Added the `assignkeygen` and `removekeygen` to manage the key generation job.
+- Fixed a bug where the `/generate` command was ignoring seed inputs.
+- Created a DB script to migrate to the version 0.3.8 schemas.
+- Added new types of dropdown menus to manage the new slash commands.
+- Updated the profile displays to show profile ID and stats average.
+
+### Specific Changes
+
+- Added the `assignkeygen` command.
+	- The command allows a user's profiles to be assigned to creating keys for dungeons.
+	- Only profiles with stats >= to the average for their tier range can be assigned to work.
+		- Higher-tier profiles can be assigned to work in lower-profile slots.
+	- Users must specify which tier they wish to assign for.
+		- The command defaults to tier 1, the lowest tier.
+- Added the `removekeygen` command.
+	- The command allows a user's profiles to be removed from the work of creating dungeon keys.
+	- Users must specify which tier they wish to assign for.
+		- The command defaults to tier 1, the lowest tier.
+- Updated the `IGSDProfiles` with the `occupied` flag to show when a profile is assigned to work.
+- Created the `IGSDEconomy` table to track a users' economy settings.
+	- Defined several kinds of work (building, key generation, research, etc). to track in the table.
+	- Defined limits for how many profiles can be assigned to each kind of work.
+	- Associated all parameters with a Discord user profiles.
+	- Created `economy_queries.json` to store table queries in an easily accessible format.
+- Created the `IGSDInventory` to track work output for a given user.
+	- Gave all users a default of 1 dungeon key to ensure they can run at least one dungeon mission.
+	- Defined other categories (dust, tiered armor, tiered weapons, etc) for future commands and jobs.
+	- Created `inventory_queries.json` to store table queries in an easily accessible format
+- Created the `IGSDKeyGenWorkers` table to easily track which profiles a user owns are assigned to the keygen job.
+	- Added columns to track work across levels.
+	- The table relies on the tier limits set in the `IGSDEconomy` table.
+	- Created `keygen_queries.json` to store table queries in an easily accessible format.
+- Updated the Daily Event Manager to produce ekys based on the number of workers assigned to the key gen roll at daily reset.
+	- Renamed the `testDailyRollReseWorks` to `testDailyResetWork` for clarity of the work.
+- Created a new dropdown menu in the `DropDownFactory` for displaying profiles assignable under the `assignkeygen` command.
+	- Navigation works the same as the `showprofiles` dropdown menu.
+	- Dropdown choices are managed by the dropdown object.
+- Created a new dropdown menu in the `DropDownFactory` for displaying profiles removable from work under the `removekeygen` command.
+	- The dropdown does not have navigation (beyond `cancel`) since it will only ever handle 5 objects at most.
+- Added commands to `MariadbIfc.py` to manage the new tables and commands needed for them.
+	- Re-factored the command query file handling to enable the ability to loop.
+	- Added new initial table creation statements to account for all new tables added with the 3.8 changes.
+		- The init scripts do not calculate missing values, like stats averages.
+- Corrected the `/generate` command to accept the seed value provided by a user arg.
+- Added new unit tests to the `UiTests.py` file to test the new dropdown menus.
+- Added new unit tests to the `UtilitiesTests.py` file to handle the average stats functions.
+- Removed two additional tags from the `Tag_Randomizer_Dictionary.txt` file that were generating NSFW images.
+- Fixed several typos noticed in doc strings.
+- Fixed a bug that accidentally assigned all `/roll` results to the default profile.
+- Reversed the order of the rarities returned by `getStandardNameList` and `getProbabilityList` for better iteration.
+- Added a function to the `StatsClass` to return the average stat value for a stat profile.
+- Created a DB update script under `upgrade_scripts/3.8/` for migrating from an older DB.
+
+### Notes
+
+- You must run the DB update script in `upgrade_scripts/3.8/` to upgrade an existing 3.7 or earlier DB.
+
 # Version 0.3.7
 
 ## Highlights

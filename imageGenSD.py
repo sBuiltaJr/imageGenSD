@@ -42,7 +42,7 @@ daily_mgr      = None
 daily_mgr_th   = None
 db_ifc         = None
 dict_path      = ["","",""]
-IGSD_version   = '0.3.7'
+IGSD_version   = '0.3.8'
 tag_randomizer = None
 #This will be modified in the future to accept user-supplied paths.
 #This file must be loaded prior to the logger to allow for user-provided
@@ -146,6 +146,73 @@ IGSD_client = IGSDClient(intents=intents)
 
 #####  Package Functions  #####
 
+@IGSD_client.tree.command()
+@dac.checks.has_permissions(use_application_commands=True)
+async def about(interaction : dis.Interaction):
+    """Displays the bot version and invite link.
+
+        Input  : interaction - the interaction context from Discord.
+
+        Output : N/A.
+    """
+    dis_log  = log.getLogger('discord')
+    
+    await interaction.response.send_message(f"This is bot version {IGSD_version}!  Invite me to your server with [this link](https://discord.com/api/oauth2/authorize?client_id=1084600126913388564&permissions=534723816512&scope=bot)!", ephemeral=True, delete_after=30.0)
+
+
+@IGSD_client.tree.command()
+@dac.checks.has_permissions(use_application_commands=True)
+@dac.describe(tier="Which tier to manage character assignments in.  1 mean 'common', 6 means 'legendary'.") #TODO: cycle through the tiers?
+async def assignkeygen(interaction : dis.Interaction,
+                       tier        : Optional[dac.Range[int, 1, 6]] = 1):
+    """Assigns selected characters to key generation.  Only characters wtih stats above the average for their can be assigned to work on this job.
+
+        Input  : interaction - the interaction context from Discord.
+                 tier - what rarity tier to assign for (1-based for the average user)
+
+        Output : N/A.
+    """
+    dis_log  = log.getLogger('discord')
+    metadata = {'ctx'     : interaction,
+                'db_ifc'  : db_ifc,
+                'loop'    : IGSD_client.getLoop(),
+                'post_fn' : post,
+                'queue'   : job_queue
+               }
+    #one-based counting is purely for user convenience.
+    tier -= 1
+
+    profiles = db_ifc.getUnoccupiedProfiles(user_id = interaction.user.id)
+    dis_log.debug(f"Got profiles for assign Key Gen: {profiles}.")
+
+    options = db_ifc.getKeyGenParams(user_id = interaction.user.id)
+    dis_log.debug(f"Got Key Gen parameters: {options}.")
+
+    if not profiles or 'total' not in options:
+
+        await interaction.response.send_message('You need a character first!  Use the /roll command to get one, or free existing profiles from their assignments!', ephemeral=True, delete_after=9.0)
+
+    elif int(options['current_tier']) < tier:
+
+        await interaction.response.send_message(f"You don't have access to this tier yet!  Right now you can access tier {options['current_tier'] + 1}. Start some /research and /building to upgrade!", ephemeral=True, delete_after=9.0)
+
+    elif int(options['workers'][f'tier_{tier}']['count']) >= int(options[f'limit_t{tier}']):
+
+        await interaction.response.send_message(f"You've assigned all possible workers for tier {tier + 1}!  Either remove a worker or research more slots.", ephemeral=True, delete_after=9.0)
+
+    else:
+
+        options['tier'] = tier
+        dis_log.debug(f"Creating a ASSIGN KEY GEN view for user {interaction.user.id}.")
+
+        view = ddf.DropdownView(ctx      = interaction,
+                                type     = ddf.DropDownTypeEnum.ASSIGN_KEY_GEN,
+                                choices  = profiles,
+                                metadata = metadata,
+                                options  = options)
+
+        await interaction.response.send_message(f'Select a profile to assign to keygen work for tier {tier + 1}:',view=view)
+
 def bannedWordsFound(prompt: str, banned_words: str) -> bool:
     """Tests if banded words exist in the provided parameters.  This is written
        as a separate function to allow future updates to the banned word list
@@ -225,7 +292,7 @@ async def generate(interaction: dis.Interaction,
                 'prompt'    : prompt,
                 'random'    : random,
                 'sampler'   : sampler,
-                'seed'      : -1,
+                'seed'      : seed,
                 'steps'     : steps,
                 'tag_cnt'   : tag_cnt,
                 'width'     : (width  - (width  % int(params['options']['step_size'])))
@@ -373,6 +440,60 @@ async def post(job      : jf.Job,
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
+@dac.describe(tier="Which tier to manage character assignments in.  1 mean 'common', 6 means 'legendary'.") #TODO: cycle through the tiers?
+async def removekeygen(interaction : dis.Interaction,
+                       tier        : Optional[dac.Range[int, 1, 6]] = 1):
+    """Creates a dropdown for removing characters from the Key Generation job.
+
+        Input  : interaction - the interaction context from Discord.
+                 tier - what rarity tier to remove (1-based for the average user)
+
+        Output : N/A.
+    """
+    dis_log  = log.getLogger('discord')
+    metadata = {'ctx'     : interaction,
+                'db_ifc'  : db_ifc,
+                'loop'    : IGSD_client.getLoop(),
+                'post_fn' : post,
+                'queue'   : job_queue
+               }
+    #one-based counting is purely for user convenience.
+    tier -= 1
+
+    options = db_ifc.getKeyGenParams(user_id = interaction.user.id)
+    dis_log.debug(f"Got Key Gen parameters: {options}.")
+
+    profiles = db_ifc.getKeyGenProfiles(tier_data = options,
+                                        user_id   = interaction.user.id)
+    dis_log.debug(f"Got profiles for Remove Key Gen: {profiles}.")
+
+    if not profiles or 'total' not in options:
+
+        await interaction.response.send_message('You need a character first!  Use the /roll command to get one!', ephemeral=True, delete_after=9.0)
+
+    elif int(options['current_tier']) < tier:
+
+        await interaction.response.send_message(f"You don't have access to this tier yet!  Right now you can access tier {options['tier'] + 1}. Start some /research and /building to upgrade!", ephemeral=True, delete_after=9.0)
+
+    elif int(options['workers'][f'tier_{tier}']['count']) == 0:
+
+        await interaction.response.send_message(f"You have no workers assigned to tier {tier + 1}!  Use /assignkeygen to add workers!", ephemeral=True, delete_after=9.0)
+
+    else:
+
+        options['tier'] = tier
+        dis_log.debug(f"Creating a REMOVE KEY GEN view for user {interaction.user.id}.")
+
+        view = ddf.DropdownView(ctx      = interaction,
+                                type     = ddf.DropDownTypeEnum.REMOVE_KEY_GEN,
+                                choices  = profiles,
+                                metadata = metadata,
+                                options  = options)
+
+        await interaction.response.send_message(f'Select a profile to remove from keygen work for tier {tier + 1}:',view=view)
+
+@IGSD_client.tree.command()
+@dac.checks.has_permissions(use_application_commands=True)
 async def roll(interaction: dis.Interaction):
     """Generates a new character and saves them to the caller's character list.
 
@@ -412,7 +533,7 @@ async def roll(interaction: dis.Interaction):
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
 @dac.describe(user="The Discord user owning the profiles lsited by the command.  If none, it defaults to you.")
-@dac.describe(profile_id="The profile ID of the character you'd like to view.  Use /listprofiles to see the name and ID other profiles!")
+@dac.describe(profile_id="The profile ID of the character you'd like to view.  Use /listprofiles to see the name and ID for profiles!")
 async def showprofile(interaction : dis.Interaction,
                       user        : Optional[dis.User] = None,
                       profile_id  : Optional[dac.Range[str, 0, 36]] = None): #The length of a UUID
@@ -641,3 +762,12 @@ def Startup():
 
 if __name__ == '__main__':
     Startup()
+
+
+#/assignresearch
+#/assignCrafting?
+#/assignWorker?
+#/CreateTeam
+#/assignDungeon
+#/hospital
+#/shop

@@ -62,8 +62,8 @@ class TestDailyEventManager(unittest.TestCase):
         self.uut.start()
         self.assertTrue(True)
 
-    def testDailyRollReseWorks(self):
-        """A simple verification that the DailyRollRese task runs up to calling
+    def testDailyResetWorks(self):
+        """A simple verification that the DailyReset task runs up to calling
            the DB interface.
            Note: a quick of the current implementation requires throwing an
                  exception to exit the 'while True' loop in the function.
@@ -75,7 +75,7 @@ class TestDailyEventManager(unittest.TestCase):
         """
 
         time.sleep = MagicMock()
-        self.uut.dailyRollReset()
+        self.uut.dailyReset()
         self.assertTrue(True)
 
 #####  Queue Manager Class  #####

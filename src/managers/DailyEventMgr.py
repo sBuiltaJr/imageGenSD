@@ -58,17 +58,17 @@ class DailyEventManager:
         """
 
         self.dem_log.debug(f"Starting the Roll reset scheduler.")
-        #Youd think I could just use sched, but sched.run() will immediately
+        #You'd think I could just use sched, but sched.run() will immediately
         #run the queue contents, regardless of the actual delay time, making
         #the actual event scheduling pointless and quickly devolving into an
         #unblocked while loop.
         #So a separate thread with blunt sleep it is.
-        self.roll_thread = th.Thread(target=self.dailyRollReset,
-                                     name="Daily Roll Reset Thread",
+        self.roll_thread = th.Thread(target=self.dailyReset,
+                                     name="Daily Reset Thread",
                                      daemon=True)
         self.roll_thread.start()
 
-    def dailyRollReset(self):
+    def dailyReset(self):
         """Resets the daily roll tracker for all users.
 
            Input: self - Pointer to the current object instance.
@@ -78,7 +78,7 @@ class DailyEventManager:
 
         while self.keep_going:
             #This MUST be first to prevent auto-reset of the flag on reset.
-            #It does meam a restart spanning a UTC midnight will not reset
+            #It does mean a restart spanning a UTC midnight will not reset
             #until the next day, but it's an acceptable edge case.
             #TODO: find a nice way to force a manual refresh command owned only
             #by the bot/DB owner.
@@ -89,7 +89,7 @@ class DailyEventManager:
             self.dem_log.debug(f"Calculated the following for the next reset: {now} {midnight} delay_time: {delay_time}.")
             time.sleep(delay_time)
 
-            self.dem_log.warning(f"Resetting daily rolls!")
+            self.dem_log.info(f"Resetting daily rolls!")
             try:
 
                 self.db_ifc.resetDailyRoll()
@@ -98,6 +98,19 @@ class DailyEventManager:
             except Exception as err:
 
                 self.dem_log.error(f"Unable to reset the daily rolls!: {err=}")
+                self.keep_going = False
+
+            self.dem_log.info(f"Updating daily work!")
+            try:
+
+                #TODO: consider getting all econ data in a single query and
+                #passing elements to each function.
+                self.db_ifc.updateDailyKeyGenWork()
+                self.dem_log.info(f"Successfully updates all daily work output.")
+
+            except Exception as err:
+
+                self.dem_log.error(f"Unable to update daily work output!: {err=}")
                 self.keep_going = False
 
             self.dem_log.info(f"Scheduling the next reset.")

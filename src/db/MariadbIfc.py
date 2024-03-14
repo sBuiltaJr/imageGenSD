@@ -284,7 +284,7 @@ class MariadbIfc:
         stat_opts['endurance'] = query[7]
         stat_opts['luck']      = query[8]
         stat_opts['strength']  = query[9]
-        
+
         stats = sc.Stats(rarity=rc.RarityList(int(query[21])),
                          opts=stat_opts)
         self.db_log.debug(f"Stats map output was: {pic.dumps(stats)}")
@@ -309,7 +309,7 @@ class MariadbIfc:
         prof_opts['wins']     = query[22]
         profile=pg.Profile(opts=prof_opts)
         self.db_log.debug(f"Profile map output was: {profile}")
-        
+
         return profile
 
     def resetDailyRoll(self):

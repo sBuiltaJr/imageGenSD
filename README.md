@@ -27,6 +27,7 @@ bot can do to prevent this as it's a byproduct of the ML training set.
 - [Discord.py](https://discordpy.readthedocs.io/en/stable/index.html) 2.2.2 or later
 - [Mariadb](https://mariadb.com/) 11 or later
 - [Mariadb python connector](https://mariadb.com/resources/blog/how-to-connect-python-programs-to-mariadb/) 1.1.9 or later
+- [coverage.py](https://coverage.readthedocs.io/en/latest/index.html) 7.4.3 or later
 
 Many of these dependencies are inherited from the Stable-Diffusion project or
 are required to interface with a database.

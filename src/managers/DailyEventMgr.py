@@ -44,11 +44,12 @@ class DailyEventManager:
         self.dem_log.debug(f"Creating DB Interface.")
         #The options are empty because the interface is a singleton and should
         #already be initialized properly by the main thread.
-        self.db_ifc      = mdb.MariadbIfc.GetInstance(options={})
+        self.db_ifc      = mdb.MariadbIfc.getInstance(options={})
+        self.keep_going  = True
         self.roll_thread = None
 
     #TODO: manage persistent state information.
-    def Start(self):
+    def start(self):
         """Creates the initial events for the system.
 
            Input: self - Pointer to the current object instance.
@@ -62,12 +63,12 @@ class DailyEventManager:
         #the actual event scheduling pointless and quickly devolving into an
         #unblocked while loop.
         #So a separate thread with blunt sleep it is.
-        self.roll_thread = th.Thread(target=self.DailyRollReset,
-                                       name="Daily Roll Reset Thread",
-                                       daemon=True)
+        self.roll_thread = th.Thread(target=self.dailyRollReset,
+                                     name="Daily Roll Reset Thread",
+                                     daemon=True)
         self.roll_thread.start()
 
-    def DailyRollReset(self):
+    def dailyRollReset(self):
         """Resets the daily roll tracker for all users.
 
            Input: self - Pointer to the current object instance.
@@ -75,7 +76,7 @@ class DailyEventManager:
            Output: None.
         """
 
-        while True:
+        while self.keep_going:
             #This MUST be first to prevent auto-reset of the flag on reset.
             #It does meam a restart spanning a UTC midnight will not reset
             #until the next day, but it's an acceptable edge case.
@@ -91,11 +92,12 @@ class DailyEventManager:
             self.dem_log.warning(f"Resetting daily rolls!")
             try:
 
-                self.db_ifc.ResetDailyRoll()
+                self.db_ifc.resetDailyRoll()
                 self.dem_log.info(f"Daily roll reset complete")
 
             except Exception as err:
 
-                self.db_log.error(f"Unable to reset the daily rolls!: {err=}")
+                self.dem_log.error(f"Unable to reset the daily rolls!: {err=}")
+                self.keep_going = False
 
             self.dem_log.info(f"Scheduling the next reset.")

@@ -28,9 +28,8 @@ class TagRandomizer:
 
            Output: None - Throws exceptions on error.
         """
-
-        self.rngLog = log.getLogger('tagrng')
-        self.rngLog.setLevel(opts['log_lvl'])
+        self.rng_log = log.getLogger('tagrng')
+        self.rng_log.setLevel(opts['log_lvl'])
         log_path     = pl.Path(opts['log_name_tagrng'])
 
         logHandler = lh.RotatingFileHandler(filename=log_path.absolute(),
@@ -44,7 +43,7 @@ class TagRandomizer:
                                   style='{'
         )
         logHandler.setFormatter(formatter)
-        self.rngLog.addHandler(logHandler)
+        self.rng_log.addHandler(logHandler)
         #This is deliberately not a Path, like in the parent, to allow linecache
         #to read the file in case the user decided to provide a large file.
         #Also, apparently Pathlib is missing methods that cachelib is using
@@ -60,12 +59,12 @@ class TagRandomizer:
             #Note the possibility of IO exceptions if /dev/urandom (or similar)
             #is not initialized/empty on your machine.
             rand.seed(rand.getrandbits(64))
-            self.rngLog.debug(f"Using rand state: {rand.getstate()}")
+            self.rng_log.debug(f"Using rand state: {rand.getstate()}")
 
         except Exception as err:
-            self.rngLog.error(f"Error setting the RNG seed for the tag randomizer! {err}")
+            self.rng_log.error(f"Error setting the RNG seed for the tag randomizer! {err}")
 
-        self.rngLog.info(f"Initializing the Tag RNG class with parameters: dict path: {self.dict_path} dict_size: {self.dict_size} max tags: {self.max_tags} min_tags{self.min_tags}.")
+        self.rng_log.info(f"Initializing the Tag RNG class with parameters: dict path: {self.dict_path} dict_size: {self.dict_size} max tags: {self.max_tags} min_tags{self.min_tags}.")
 
     def getRandomTags(self, exact=0) -> (str, int):
         """Generates a string of comma-separated random tags extracted from the
@@ -94,7 +93,7 @@ class TagRandomizer:
 
             if tag_list.find(tag) > -1:
 
-                self.rngLog.debug(f"Found duplicate tag {tag} from tag_list {tag_list}, attempting to get another")
+                self.rng_log.debug(f"Found duplicate tag {tag} from tag_list {tag_list}, attempting to get another")
 
                 for retry in range (0, self.rand_retries):
 
@@ -102,10 +101,11 @@ class TagRandomizer:
 
                     if tag_list.find(tag) == -1:
 
-                        self.rngLog.debug(f"Found new unique tag")
+                        self.rng_log.debug(f"Found new unique tag")
                         break
 
-                self.rngLog.debug(f"Exiting de-dupe loop with tag {tag}.")
+                self.rng_log.debug(f"Exiting de-dupe loop with tag {tag}.")
+
             #The getline function includes getting the separator.
             tag_list += (', ' + tag.rstrip(os.linesep))
 
@@ -122,12 +122,12 @@ class TagRandomizer:
             if index == -1:
 
                 tag_list = tag_list[0:self.post_limit]
-                self.rngLog.warning(f"Tag list lacks comma separators and was bluntly truncated to {self.post_limit}.  This may still fail to post!")
+                self.rng_log.warning(f"Tag list lacks comma separators and was bluntly truncated to {self.post_limit}.  This may still fail to post!")
 
             else:
                 tag_list = tag_list[0:index]
-                self.rngLog.warning(f"Tag_list exceeded allowed tag size limit of {self.post_limit}, truncated to {len(tag_list)}.  This may still fail to post!")
+                self.rng_log.warning(f"Tag_list exceeded allowed tag size limit of {self.post_limit}, truncated to {len(tag_list)}.  This may still fail to post!")
 
-        self.rngLog.info(f"Used {tag_count} tags to get prompt input: {tag_list} of len {len(tag_list)}")
+        self.rng_log.info(f"Used {tag_count} tags to get prompt input: {tag_list} of len {len(tag_list)}")
 
         return tag_list, tag_count

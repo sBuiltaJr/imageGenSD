@@ -33,7 +33,7 @@ class MariadbIfc:
     __lock = th.Lock()
 
     @staticmethod
-    def GetInstance(options : dict):
+    def getInstance(options : dict):
         """Returns an instance of the singletion, or makes a new instance if
            one doesn't exist, using the provided options parameter.
 
@@ -67,7 +67,7 @@ class MariadbIfc:
 
         if MariadbIfc.__instance != None:
 
-            return  MariadbIfc.__instance
+            return
 
         else:
 
@@ -115,7 +115,7 @@ class MariadbIfc:
                 self.db_log.error(f"Unable to get MariaDB commands: {err=}")
                 raise  FileNotFoundError(f"Error opening the mariaDB command files: {err=}")
 
-            if not self.ValidateInstall() :
+            if not self.validateInstall() :
 
                 self.db_log.error(f"Unable to access mariaDB server! {options['host']} {options['port']} {options['user_name']} {options['password']}")
                 raise PermissionError(f"Unable to access mariaDB server!")
@@ -123,7 +123,7 @@ class MariadbIfc:
             self.db_log.info(f"Successfully connected to database: host: {options['host']} port: {options['port']} username: {options['user_name']} db: {options['database']}")
             self.db_log.debug(f"Loaded commands: {self.db_cmds} {self.pict_cmds} {self.prof_cmds} {self.user_cmds}")
 
-    def DailyDone(self,
+    def dailyDone(self,
                   id  : Optional[str] = "x'fffffffffffffffffffffffffffffffe'") -> bool:
         """Returns whether a user has already completed their daily actions.
 
@@ -157,7 +157,7 @@ class MariadbIfc:
 
         return result
 
-    def GetImage(self,
+    def getImage(self,
                  picture_id : Optional[str] = None,
                  profile_id : Optional[str] = "ffffffff-ffff-ffff-ffff-fffffffffffe") -> str:
         """Returns a given profile for a given user.
@@ -208,7 +208,7 @@ class MariadbIfc:
             self.db_log.debug(f"Got picture: {img[0]}")
             return img[0]
 
-    def GetProfile(self,
+    def getProfile(self,
                    id         : Optional[str] = "ffffffff-ffff-ffff-ffff-fffffffffffe") -> Optional[pg.Profile]:
         """Returns a given profile for a given user.
 
@@ -269,7 +269,7 @@ class MariadbIfc:
 
         return profile
 
-    def GetProfiles(self,
+    def getProfiles(self,
                     user_id : int) -> list:
         """Returns a given profile for a given user.
 
@@ -298,7 +298,7 @@ class MariadbIfc:
 
         return results
 
-    def ResetDailyRoll(self):
+    def resetDailyRoll(self):
         """Resets the 'daily' boolean for all user profiles, allowing them to
            perform another round of daily actions.
 
@@ -322,7 +322,7 @@ class MariadbIfc:
 
             self.db_log.error(f"Failed to reset daily value!: {err=}")
 
-    def SaveRoll(self,
+    def saveRoll(self,
                  id      : Optional[str] = "x'fffffffffffffffffffffffffffffffe'",
                  img     : Optional[str] = None,
                  info    : dict          = None,
@@ -424,7 +424,7 @@ class MariadbIfc:
             cursor.execute(cmd)
             self.db_log.info(f"Updated user {id}'s owned dict")
 
-    def ValidateInstall(self) -> bool:
+    def validateInstall(self) -> bool:
         """Validates all the database components are accessable and usable by
            the script.
 

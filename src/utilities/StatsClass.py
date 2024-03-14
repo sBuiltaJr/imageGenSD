@@ -12,7 +12,7 @@ from typing import Literal, Optional
 
 #####  Package Functions  #####
 
-def GetStatRange(rarity : rc.RarityList) -> tuple:
+def getStatRange(rarity : rc.RarityList) -> tuple:
     """Returns a tuple of a minimum and maximum value for a range, given a rarity.
 
        Input: rarity - Which rarity value to use for range definitions.
@@ -44,7 +44,7 @@ def GetStatRange(rarity : rc.RarityList) -> tuple:
             return ( 0,   1)
 
 
-def GetDescription(rarity : rc.RarityList = rc.RarityList.COMMON) -> str:
+def getDescription(rarity : rc.RarityList = rc.RarityList.COMMON) -> str:
     """Generates a random rarity level for the profile.
 
        Input: self - Pointer to the current object instance.
@@ -101,7 +101,7 @@ class Stats:
            Output: None - Throws exceptions on error.
         """
         #Starting simple for now, future versions should have luck influence stats?
-        self.range     = GetStatRange(rarity)
+        self.range     = getStatRange(rarity)
 
         self.agility   = agility if agility != None else rand.randint(self.range[0], self.range[1])
         self.defense   = defense if defense != None else rand.randint(self.range[0], self.range[1])
@@ -109,7 +109,7 @@ class Stats:
         self.luck      = luck if luck != None else rand.randint(self.range[0], self.range[1])
         self.strength  = strength if strength != None else rand.randint(self.range[0], self.range[1])
 
-    def GetStatsList(self) -> list:
+    def getStatsList(self) -> list:
         """Returns the object's stats as a list.
 
            Input: self - Pointer to the current object instance.

@@ -34,15 +34,14 @@ class MenuPagination(dis.ui.View):
 
         else:
 
-            emb = discord.Embed(
-                description=f"Only the author of the command can perform this action.",
-                color=16711680
+            emb = dis.Embed(description=f"Only the author of the command can perform this action.",
+                            color=16711680
             )
 
             await interaction.response.send_message(embed=emb, ephemeral=True, delete_after=9.0)
             return False
 
-    async def Navigate(self):
+    async def navigate(self):
         """Moves between pages, if possible.
 
            Input : self - a pointer to the current object.
@@ -57,10 +56,10 @@ class MenuPagination(dis.ui.View):
 
         elif self.total_pages > 1:
 
-            self.UpdateButtons()
+            self.updateButtons()
             await self.interaction.response.send_message(embed=emb, view=self)
 
-    async def EditPage(self,
+    async def editPage(self,
                        interaction: dis.Interaction):
         """Moves between pages, if possible.
 
@@ -70,10 +69,10 @@ class MenuPagination(dis.ui.View):
            Output : None.
         """
         emb, self.total_pages = await self.get_page(self.index)
-        self.UpdateButtons()
+        self.updateButtons()
         await interaction.response.edit_message(embed=emb, view=self)
 
-    def UpdateButtons(self):
+    def updateButtons(self):
         """Updates the button state based on valid button interactions.
 
            Input : self - a pointer to the current object.
@@ -92,7 +91,7 @@ class MenuPagination(dis.ui.View):
         self.children[1].disabled = self.index == self.total_pages
 
     @dis.ui.button(emoji="◀️", style=dis.ButtonStyle.blurple)
-    async def Previous(self,
+    async def previous(self,
                        interaction: dis.Interaction,
                        button: dis.Button):
         """Handles the button interaction of moving back a page.
@@ -104,10 +103,10 @@ class MenuPagination(dis.ui.View):
            Output : None.
         """
         self.index -= 1
-        await self.EditPage(interaction)
+        await self.editPage(interaction)
 
     @dis.ui.button(emoji="▶️", style=dis.ButtonStyle.blurple)
-    async def Next(self,
+    async def next(self,
                    interaction: dis.Interaction,
                    button: dis.Button):
         """Handles the button interaction of moving to the next page.
@@ -119,10 +118,10 @@ class MenuPagination(dis.ui.View):
            Output : None.
         """
         self.index += 1
-        await self.EditPage(interaction)
+        await self.editPage(interaction)
 
     @dis.ui.button(emoji="⏭️", style=dis.ButtonStyle.blurple)
-    async def End(self,
+    async def end(self,
                   interaction: dis.Interaction,
                   button: dis.Button):
         """Handles the button interaction of moving to the first or last page.
@@ -141,7 +140,7 @@ class MenuPagination(dis.ui.View):
 
             self.index = 1
 
-        await self.EditPage(interaction)
+        await self.editPage(interaction)
 
     async def on_timeout(self):
         """Handles the timeout interaction inherent to discord interactions.
@@ -155,7 +154,7 @@ class MenuPagination(dis.ui.View):
         await message.edit(view=None)
 
     @staticmethod
-    def GetTotalPages(total_items: int,
+    def getTotalPages(total_items: int,
                       items_per_page: int) -> int:
         """Calculates the total number of pages for a given object.
 

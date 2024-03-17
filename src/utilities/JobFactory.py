@@ -348,10 +348,10 @@ class ShowProfileJob(Job):
 
             image = io.BytesIO(b64.b64decode(self.db_img))
 
-            await metadata['ctx'].channel.send(content=f"<@{self.user_id}>",
-                                               file=dis.File(fp=image,
-                                                             filename='image.png'),
-                                               embed=embed)
+            await metadata['ctx'].edit_original_response(content=f"<@{self.user_id}>",
+                                                         attachments=[dis.File(fp=image,
+                                                                               filename='image.png')],
+                                                         embed=embed)
 
     def doRandomize(self,
                     tag_src):

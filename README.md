@@ -22,10 +22,10 @@ bot can do to prevent this as it's a byproduct of the ML training set.
 
 # Dependencies
 
-- [Python](https://www.python.org/) 3.10 or later
+- [Python](https://www.python.org/) 3.11.2 or later
 - [Stable Diffusion UI](https://github.com/AUTOMATIC1111/stable-diffusion-webui) 1.4 or later
 - [Discord.py](https://discordpy.readthedocs.io/en/stable/index.html) 2.2.2 or later
-- [Mariadb](https://mariadb.com/) 11 or later
+- [Mariadb](https://mariadb.com/) 10.11 or later
 - [Mariadb python connector](https://mariadb.com/resources/blog/how-to-connect-python-programs-to-mariadb/) 1.1.9 or later
 - [coverage.py](https://coverage.readthedocs.io/en/latest/index.html) 7.4.3 or later
 
@@ -67,7 +67,7 @@ Note: setup varies by OS.
     1. `CREATE DATABASE IGSD;`
     2. `CREATE USER IF NOT EXISTS 'IGSD_Bot'@'%' IDENTIFIED BY 'password';`
     3. `GRANT ALL PRIVILEGES ON IGSD.* TO 'IGSD_Bot'@'%';`
-4. Enter your Discord Bot's static login token into the `src/config/credentials.json` file.
+5. Enter your Discord Bot's static login token into the `src/config/credentials.json` file.
     1. DO NOT commit this value to a public repo!
 
 ## To run

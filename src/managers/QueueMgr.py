@@ -18,9 +18,7 @@ import queue
 import requests as req
 import time
 
-jobs = {}
-
-#####  Manager Class  #####
+#####  Queue Class  #####
 
 #class ManagedQueue(Queue):
 #    """This overloads the default MP class to add useful basic functions, like
@@ -72,9 +70,9 @@ class Manager:
            Output: None - Throws exceptions on error.
         """
 
-        self.queue_log = log.getLogger('queue')
+        self.queue_log = log.getLogger(f'queue_{manager_id}')
         self.queue_log.setLevel(opts['log_lvl'])
-        log_path = pl.Path(opts['log_name_queue'])
+        log_path = pl.Path(f"{opts['log_name_queue']}_{manager_id}")
 
         logHandler = lh.RotatingFileHandler(filename=log_path.absolute(),
                                             encoding=opts['log_encoding'],
@@ -92,6 +90,7 @@ class Manager:
         self.flush_queue = False
         self.id          = manager_id
         self.keep_going  = True
+        self.jobs = {}
 
         #It's possible all opts are provided directly from config.json,
         #requiring them to be cast appropriately for the manager.  This also
@@ -132,7 +131,6 @@ class Manager:
 
            Output: str - Result of the job scheduling attempt.
         """
-        global jobs
 
         #TODO: consider removing to have a single dict of 1 action per user to
         #ensure users can't submit multiple rolls.
@@ -141,9 +139,9 @@ class Manager:
         #TODO3: consider having a lock around 2 trackers, 1 per user and 1 for
         #jobs per guild, to ensure 1 global job per user and limit spam
         #from a server (including user/account flooding from a server).
-        if job.getGuild() not in jobs:
+        if job.getGuild() not in self.jobs:
 
-            if len(jobs) >= self.max_guilds :
+            if len(self.jobs) >= self.max_guilds :
 
                 self.queue_log.warning(f"Trying to add guild {job.getGuild()} goes over Guild limit {self.max_guilds}!")
                 return "Bot is currently servicing the maximum number of allowed Guilds."
@@ -151,25 +149,25 @@ class Manager:
             else:
                 #Asyncio and Threading are suppose to be GIL safe, making this
                 #safe.  Change this if that changes.
-                jobs[job.getGuild()] = {}
+                self.jobs[job.getGuild()] = {}
 
         #This is a form of rate-limiting; limiting a guild to X posts instead
         #of attempting to track timing.
-        if len(jobs[job.getGuild()]) >= self.max_guild_reqs:
+        if len(self.jobs[job.getGuild()]) >= self.max_guild_reqs:
 
             self.queue_log.warning(f"User {job.getUserId()}'s job excedded the Guild job limit {self.max_guild_reqs}!")
 
-            if len(jobs[job.getGuild()]) == 0:
+            if len(self.jobs[job.getGuild()]) == 0:
 
-                del jobs[job.getGuild()]
+                del self.jobs[job.getGuild()]
 
             return "Unable to add your job, too many jobs from this Guild are already in the queue."
 
         #This isn't an elif to avoid duplicating the contents. ID is also only
         #deleted after the job is done, so this function always loses the race.
-        if job.getUserId() not in jobs[job.getGuild()]:
+        if job.getUserId() not in self.jobs[job.getGuild()]:
 
-            (jobs[job.getGuild()])[job.getUserId()] = metadata
+            (self.jobs[job.getGuild()])[job.getUserId()] = metadata
             self.queue_log.debug(f"Added new job from Guild {job.getGuild()} to ID {job.getUserId()}.")
 
         else :
@@ -196,14 +194,14 @@ class Manager:
 
         except queue.Full as err:
 
-            (jobs[job.getGuild()]).pop(job.getUserId())
+            (self.jobs[job.getGuild()]).pop(job.getUserId())
             self.queue_log.warning(f" Encountered a full queue for job with metadata: {job}, {err}!")
 
             return "The work queue is currently full, please wait a bit before making another job."
 
         except Exception as err:
 
-            (jobs[job.getGuild()]).pop(job.getUserId())
+            (self.jobs[job.getGuild()]).pop(job.getUserId())
             self.queue_log.error(f" Unable to add job to queue for job with metadata: {job}, {err}!")
 
             return "Unable to add your job to the queue.  Are you sending more than text and numbers?"
@@ -220,7 +218,6 @@ class Manager:
 
             Output: None - Throws exceptions on error.
         """
-        global jobs
 
         while self.keep_going:
 
@@ -238,12 +235,12 @@ class Manager:
             except Exception as err:
                 self.queue_log.error(f"Exception doing work for Job: {err}, {job}.")
 
-            if len(jobs[job.getGuild()]) == 0:
+            if len(self.jobs[job.getGuild()]) == 0:
 
                 self.queue_log.debug(f"Removing empty Guild {job.getGuild()} from the list.")
-                del jobs[job.getGuild()]
+                del self.jobs[job.getGuild()]
 
-            metadata = (jobs[job.getGuild()]).pop(job.getUserId())
+            metadata = (self.jobs[job.getGuild()]).pop(job.getUserId())
             self.queue_log.debug(f"Posting job result to Discord from metadata: {metadata}")
             metadata['loop'].create_task(metadata['post_fn'](job=job, metadata=metadata),
                                          name="reply")

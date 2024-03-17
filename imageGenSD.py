@@ -8,6 +8,7 @@
 import asyncio as asy
 import discord as dis
 from discord import app_commands as dac
+from enum import Enum, verify, UNIQUE
 import logging as log
 import logging.handlers as lh
 import json
@@ -42,7 +43,11 @@ daily_mgr      = None
 daily_mgr_th   = None
 db_ifc         = None
 dict_path      = ["","",""]
-IGSD_version   = '0.3.8'
+IGSD_version   = '0.3.85'
+job_queue      = None
+job_worker     = None
+show_queue     = None
+show_worker    = None
 tag_randomizer = None
 #This will be modified in the future to accept user-supplied paths.
 #This file must be loaded prior to the logger to allow for user-provided
@@ -96,10 +101,8 @@ except IndexError as err:
     print(f"The tag dictionary is {params['tag_rng_opts']['dict_size']} lines long, shorter than the tag randomizer max size of {params['tag_rng_opts']['max_rand_tag_cnt']} OR Max tags {params['tag_rng_opts']['max_rand_tag_cnt']} is less than min tags {params['tag_rng_opts']['min_rand_tag_cnt']}!")
     exit(-5)
 
-job_queue   = None
-worker      = None
-
 #####  Package Classes  #####
+MY_GUILD = dis.Object(id=1084545432253894727)
 
 class IGSDClient(dis.Client):
     def __init__(self, *, intents: dis.Intents):
@@ -110,6 +113,7 @@ class IGSDClient(dis.Client):
 
             Output : None
         """
+
         self.dis_log = log.getLogger('discord')
         self.dis_log.debug(f"Intents are: {intents}")
 
@@ -130,7 +134,7 @@ class IGSDClient(dis.Client):
         self.loop = asy.get_running_loop()
 
         self.dis_log.debug(f"Syncing Guild Tree to Global.")
-        await self.tree.sync()
+        await self.tree.sync(guild=MY_GUILD)
 
     def getLoop(self):
         """Returns a reference to this client's asyncio event loop.
@@ -139,6 +143,7 @@ class IGSDClient(dis.Client):
 
             Output : loop - the client's event loop.
         """
+
         return self.loop;
 
 intents = dis.Intents.default()
@@ -155,8 +160,9 @@ async def about(interaction : dis.Interaction):
 
         Output : N/A.
     """
-    dis_log  = log.getLogger('discord')
-    
+
+    dis_log = log.getLogger('discord')
+
     await interaction.response.send_message(f"This is bot version {IGSD_version}!  Invite me to your server with [this link](https://discord.com/api/oauth2/authorize?client_id=1084600126913388564&permissions=534723816512&scope=bot)!", ephemeral=True, delete_after=30.0)
 
 
@@ -172,6 +178,7 @@ async def assignkeygen(interaction : dis.Interaction,
 
         Output : N/A.
     """
+
     dis_log  = log.getLogger('discord')
     metadata = {'ctx'     : interaction,
                 'db_ifc'  : db_ifc,
@@ -222,6 +229,7 @@ def bannedWordsFound(prompt: str, banned_words: str) -> bool:
 
        Output : None.
     """
+
     result = False;
 
     #The default prompt is assumed to not be banned.
@@ -273,6 +281,7 @@ async def generate(interaction: dis.Interaction,
 
         Output : N/A.
     """
+
     dis_log = log.getLogger('discord')
     error   = False;
 
@@ -316,6 +325,7 @@ async def hello(interaction: dis.Interaction):
 
        Output : None.
     """
+
     await interaction.response.send_message(f'Hi, {interaction.user.mention}', ephemeral=True, delete_after=9.0)
 
 @IGSD_client.tree.command()
@@ -329,6 +339,7 @@ async def listprofiles(interaction : dis.Interaction,
 
         Output : N/A.
     """
+
     dis_log  = log.getLogger('discord')
     #This has to be in the function body because an arg can't be used to assign
     #another arg in the function call.
@@ -360,6 +371,7 @@ async def on_ready():
     global daily_mgr_th
     global db_ifc
     global job_queue
+    global show_queue
     global tag_randomizer
     global worker
 
@@ -388,13 +400,19 @@ async def on_ready():
     dis_log.debug(f"Instantiating the Tag Randomizer.")
     tag_randomizer = tr.TagRandomizer(opts=params['tag_rng_opts'])
 
-
-    dis_log.debug(f"Creating Queue Manager.")
-    job_queue = qm.Manager(manager_id = 1,
+    dis_log.debug(f"Creating Job Queue Manager.")
+    job_queue = qm.Manager(manager_id = 0,
                            opts       = params['queue_opts'])
-    worker    = th.Thread(target = job_queue.putJob,
-                          name   = "Queue mgr",
-                          daemon = True)
+    job_worker = th.Thread(target = job_queue.putJob,
+                           name   = "Job Queue mgr",
+                           daemon = True)
+
+    dis_log.debug(f"Creating Show Queue Manager.")
+    show_queue = qm.Manager(manager_id = 1,
+                            opts       = params['queue_opts'])
+    show_worker = th.Thread(target = show_queue.putJob,
+                            name   = "Show Queue mgr",
+                            daemon = True)
 
     dis_log.debug(f"Creating DB Interface.")
     db_ifc = mdb.MariadbIfc(options=params['db_opts'])
@@ -407,7 +425,8 @@ async def on_ready():
 
     daily_mgr_th.start()
     #Only start the job queue once all other tasks are ready.
-    worker.start()
+    job_worker.start()
+    show_worker.start()
 
     print('------')
 
@@ -450,6 +469,7 @@ async def removekeygen(interaction : dis.Interaction,
 
         Output : N/A.
     """
+
     dis_log  = log.getLogger('discord')
     metadata = {'ctx'     : interaction,
                 'db_ifc'  : db_ifc,
@@ -503,6 +523,7 @@ async def roll(interaction: dis.Interaction):
 
        Note: All slash commands *MUST* respond in 3 seconds or be terminated.
     """
+
     dis_log = log.getLogger('discord')
 
     if db_ifc.dailyDone(interaction.user.id) :
@@ -532,24 +553,26 @@ async def roll(interaction: dis.Interaction):
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
-@dac.describe(user="The Discord user owning the profiles lsited by the command.  If none, it defaults to you.")
 @dac.describe(profile_id="The profile ID of the character you'd like to view.  Use /listprofiles to see the name and ID for profiles!")
+@dac.describe(user="The Discord user owning the profiles lsited by the command.  If none, it defaults to you.")
 async def showprofile(interaction : dis.Interaction,
-                      user        : Optional[dis.User] = None,
-                      profile_id  : Optional[dac.Range[str, 0, 36]] = None): #The length of a UUID
+                      profile_id  : Optional[dac.Range[str, 0, 36]] = None,  #The length of a UUID
+                      user        : Optional[dis.User] = None):
     """Displays the profile associated with the provided ID.
 
         Input  : interaction - the interaction context from Discord.
-                 id - the profile ID to retrieve.
+                 profile_id - the profile ID to retrieve.
+                 user - which user's profiles to show; defaults to the author.
 
         Output : N/A.
     """
+
     dis_log  = log.getLogger('discord')
     metadata = {'ctx'     : interaction,
                 'db_ifc'  : db_ifc,
                 'loop'    : IGSD_client.getLoop(),
                 'post_fn' : post,
-                'queue'   : job_queue
+                'queue'   : show_queue
                }
 
     if profile_id == None:
@@ -574,10 +597,46 @@ async def showprofile(interaction : dis.Interaction,
                                    ctx     = interaction,
                                    options = opts)
         dis_log.debug(f"Posting SHOW job {job} to the queue.")
-        result = job_queue.add(metadata = metadata,
-                               job      = job)
+        result = show_queue.add(metadata = metadata,
+                                job      = job)
 
         await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
+
+
+@verify(UNIQUE)
+class SummaryChoices(Enum):
+    CHARACTERS = 0
+    ECONOMY    = 1
+    INVENTORY  = 2
+
+@IGSD_client.tree.command()
+@dac.checks.has_permissions(use_application_commands=True)
+@dac.describe(user="The Discord user owning the profiles lsited by the command.  If none, it defaults to you.")
+@dac.describe(type="What kind of summary to show (characters, economy, or inventory.  Defaults to inventory.")
+async def showsummary(interaction : dis.Interaction,
+                      type        : Optional[SummaryChoices] = SummaryChoices.INVENTORY,
+                      user        : Optional[dis.User] = None):
+    """Displays various kinds of summaries for a particular player.  Defaults
+       to showing the user's inventory.
+
+        Input  : interaction - the interaction context from Discord.
+                 type - what kind of summary to show.
+                 user - which user's profiles to show; defaults to the author.
+
+        Output : N/A.
+    """
+
+    dis_log  = log.getLogger('discord')
+    metadata = {'ctx'     : interaction,
+                'db_ifc'  : db_ifc,
+                'loop'    : IGSD_client.getLoop(),
+                'post_fn' : post,
+                'queue'   : show_queue
+               }
+
+    user_id = interaction.user.id if user == None else user.id
+
+
 
 #This is commented until the failed inheritance issue can be resolved.
 #@IGSD_client.tree.command()
@@ -716,8 +775,8 @@ async def testshowprofile(interaction: dis.Interaction):
     job = jf.JobFactory.getJob(type = jf.JobTypeEnum.TESTSHOW,
                                ctx  = interaction)
     dis_log.debug(f"Posting test SHOW job {job} to the queue.")
-    result = job_queue.add(metadata = metadata,
-                           job      = job)
+    result = show_queue.add(metadata = metadata,
+                            job      = job)
 
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
@@ -731,6 +790,7 @@ def Startup():
 
        Output : None.
     """
+
     global params
     global creds
     global job_queue

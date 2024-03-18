@@ -6,13 +6,14 @@
 
 from abc import ABC, abstractmethod
 import base64 as b64
-from ..db import MariadbIfc as mdb
 import discord as dis
 from enum import IntEnum, verify, UNIQUE
 import io
 import json
-from . import ProfileGenerator as pg
 import requests as req
+import src.db.MariadbIfc as mdb
+import src.utilities.ProfileGenerator as pg
+import src.utilities.RarityClass as rc
 from typing import Optional
 from urllib.parse import urljoin
 
@@ -73,6 +74,38 @@ class Job(ABC):
         #Randomized and co are special because they're not a parameter sent to SD.
         embed.add_field(name='Randomized', value=info['random'])
         embed.add_field(name='Tags Added to Prompt', value=info['tags_added'])
+
+        return embed
+
+    def _getEmbedBaseForSummaryCharacters(self) -> dis.Embed:
+        """Returns a Discord embed object formatted for Character-Summary
+           style posts.
+
+           Input: self - Pointer to the current object instance.
+                  info - a dict of all the relevent embed parameters.
+
+           Output: embed - A formatted Embed object.
+        """
+        embed = dis.Embed()
+
+        embed.add_field(name='user', value=f"<@{self.user_id}>")
+        embed.add_field(name='Higest Rarity', value=f"{rc.RarityList(self.summary['highest_rarity']).name}")
+        embed.add_field(name='Rival', value=f"None!")
+        #Users aren't guaranted to have any partiular tier of character.
+        if f'{rc.RarityList.COMMON.value}' in self.summary :
+            embed.add_field(name=f'Tier 1 ({rc.RarityList.COMMON.name})', value=f"Profiles:\n`{self.summary[f'{rc.RarityList.COMMON.value}']['owned']:12d}`\nActive Workers:\n`{self.summary[f'{rc.RarityList.COMMON.value}']['occupied']:12d}`\nAvailable Workers:\n`{self.summary[f'{rc.RarityList.COMMON.value}']['able_workers']:12d}`\nAll Stats Average:\n`{self.summary[f'{rc.RarityList.COMMON.value}']['avg_stat']:12.2f}`\nWins:\n`{self.summary[f'{rc.RarityList.COMMON.value}']['wins']:12d}`\nLosses:\n`{self.summary[f'{rc.RarityList.COMMON.value}']['losses']:12d}`")
+        if f'{rc.RarityList.UNCOMMON.value}' in self.summary :
+            embed.add_field(name=f'Tier 2 ({rc.RarityList.UNCOMMON.name})', value=f"Profiles:\n`{self.summary[f'{rc.RarityList.UNCOMMON.value}']['owned']:12d}`\nActive Workers:\n`{self.summary[f'{rc.RarityList.UNCOMMON.value}']['occupied']:12d}`\nAvailable Workers:\n`{self.summary[f'{rc.RarityList.UNCOMMON.value}']['able_workers']:12d}`\nAll Stats Average:\n`{self.summary[f'{rc.RarityList.UNCOMMON.value}']['avg_stat']:12.2f}`\nWins:\n`{self.summary[f'{rc.RarityList.UNCOMMON.value}']['wins']:12d}`\nLosses:\n`{self.summary[f'{rc.RarityList.UNCOMMON.value}']['losses']:12d}`")
+        if f'{rc.RarityList.RARE.value}' in self.summary :
+            embed.add_field(name=f'Tier 3 ({rc.RarityList.RARE.name})', value=f"Profiles:\n`{self.summary[f'{rc.RarityList.RARE.value}']['owned']:12d}`\nActive Workers:\n`{self.summary[f'{rc.RarityList.RARE.value}']['occupied']:12d}`\nAvailable Workers:\n`{self.summary[f'{rc.RarityList.RARE.value}']['able_workers']:12d}`\nAll Stats Average:\n`{self.summary[f'{rc.RarityList.RARE.value}']['avg_stat']:12.2f}`\nWins:\n`{self.summary[f'{rc.RarityList.RARE.value}']['wins']:12d}`\nLosses:\n`{self.summary[f'{rc.RarityList.RARE.value}']['losses']:12d}`")
+        if f'{rc.RarityList.SUPER_RARE.value}' in self.summary :
+            embed.add_field(name=f'Tier 4 ({rc.RarityList.SUPER_RARE.name})', value=f"Profiles:\n`{self.summary[f'{rc.RarityList.SUPER_RARE.value}']['owned']:12d}`\nActive Workers:\n`{self.summary[f'{rc.RarityList.SUPER_RARE.value}']['occupied']:12d}`\nAvailable Workers:\n`{self.summary[f'{rc.RarityList.SUPER_RARE.value}']['able_workers']:12d}`\nAll Stats Average:\n`{self.summary[f'{rc.RarityList.SUPER_RARE.value}']['avg_stat']:12.2f}`\nWins:\n`{self.summary[f'{rc.RarityList.SUPER_RARE.value}']['wins']:12d}`\nLosses:\n`{self.summary[f'{rc.RarityList.SUPER_RARE.value}']['losses']:12d}`")
+        if f'{rc.RarityList.ULTRA_RARE.value}' in self.summary :
+            embed.add_field(name=f'Tier 5 ({rc.RarityList.ULTRA_RARE.name})', value=f"Profiles:\n`{self.summary[f'{rc.RarityList.ULTRA_RARE.value}']['owned']:12d}`\nActive Workers:\n`{self.summary[f'{rc.RarityList.ULTRA_RARE.value}']['occupied']:12d}`\nAvailable Workers:\n`{self.summary[f'{rc.RarityList.ULTRA_RARE.value}']['able_workers']:12d}`\nAll Stats Average:\n`{self.summary[f'{rc.RarityList.ULTRA_RARE.value}']['avg_stat']:12.2f}`\nWins:\n`{self.summary[f'{rc.RarityList.ULTRA_RARE.value}']['wins']:12d}`\nLosses:\n`{self.summary[f'{rc.RarityList.ULTRA_RARE.value}']['losses']:12d}`")
+        if f'{rc.RarityList.LEGENDARY.value}' in self.summary :
+            embed.add_field(name=f'Tier 6 ({rc.RarityList.LEGENDARY.name})', value=f"Profiles:\n`{self.summary[f'{rc.RarityList.LEGENDARY.value}']['owned']:12d}`\nActive Workers:\n`{self.summary[f'{rc.RarityList.LEGENDARY.value}']['occupied']:12d}`\nAvailable Workers:\n`{self.summary[f'{rc.RarityList.LEGENDARY.value}']['able_workers']:12d}`\nAll Stats Average:\n`{self.summary[f'{rc.RarityList.LEGENDARY.value}']['avg_stat']:12.2f}`\nWins:\n`{self.summary[f'{rc.RarityList.LEGENDARY.value}']['wins']:12d}`\nLosses:\n`{self.summary[f'{rc.RarityList.LEGENDARY.value}']['losses']:12d}`")
+        #But, as long as they have 1 profile, they have a summary.
+        embed.add_field(name='Totals', value=f"Profiles:\n`{self.summary['owned']:12d}`\nActive Workers:\n`{self.summary['occupied']:12d}`\nAvailable Workers:\n`{self.summary['able_workers']:12d}`\nWins:\n`{self.summary['wins']:12d}`\nLosses:\n`{self.summary['losses']:12d}`")
 
         return embed
 
@@ -173,13 +206,16 @@ class Job(ABC):
 @verify(UNIQUE)
 class JobTypeEnum(IntEnum):
 
-    GENERATE     =    0
-    ROLL         =    1
-    SHOWPROFILE  =    2
-    TESTPOST     =    3
-    TESTGET      =    4
-    TESTROLL     =    5
-    TESTSHOW     =    6
+    GENERATE                =    0
+    ROLL                    =    1
+    SHOW_PROFILE            =    2
+    SHOW_SUMMARY_CHARACTERS =    3
+    SHOW_SUMMARY_ECONOMY    =    4
+    SHOW_SUMMARY_INVENTORY  =    5
+    TEST_POST               =    6
+    TEST_GET                =    7
+    TEST_ROLL               =    8
+    TEST_SHOW               =    9
 
 #####  Job Classes  #####
 
@@ -303,6 +339,57 @@ class RollJob(Job):
         tag_data = tag_src.getRandomTags(int(self.post_data['tag_cnt']))
         self.post_data['prompt']     += tag_data[0]
         self.post_data['tags_added']  = tag_data[1]
+
+class ShowSummaryCharactersJob(Job):
+
+    def __init__(self,
+                 ctx     : dis.Interaction,
+                 options : dict):
+        """Creates a job object for the /showsummary for characters command.
+
+           Input: self - Pointer to the current object instance.
+                  ctx - the Discord context from the user's slash command.
+                  options - a dict of configs for this job.
+
+           Output: N/A.
+        """
+
+        self.author             = ctx.user.id
+        self.guild              = ctx.guild_id
+        self.randomize          = False
+        self.result             = req.Response()
+        self.result.reason      = "OK"
+        self.result.status_code = 200
+        self.summary            = {}
+        self.user_id            = options['user_id']
+
+    def doWork(self,
+               web_url: str):
+        pass
+
+    async def post(self,
+                   metadata : dict):
+
+        self.summary = metadata['db_ifc'].getSummaryCharacters(self.user_id)
+
+        if not self.summary:
+
+            embed = dis.Embed(title="Error",
+                              description=f"User <@{self.user_id}> doesn't own any characters!",
+                              color=0xec1802)
+
+            await metadata['ctx'].channel.send(content=f"<@{self.author}>", embed=embed)
+
+        else:
+
+            embed = self._getEmbedBaseForSummaryCharacters()
+
+            await metadata['ctx'].channel.send(content=f"<@{self.author}>",
+                                               embed=embed)
+
+    def doRandomize(self,
+                    tag_src):
+        pass
 
 class ShowProfileJob(Job):
 
@@ -556,23 +643,39 @@ class JobFactory:
                 return RollJob(ctx,
                                options)
 
+            case JobTypeEnum.SHOW_SUMMARY_CHARACTERS:
+                return ShowSummaryCharactersJob(ctx,
+                                                options)
+
+            case JobTypeEnum.SHOW_SUMMARY_ECONOMY:
+                return ShowSummaryEconomyJob(ctx,
+                                             options)
+
+            case JobTypeEnum.SHOW_SUMMARY_INVENTORY:
+                return ShowSummaryInventoryJob(ctx,
+                                               options)
+
             case JobTypeEnum.SHOWPROFILE:
                 return ShowProfileJob(ctx,
                                       options)
 
-            case JobTypeEnum.TESTPOST:
+            case JobTypeEnum.SHOWPROFILE:
+                return ShowProfileJob(ctx,
+                                      options)
+
+            case JobTypeEnum.TEST_POST:
                 return TestPostJob(ctx,
                                    options)
 
-            case JobTypeEnum.TESTGET:
+            case JobTypeEnum.TEST_GET:
                 return TestGetJob(ctx,
                                   options)
 
-            case JobTypeEnum.TESTROLL:
+            case JobTypeEnum.TEST_ROLL:
                 return TestRollJob(ctx,
                                    options)
 
-            case JobTypeEnum.TESTSHOW:
+            case JobTypeEnum.TEST_SHOW:
                 return TestShowJob(ctx,
                                    options)
 

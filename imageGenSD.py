@@ -163,7 +163,7 @@ async def about(interaction : dis.Interaction):
 
     dis_log = log.getLogger('discord')
 
-    await interaction.response.send_message(f"This is bot version {IGSD_version}!  Invite me to your server with [this link](https://discord.com/api/oauth2/authorize?client_id=1084600126913388564&permissions=534723816512&scope=bot)!", ephemeral=True, delete_after=30.0)
+    await interaction.response.send_message(f"This is bot version {IGSD_version}!  Invite me to your server with [this link](https://discord.com/api/oauth2/authorize?client_id=1084600126913388564&permissions=534723816512&scope=bot)!  Code found [on GitHub](https://github.com/sBuiltaJr/imageGenSD)", ephemeral=True, delete_after=30.0)
 
 
 @IGSD_client.tree.command()
@@ -593,7 +593,7 @@ async def showprofile(interaction : dis.Interaction,
         opts = {'id' : profile_id}
 
         dis_log.debug(f"Creating a job with metadata {metadata} and options {opts}.")
-        job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOWPROFILE,
+        job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_PROFILE,
                                    ctx     = interaction,
                                    options = opts)
         dis_log.debug(f"Posting SHOW job {job} to the queue.")
@@ -605,16 +605,17 @@ async def showprofile(interaction : dis.Interaction,
 
 @verify(UNIQUE)
 class SummaryChoices(Enum):
-    CHARACTERS = 0
-    ECONOMY    = 1
-    INVENTORY  = 2
+    #lower case since it's user-facing
+    Characters = 0
+    Economy    = 1
+    Inventory  = 2
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
 @dac.describe(user="The Discord user owning the profiles lsited by the command.  If none, it defaults to you.")
 @dac.describe(type="What kind of summary to show (characters, economy, or inventory.  Defaults to inventory.")
 async def showsummary(interaction : dis.Interaction,
-                      type        : Optional[SummaryChoices] = SummaryChoices.INVENTORY,
+                      type        : Optional[SummaryChoices] = SummaryChoices.Inventory,
                       user        : Optional[dis.User] = None):
     """Displays various kinds of summaries for a particular player.  Defaults
        to showing the user's inventory.
@@ -634,8 +635,50 @@ async def showsummary(interaction : dis.Interaction,
                 'queue'   : show_queue
                }
 
-    user_id = interaction.user.id if user == None else user.id
 
+    opts = {'user_id' : interaction.user.id if user == None else user.id}
+
+    match type:
+
+        case SummaryChoices.Characters:
+
+            dis_log.debug(f"Creating a job with metadata {metadata}.")
+            job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_SUMMARY_CHARACTERS,
+                                       ctx     = interaction,
+                                       options = opts)
+
+            dis_log.debug(f"Posting CHARACTERS SUMMARY job {job} to the queue.")
+            result = show_queue.add(metadata = metadata,
+                                    job      = job)
+
+        case SummaryChoices.Economy:
+
+            dis_log.debug(f"Creating a job with metadata {metadata}.")
+            job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_SUMMARY_ECONOMY,
+                                       ctx     = interaction,
+                                       options = opts)
+
+            dis_log.debug(f"Posting ECONOMY SUMMARY job {job} to the queue.")
+            result = show_queue.add(metadata = metadata,
+                                    job      = job)
+
+        case SummaryChoices.Inventory:
+
+            dis_log.debug(f"Creating a INVENTORY SUMMARY job with metadata {metadata}.")
+            job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_SUMMARY_INVENTORY,
+                                       ctx     = interaction,
+                                       options = opts)
+
+            dis_log.debug(f"Posting INVENTORY SUMMARY job {job} to the queue.")
+            result = show_queue.add(metadata = metadata,
+                                    job      = job)
+
+        case _:
+
+            dis_log.Error(f"Given an invalid type of showsummary job {type}!")
+            result = "Error, this is an invalid choice!"
+
+    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 
 #This is commented until the failed inheritance issue can be resolved.
@@ -691,12 +734,12 @@ async def testget(interaction: dis.Interaction):
                 'post_fn' : post
                }
     dis_log.debug(f"Creating a job with metadata {metadata}.")
-    job = jf.JobFactory.getJob(type = jf.JobTypeEnum.TESTGET,
+    job = jf.JobFactory.getJob(type = jf.JobTypeEnum.TEST_GET,
                                ctx  = interaction)
 
     dis_log.debug(f"Posting test GET job {job} to the queue.")
-    result = job_queue.add(metadata = metadata,
-                           job      = job)
+    result = show_queue.add(metadata = metadata,
+                            job      = job)
 
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
@@ -719,7 +762,7 @@ async def testpost(interaction: dis.Interaction):
                 'post_fn' : post
                }
     dis_log.debug(f"Creating a job with metadata {metadata}.")
-    job = jf.JobFactory.getJob(type = jf.JobTypeEnum.TESTPOST,
+    job = jf.JobFactory.getJob(type = jf.JobTypeEnum.TEST_POST,
                                ctx  = interaction)
     dis_log.debug(f"Posting test PUT job {job} to the queue.")
     result = job_queue.add(metadata = metadata,
@@ -745,7 +788,7 @@ async def testroll(interaction: dis.Interaction):
                 'post_fn' : post
                }
     dis_log.debug(f"Creating a job with metadata {metadata}.")
-    job = jf.JobFactory.getJob(type = jf.JobTypeEnum.TESTROLL,
+    job = jf.JobFactory.getJob(type = jf.JobTypeEnum.TEST_ROLL,
                                ctx  = interaction)
     dis_log.debug(f"Posting test ROLL job {job} to the queue.")
     result = job_queue.add(metadata = metadata,
@@ -772,7 +815,7 @@ async def testshowprofile(interaction: dis.Interaction):
                 'post_fn' : post
                }
     dis_log.debug(f"Creating a job with metadata {metadata}.")
-    job = jf.JobFactory.getJob(type = jf.JobTypeEnum.TESTSHOW,
+    job = jf.JobFactory.getJob(type = jf.JobTypeEnum.TEST_SHOW,
                                ctx  = interaction)
     dis_log.debug(f"Posting test SHOW job {job} to the queue.")
     result = show_queue.add(metadata = metadata,

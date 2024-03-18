@@ -5,6 +5,7 @@
     "get_image"            : "SELECT picture FROM IGSDPictures WHERE pi_ID = %s;",
     "get_owned_profs"      : "SELECT * FROM IGSDProfiles WHERE (owner = %s) ORDER BY name;",
     "get_profile"          : "SELECT * FROM IGSDProfiles WHERE pr_ID = '%s';",
+	"get_profs_summary"    : "SELECT DISTINCT rarity, AVG(stats_avg) AS avg_stat, STD(stats_avg) AS average_std, SUM(wins) AS wins, SUM(losses) AS losses, SUM(creator = owner) AS made_and_owned, COUNT(rarity) AS owned, SUM(occupied = True) AS occupied, CASE WHEN (rarity = 6000) THEN SUM(stats_avg >= 10.00) WHEN (rarity = 5000) THEN SUM(stats_avg >= 20.00) WHEN (rarity = 4000) THEN SUM(stats_avg >= 37.50) WHEN (rarity = 3000) THEN SUM(stats_avg >= 57.50) END AS able_workers FROM IGSDProfiles WHERE owner = %s GROUP BY rarity;",
     "get_unoccupied_profs" : "SELECT * FROM IGSDProfiles WHERE (owner = %s AND occupied = False) ORDER BY name;",
     "pic_id_index"         : "1",
     "put_new"              : "INSERT INTO IGSDProfiles VALUES (SYS_GUID(), %s, SYSDATE(), %s, %s, %s, %s, %s, %s, %s, 0, 0, '%s', 0, %s, 0, '%s', 0, 0, 0, '%s', %d, 0, False, %f) RETURNING pr_ID, created;",

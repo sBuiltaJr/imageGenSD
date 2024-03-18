@@ -466,6 +466,76 @@ class MariadbIfc:
 
         return results
 
+    def getSummaryCharacters(self,
+                             user_id : int) -> dict:
+        """Returns db-calcualted stats about a user's character profiles.
+
+            Input: self - Pointer to the current object instance.
+                   user_id - user ID to interrogate for profiles.
+
+            Output: list - A list of profile stats sorted by rank, if any.
+        """
+        cmd        = ""
+        cursor     = self.con.cursor(buffered=False)
+        losses     = 0
+        made_owned = 0
+        most_rare  = rc.RarityList.CUSTOM.value
+        owned      = 0
+        rarities   = rc.RarityList.getStandardValueList()
+        results    = {}
+        wins       = 0
+        workers    = 0
+        working    = 0
+
+        self.db_log.info(f"Getting character stats for user {user_id}")
+        cmd = (self.cmds['prof']['get_profs_summary']) % (user_id)
+        self.db_log.debug(f"Executing command: {cmd}")
+        cursor.execute(cmd)
+
+        for x in cursor:
+
+            #TODO: split into two commands if non-standard stats are needed.
+            if int(x[0]) in rarities :
+
+                self.db_log.debug(f"Adding result: {x}")
+                results[f'{x[0]}'] = {'avg_stat'       : float(x[1]),
+                                      'avg_std'        : float(x[2]),
+                                      'wins'           : int(x[3]),
+                                      'losses'         : int(x[4]),
+                                      'made_and_owned' : int(x[5]),
+                                      'owned'          : int(x[6]),
+                                      'occupied'       : int(x[7]),
+                                      'able_workers'   : int( x[8])}
+
+                #It doesn't make sense to sum all values in the results, since 
+                #not all columns have a meaningful sum, so the script does it.
+                losses      += results[f'{x[0]}']['losses']
+                made_owned  += results[f'{x[0]}']['made_and_owned']
+                owned       += results[f'{x[0]}']['owned']
+                wins        += results[f'{x[0]}']['wins']
+                workers     += results[f'{x[0]}']['able_workers'] #TODO: re-define how this is calculated once the work thesholds are settled.
+                working     += results[f'{x[0]}']['occupied']
+                most_rare   = int(x[0]) if int(x[0]) < most_rare else most_rare
+
+            else :
+
+                self.db_log.debug(f"Ignoring result: {x}")
+
+        if results:
+            #This is entirely to avoid key errors and assocaited shenanigans.
+            results['able_workers']   = workers
+            results['highest_rarity'] = most_rare
+            results['losses']         = losses
+            results['made_and_owned'] = made_owned
+            results['occupied']       = working
+            results['owned']          = owned
+            results['wins']           = wins
+
+        self.db_log.debug(f"Got results: {results}")
+
+
+        return results
+
     def getUnoccupiedProfiles(self,
                               user_id : int) -> list:
         """Returns all profiles not marked as 'occupied' for a given user.

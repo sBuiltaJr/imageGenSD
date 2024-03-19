@@ -475,14 +475,17 @@ class MariadbIfc:
 
             Output: list - A list of profile stats sorted by rank, if any.
         """
+        armed      = 0
         cmd        = ""
         cursor     = self.con.cursor(buffered=False)
+        equipped   = 0
         losses     = 0
         made_owned = 0
         most_rare  = rc.RarityList.CUSTOM.value
         owned      = 0
         rarities   = rc.RarityList.getStandardValueList()
         results    = {}
+        total_val  = 0
         wins       = 0
         workers    = 0
         working    = 0
@@ -502,20 +505,25 @@ class MariadbIfc:
                                       'avg_std'        : float(x[2]),
                                       'wins'           : int(x[3]),
                                       'losses'         : int(x[4]),
-                                      'made_and_owned' : int(x[5]),
-                                      'owned'          : int(x[6]),
-                                      'occupied'       : int(x[7]),
-                                      'able_workers'   : int( x[8])}
+                                      'total_value'    : int(x[5]),
+                                      'equipped'       : int(x[6]),
+                                      'armed'          : int(x[7]),
+                                      'avg_health'     : float(x[8]),
+                                      'made_and_owned' : int(x[9]),
+                                      'owned'          : int(x[10]),
+                                      'occupied'       : int(x[11])}
 
-                #It doesn't make sense to sum all values in the results, since 
+                #It doesn't make sense to sum all values in the results, since
                 #not all columns have a meaningful sum, so the script does it.
-                losses      += results[f'{x[0]}']['losses']
-                made_owned  += results[f'{x[0]}']['made_and_owned']
-                owned       += results[f'{x[0]}']['owned']
-                wins        += results[f'{x[0]}']['wins']
-                workers     += results[f'{x[0]}']['able_workers'] #TODO: re-define how this is calculated once the work thesholds are settled.
-                working     += results[f'{x[0]}']['occupied']
-                most_rare   = int(x[0]) if int(x[0]) < most_rare else most_rare
+                armed      += results[f'{x[0]}']['armed']
+                equipped   += results[f'{x[0]}']['equipped']
+                losses     += results[f'{x[0]}']['losses']
+                made_owned += results[f'{x[0]}']['made_and_owned']
+                owned      += results[f'{x[0]}']['owned']
+                total_val  += results[f'{x[0]}']['total_value']
+                wins       += results[f'{x[0]}']['wins']
+                working    += results[f'{x[0]}']['occupied']
+                most_rare  = int(x[0]) if int(x[0]) < most_rare else most_rare
 
             else :
 
@@ -523,16 +531,17 @@ class MariadbIfc:
 
         if results:
             #This is entirely to avoid key errors and assocaited shenanigans.
-            results['able_workers']   = workers
+            results['equipped']       = equipped
+            results['armed']          = armed
             results['highest_rarity'] = most_rare
             results['losses']         = losses
             results['made_and_owned'] = made_owned
             results['occupied']       = working
             results['owned']          = owned
+            results['total_value']    = total_val
             results['wins']           = wins
 
         self.db_log.debug(f"Got results: {results}")
-
 
         return results
 
@@ -931,3 +940,6 @@ class MariadbIfc:
         all_ok = True;
 
         return all_ok
+
+#TODO: update new profiles to calculate dust value
+#TODO: re-define how able_workers is calculated once the work thesholds are settled.

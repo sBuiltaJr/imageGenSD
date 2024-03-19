@@ -473,8 +473,9 @@ class MariadbIfc:
             Input: self - Pointer to the current object instance.
                    user_id - user ID to interrogate for profiles.
 
-            Output: list - A list of profile stats sorted by rank, if any.
+            Output: dict - A dict of profile stats sorted by rank, if any.
         """
+
         armed      = 0
         cmd        = ""
         cursor     = self.con.cursor(buffered=False)
@@ -530,6 +531,7 @@ class MariadbIfc:
                 self.db_log.debug(f"Ignoring result: {x}")
 
         if results:
+
             #This is entirely to avoid key errors and assocaited shenanigans.
             results['equipped']       = equipped
             results['armed']          = armed
@@ -542,6 +544,46 @@ class MariadbIfc:
             results['wins']           = wins
 
         self.db_log.debug(f"Got results: {results}")
+
+        return results
+
+    def getSummaryEconomy(self,
+                          user_id : int) -> dict:
+        """Returns db-calcualted stats about a user's economy.
+
+            Input: self - Pointer to the current object instance.
+                   user_id - user ID to interrogate for economy data.
+
+            Output: dict - A dict of economy stats sorted by rank, if any.
+        """
+
+        categories = ['builder', 'crafter', 'hospital', 'keygen', 'research', 'team', 'worker']
+        count      = 0
+        cursor     = self.con.cursor(buffered=False)
+        results    = {}
+
+        self.db_log.info(f"Getting econ stats for user {user_id}")
+        cmd = (self.cmds['econ']['get_econ_summary']) % (user_id)
+        self.db_log.debug(f"Executing command: {cmd}")
+        cursor.execute(cmd)
+
+        result = cursor.fetchone()
+
+        if result:
+
+            for key in categories:
+
+                results[key] = {}
+                results[key]['count']  = result[count + 0]
+                results[key]['tier']   = result[count + 1]
+                results[key]['tier_0'] = result[count + 2]
+                results[key]['tier_1'] = result[count + 3]
+                results[key]['tier_2'] = result[count + 4]
+                results[key]['tier_3'] = result[count + 5]
+                results[key]['tier_4'] = result[count + 6]
+                results[key]['tier_5'] = result[count + 7]
+                count += 8
+
 
         return results
 

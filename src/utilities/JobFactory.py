@@ -47,7 +47,7 @@ class Job(ABC):
 
            Input: self - Pointer to the current object instance.
 
-           Output: int - N/A.
+           Output: N/A.
         """
         pass
 
@@ -95,18 +95,31 @@ class Job(ABC):
         if f'{rc.RarityList.COMMON.value}' in self.summary :
             embed.add_field(name=f'Tier 1 ({rc.RarityList.COMMON.name})', value=f"Profiles:\n`{self.summary[f'{rc.RarityList.COMMON.value}']['owned']:12d}`\nTotal Value:\n`{self.summary[f'{rc.RarityList.COMMON.value}']['total_value']:12d}`\nAll Stats Average:\n`{self.summary[f'{rc.RarityList.COMMON.value}']['avg_stat']:12.2f}`\nEquipped:\n`{self.summary[f'{rc.RarityList.COMMON.value}']['equipped']:12d}`\nArmed:\n`{self.summary[f'{rc.RarityList.COMMON.value}']['armed']:12d}`\nAverage Health:\n`{self.summary[f'{rc.RarityList.COMMON.value}']['avg_health']:12.2f}`\nActive Workers:\n`{self.summary[f'{rc.RarityList.COMMON.value}']['occupied']:12d}`\nWins:\n`{self.summary[f'{rc.RarityList.COMMON.value}']['wins']:12d}`\nLosses:\n`{self.summary[f'{rc.RarityList.COMMON.value}']['losses']:12d}`")
         if f'{rc.RarityList.UNCOMMON.value}' in self.summary :
-            embed.add_field(name=f'Tier 1 ({rc.RarityList.UNCOMMON.name})', value=f"Profiles:\n`{self.summary[f'{rc.RarityList.UNCOMMON.value}']['owned']:12d}`\nTotal Value:\n`{self.summary[f'{rc.RarityList.UNCOMMON.value}']['total_value']:12d}`\nAll Stats Average:\n`{self.summary[f'{rc.RarityList.UNCOMMON.value}']['avg_stat']:12.2f}`\nEquipped:\n`{self.summary[f'{rc.RarityList.UNCOMMON.value}']['equipped']:12d}`\nArmed:\n`{self.summary[f'{rc.RarityList.UNCOMMON.value}']['armed']:12d}`\nAverage Health:\n`{self.summary[f'{rc.RarityList.UNCOMMON.value}']['avg_health']:12.2f}`\nActive Workers:\n`{self.summary[f'{rc.RarityList.UNCOMMON.value}']['occupied']:12d}`\nWins:\n`{self.summary[f'{rc.RarityList.UNCOMMON.value}']['wins']:12d}`\nLosses:\n`{self.summary[f'{rc.RarityList.UNCOMMON.value}']['losses']:12d}`")
+            embed.add_field(name=f'Tier 2 ({rc.RarityList.UNCOMMON.name})', value=f"Profiles:\n`{self.summary[f'{rc.RarityList.UNCOMMON.value}']['owned']:12d}`\nTotal Value:\n`{self.summary[f'{rc.RarityList.UNCOMMON.value}']['total_value']:12d}`\nAll Stats Average:\n`{self.summary[f'{rc.RarityList.UNCOMMON.value}']['avg_stat']:12.2f}`\nEquipped:\n`{self.summary[f'{rc.RarityList.UNCOMMON.value}']['equipped']:12d}`\nArmed:\n`{self.summary[f'{rc.RarityList.UNCOMMON.value}']['armed']:12d}`\nAverage Health:\n`{self.summary[f'{rc.RarityList.UNCOMMON.value}']['avg_health']:12.2f}`\nActive Workers:\n`{self.summary[f'{rc.RarityList.UNCOMMON.value}']['occupied']:12d}`\nWins:\n`{self.summary[f'{rc.RarityList.UNCOMMON.value}']['wins']:12d}`\nLosses:\n`{self.summary[f'{rc.RarityList.UNCOMMON.value}']['losses']:12d}`")
         if f'{rc.RarityList.RARE.value}' in self.summary :
-            embed.add_field(name=f'Tier 1 ({rc.RarityList.RARE.name})', value=f"Profiles:\n`{self.summary[f'{rc.RarityList.RARE.value}']['owned']:12d}`\nTotal Value:\n`{self.summary[f'{rc.RarityList.RARE.value}']['total_value']:12d}`\nAll Stats Average:\n`{self.summary[f'{rc.RarityList.RARE.value}']['avg_stat']:12.2f}`\nEquipped:\n`{self.summary[f'{rc.RarityList.RARE.value}']['equipped']:12d}`\nArmed:\n`{self.summary[f'{rc.RarityList.RARE.value}']['armed']:12d}`\nAverage Health:\n`{self.summary[f'{rc.RarityList.RARE.value}']['avg_health']:12.2f}`\nActive Workers:\n`{self.summary[f'{rc.RarityList.RARE.value}']['occupied']:12d}`\nWins:\n`{self.summary[f'{rc.RarityList.RARE.value}']['wins']:12d}`\nLosses:\n`{self.summary[f'{rc.RarityList.RARE.value}']['losses']:12d}`")
+            embed.add_field(name=f'Tier 3 ({rc.RarityList.RARE.name})', value=f"Profiles:\n`{self.summary[f'{rc.RarityList.RARE.value}']['owned']:12d}`\nTotal Value:\n`{self.summary[f'{rc.RarityList.RARE.value}']['total_value']:12d}`\nAll Stats Average:\n`{self.summary[f'{rc.RarityList.RARE.value}']['avg_stat']:12.2f}`\nEquipped:\n`{self.summary[f'{rc.RarityList.RARE.value}']['equipped']:12d}`\nArmed:\n`{self.summary[f'{rc.RarityList.RARE.value}']['armed']:12d}`\nAverage Health:\n`{self.summary[f'{rc.RarityList.RARE.value}']['avg_health']:12.2f}`\nActive Workers:\n`{self.summary[f'{rc.RarityList.RARE.value}']['occupied']:12d}`\nWins:\n`{self.summary[f'{rc.RarityList.RARE.value}']['wins']:12d}`\nLosses:\n`{self.summary[f'{rc.RarityList.RARE.value}']['losses']:12d}`")
         if f'{rc.RarityList.SUPER_RARE.value}' in self.summary :
-            embed.add_field(name=f'Tier 1 ({rc.RarityList.SUPER_RARE.name})', value=f"Profiles:\n`{self.summary[f'{rc.RarityList.SUPER_RARE.value}']['owned']:12d}`\nTotal Value:\n`{self.summary[f'{rc.RarityList.SUPER_RARE.value}']['total_value']:12d}`\nAll Stats Average:\n`{self.summary[f'{rc.RarityList.SUPER_RARE.value}']['avg_stat']:12.2f}`\nEquipped:\n`{self.summary[f'{rc.RarityList.SUPER_RARE.value}']['equipped']:12d}`\nArmed:\n`{self.summary[f'{rc.RarityList.SUPER_RARE.value}']['armed']:12d}`\nAverage Health:\n`{self.summary[f'{rc.RarityList.SUPER_RARE.value}']['avg_health']:12.2f}`\nActive Workers:\n`{self.summary[f'{rc.RarityList.SUPER_RARE.value}']['occupied']:12d}`\nWins:\n`{self.summary[f'{rc.RarityList.SUPER_RARE.value}']['wins']:12d}`\nLosses:\n`{self.summary[f'{rc.RarityList.SUPER_RARE.value}']['losses']:12d}`")
+            embed.add_field(name=f'Tier 4 ({rc.RarityList.SUPER_RARE.name})', value=f"Profiles:\n`{self.summary[f'{rc.RarityList.SUPER_RARE.value}']['owned']:12d}`\nTotal Value:\n`{self.summary[f'{rc.RarityList.SUPER_RARE.value}']['total_value']:12d}`\nAll Stats Average:\n`{self.summary[f'{rc.RarityList.SUPER_RARE.value}']['avg_stat']:12.2f}`\nEquipped:\n`{self.summary[f'{rc.RarityList.SUPER_RARE.value}']['equipped']:12d}`\nArmed:\n`{self.summary[f'{rc.RarityList.SUPER_RARE.value}']['armed']:12d}`\nAverage Health:\n`{self.summary[f'{rc.RarityList.SUPER_RARE.value}']['avg_health']:12.2f}`\nActive Workers:\n`{self.summary[f'{rc.RarityList.SUPER_RARE.value}']['occupied']:12d}`\nWins:\n`{self.summary[f'{rc.RarityList.SUPER_RARE.value}']['wins']:12d}`\nLosses:\n`{self.summary[f'{rc.RarityList.SUPER_RARE.value}']['losses']:12d}`")
         if f'{rc.RarityList.ULTRA_RARE.value}' in self.summary :
-            embed.add_field(name=f'Tier 1 ({rc.RarityList.ULTRA_RARE.name})', value=f"Profiles:\n`{self.summary[f'{rc.RarityList.ULTRA_RARE.value}']['owned']:12d}`\nTotal Value:\n`{self.summary[f'{rc.RarityList.ULTRA_RARE.value}']['total_value']:12d}`\nAll Stats Average:\n`{self.summary[f'{rc.RarityList.ULTRA_RARE.value}']['avg_stat']:12.2f}`\nEquipped:\n`{self.summary[f'{rc.RarityList.ULTRA_RARE.value}']['equipped']:12d}`\nArmed:\n`{self.summary[f'{rc.RarityList.ULTRA_RARE.value}']['armed']:12d}`\nAverage Health:\n`{self.summary[f'{rc.RarityList.ULTRA_RARE.value}']['avg_health']:12.2f}`\nActive Workers:\n`{self.summary[f'{rc.RarityList.ULTRA_RARE.value}']['occupied']:12d}`\nWins:\n`{self.summary[f'{rc.RarityList.ULTRA_RARE.value}']['wins']:12d}`\nLosses:\n`{self.summary[f'{rc.RarityList.ULTRA_RARE.value}']['losses']:12d}`")
+            embed.add_field(name=f'Tier 5 ({rc.RarityList.ULTRA_RARE.name})', value=f"Profiles:\n`{self.summary[f'{rc.RarityList.ULTRA_RARE.value}']['owned']:12d}`\nTotal Value:\n`{self.summary[f'{rc.RarityList.ULTRA_RARE.value}']['total_value']:12d}`\nAll Stats Average:\n`{self.summary[f'{rc.RarityList.ULTRA_RARE.value}']['avg_stat']:12.2f}`\nEquipped:\n`{self.summary[f'{rc.RarityList.ULTRA_RARE.value}']['equipped']:12d}`\nArmed:\n`{self.summary[f'{rc.RarityList.ULTRA_RARE.value}']['armed']:12d}`\nAverage Health:\n`{self.summary[f'{rc.RarityList.ULTRA_RARE.value}']['avg_health']:12.2f}`\nActive Workers:\n`{self.summary[f'{rc.RarityList.ULTRA_RARE.value}']['occupied']:12d}`\nWins:\n`{self.summary[f'{rc.RarityList.ULTRA_RARE.value}']['wins']:12d}`\nLosses:\n`{self.summary[f'{rc.RarityList.ULTRA_RARE.value}']['losses']:12d}`")
         if f'{rc.RarityList.LEGENDARY.value}' in self.summary :
-            embed.add_field(name=f'Tier 1 ({rc.RarityList.LEGENDARY.name})', value=f"Profiles:\n`{self.summary[f'{rc.RarityList.LEGENDARY.value}']['owned']:12d}`\nTotal Value:\n`{self.summary[f'{rc.RarityList.LEGENDARY.value}']['total_value']:12d}`\nAll Stats Average:\n`{self.summary[f'{rc.RarityList.LEGENDARY.value}']['avg_stat']:12.2f}`\nEquipped:\n`{self.summary[f'{rc.RarityList.LEGENDARY.value}']['equipped']:12d}`\nArmed:\n`{self.summary[f'{rc.RarityList.LEGENDARY.value}']['armed']:12d}`\nAverage Health:\n`{self.summary[f'{rc.RarityList.LEGENDARY.value}']['avg_health']:12.2f}`\nActive Workers:\n`{self.summary[f'{rc.RarityList.LEGENDARY.value}']['occupied']:12d}`\nWins:\n`{self.summary[f'{rc.RarityList.LEGENDARY.value}']['wins']:12d}`\nLosses:\n`{self.summary[f'{rc.RarityList.LEGENDARY.value}']['losses']:12d}`")
+            embed.add_field(name=f'Tier 6 ({rc.RarityList.LEGENDARY.name})', value=f"Profiles:\n`{self.summary[f'{rc.RarityList.LEGENDARY.value}']['owned']:12d}`\nTotal Value:\n`{self.summary[f'{rc.RarityList.LEGENDARY.value}']['total_value']:12d}`\nAll Stats Average:\n`{self.summary[f'{rc.RarityList.LEGENDARY.value}']['avg_stat']:12.2f}`\nEquipped:\n`{self.summary[f'{rc.RarityList.LEGENDARY.value}']['equipped']:12d}`\nArmed:\n`{self.summary[f'{rc.RarityList.LEGENDARY.value}']['armed']:12d}`\nAverage Health:\n`{self.summary[f'{rc.RarityList.LEGENDARY.value}']['avg_health']:12.2f}`\nActive Workers:\n`{self.summary[f'{rc.RarityList.LEGENDARY.value}']['occupied']:12d}`\nWins:\n`{self.summary[f'{rc.RarityList.LEGENDARY.value}']['wins']:12d}`\nLosses:\n`{self.summary[f'{rc.RarityList.LEGENDARY.value}']['losses']:12d}`")
         #But, as long as they have 1 profile, they have a summary.
         embed.add_field(name='Totals', value=f"Profiles:\n`{self.summary['owned']:12d}`\nEquipped:\n`{self.summary['equipped']:12d}`\nArmed:\n`{self.summary['armed']:12d}`\nActive Workers:\n`{self.summary['occupied']:12d}`\nWins:\n`{self.summary['wins']:12d}`\nLosses:\n`{self.summary['losses']:12d}`")
 
+        return embed
+
+    def _getEmbedBaseForSummaryEconomy(self) -> dis.Embed:
+        """Returns a Discord embed object formatted for Economy-Summary style
+           posts.
+
+           Input: self - Pointer to the current object instance.
+                  info - a dict of all the relevent embed parameters.
+
+           Output: embed - A formatted Embed object.
+        """
+        embed = dis.Embed()
+        embed.add_field(name='user', value=f"<@{self.user_id}>")
         return embed
 
     def _getEmbedBaseForProfiles(self) -> dis.Embed:
@@ -137,6 +150,26 @@ class Job(ABC):
         embed.add_field(name='Profile ID', value=self.profile.id)
 
         return embed
+
+    def _getMentions(self,
+                     ids : list) -> dis.AllowedMentions:
+        """Returns a AllowedMentions object for use in a .send command.  This
+           is mostly useful for creating a fake user object to meet the
+           structural requirement of Discord.py's parsing of user ID lists.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: obj - An AllowedMentions object for the given IDs.
+        """
+
+        #This is because the Discord.py implementation uses
+        #"[x.id for x in self.users]" get the IDs.
+        class FakeUser :
+            def __init__(self, id : int) :
+                self.id = id
+
+        return dis.AllowedMentions(everyone = False,
+                                   users    = [FakeUser(id) for id in ids])
 
     def getGuild(self) -> int:
         """Returns the Guild (Discord Server) ID originating this request.
@@ -267,6 +300,7 @@ class GenerateJob(Job):
             image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
 
         await metadata['ctx'].channel.send(content=f"<@{self.user_id}>",
+                                           allowed_mentions=self._getMentions(ids=[self.user_id]),
                                            file=dis.File(fp=image,
                                                          filename='image.png'),
                                            embed=embed)
@@ -329,6 +363,7 @@ class RollJob(Job):
                 image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
 
             await metadata['ctx'].channel.send(content=f"<@{self.user_id}>",
+                                               allowed_mentions=self._getMentions(ids=[self.user_id]),
                                                file=dis.File(fp=image,
                                                              filename='image.png'),
                                                embed=embed)
@@ -385,11 +420,66 @@ class ShowSummaryCharactersJob(Job):
             embed = self._getEmbedBaseForSummaryCharacters()
 
             await metadata['ctx'].channel.send(content=f"<@{self.author}>",
+                                               allowed_mentions=self._getMentions(ids=[self.author]),
                                                embed=embed)
 
     def doRandomize(self,
                     tag_src):
         pass
+
+class ShowSummaryEconomyJob(Job):
+
+    def __init__(self,
+                 ctx     : dis.Interaction,
+                 options : dict):
+        """Creates a job object for the /showsummary for economy command.
+
+           Input: self - Pointer to the current object instance.
+                  ctx - the Discord context from the user's slash command.
+                  options - a dict of configs for this job.
+
+           Output: N/A.
+        """
+
+        self.author             = ctx.user.id
+        self.guild              = ctx.guild_id
+        self.randomize          = False
+        self.result             = req.Response()
+        self.result.reason      = "OK"
+        self.result.status_code = 200
+        self.summary            = {}
+        self.user_id            = options['user_id']
+
+    def doWork(self,
+               web_url: str):
+        pass
+
+    async def post(self,
+                   metadata : dict):
+
+        self.summary = metadata['db_ifc'].getSummaryEconomy(self.user_id)
+
+        if not self.summary:
+
+            embed = dis.Embed(title="Error",
+                              description=f"User <@{self.user_id}> doesn't havny any economy built!",
+                              color=0xec1802)
+
+            await metadata['ctx'].channel.send(content=f"<@{self.author}>", embed=embed)
+
+        else:
+
+
+            embed   = self._getEmbedBaseForSummaryEconomy()
+
+            await metadata['ctx'].channel.send(content=f"<@{self.author}>, here is the economy for user <@{self.user_id}>",
+                                               allowed_mentions=self._getMentions(ids=[self.author]),
+                                               embed=embed)
+
+    def doRandomize(self,
+                    tag_src):
+        pass
+
 
 class ShowProfileJob(Job):
 
@@ -476,6 +566,7 @@ class TestGetJob(Job):
                           color=0x008000)
 
         await metadata['ctx'].channel.send(content=f"<@{self.user_id}>",
+                                           allowed_mentions=self._getMentions(ids=[self.user_id]),
                                            embed=embed)
 
     def doRandomize(self,
@@ -520,6 +611,7 @@ class TestPostJob(Job):
             image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
 
         await metadata['ctx'].channel.send(content=f"<@{self.user_id}>",
+                                           allowed_mentions=self._getMentions(ids=[self.user_id]),
                                            file=dis.File(fp=image,
                                                          filename='image.png'),
                                            embed=embed)
@@ -564,6 +656,7 @@ class TestRollJob(Job):
             image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
 
         await metadata['ctx'].channel.send(content=f"<@{self.user_id}>",
+                                           allowed_mentions=self._getMentions(ids=[self.user_id]),
                                            file=dis.File(fp=image,
                                                          filename='image.png'),
                                            embed=embed)
@@ -608,6 +701,7 @@ class TestShowJob(Job):
         image = io.BytesIO(b64.b64decode(self.db_img))
 
         await metadata['ctx'].channel.send(content=f"<@{self.user_id}>",
+                                           allowed_mentions=self._getMentions(ids=[self.user_id]),
                                            file=dis.File(fp=image,
                                                          filename='image.png'),
                                            embed=embed)
@@ -655,11 +749,7 @@ class JobFactory:
                 return ShowSummaryInventoryJob(ctx,
                                                options)
 
-            case JobTypeEnum.SHOWPROFILE:
-                return ShowProfileJob(ctx,
-                                      options)
-
-            case JobTypeEnum.SHOWPROFILE:
+            case JobTypeEnum.SHOW_PROFILE:
                 return ShowProfileJob(ctx,
                                       options)
 

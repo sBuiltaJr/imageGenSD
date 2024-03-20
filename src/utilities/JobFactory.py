@@ -119,7 +119,14 @@ class Job(ABC):
            Output: embed - A formatted Embed object.
         """
         embed = dis.Embed()
-        embed.add_field(name='user', value=f"<@{self.user_id}>")
+        embed.add_field(name='Building', value=f"Assigned Characters\n`{self.summary['builder']['count']:12d}\n`Max Tier\n`{1 + self.summary['builder']['tier']:12d}`")
+        embed.add_field(name='Crafting', value=f"Assigned Characters\n`{self.summary['crafter']['count']:12d}\n`Max Tier\n`{1 + self.summary['crafter']['tier']:12d}`")
+        embed.add_field(name='Hospitals', value=f"Assigned Characters\n`{self.summary['hospital']['count']:12d}\n`Max Tier\n`{1  + self.summary['hospital']['tier']:12d}`")
+        embed.add_field(name='Key Generation', value=f"Assigned Characters\n`{self.summary['keygen']['count']:12d}\n`Max Tier\n`{1 + self.summary['keygen']['tier']:12d}`")
+        embed.add_field(name='Research', value=f"Assigned Characters\n`{self.summary['research']['count']:12d}\n`Max Tier\n`{1 + self.summary['research']['tier']:12d}`")
+        embed.add_field(name='Dungeon Teams', value=f"Assigned Characters\n`{self.summary['team']['count']:12d}\n`Max Tier\n`{1 + self.summary['team']['tier']:12d}`")
+        embed.add_field(name='Workers', value=f"Assigned Characters\n`{self.summary['worker']['count']:12d}\n`Max Tier\n`{1 + self.summary['worker']['tier']:12d}`")
+
         return embed
 
     def _getEmbedBaseForProfiles(self) -> dis.Embed:

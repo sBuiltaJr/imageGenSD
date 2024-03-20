@@ -558,7 +558,7 @@ class MariadbIfc:
         """
 
         categories = ['builder', 'crafter', 'hospital', 'keygen', 'research', 'team', 'worker']
-        count      = 0
+        count      = 1
         cursor     = self.con.cursor(buffered=False)
         results    = {}
 
@@ -733,6 +733,7 @@ class MariadbIfc:
 
         cmd = (self.cmds['econ']['put_keygen_count']) % (count - len(profile_ids), user_id)
         self.db_log.debug(f"Updating user's econ keygen count: {cmd}")
+        cursor.execute(cmd)
 
         #Only update occupied after clearing the work table in case the command
         #fails somehow, ensuring that the table won't have ghost workers.

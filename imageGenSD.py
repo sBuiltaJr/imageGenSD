@@ -587,22 +587,25 @@ async def showprofile(interaction : dis.Interaction,
                }
 
 
-    if db_ifc.getDropdown(user_id = interaction.user.id) :
 
-        await interaction.response.send_message(f'Please close your existing dropdown menu or wait for it to time out.', ephemeral=True, delete_after=9.0)
+    if profile_id == None:
 
-    elif profile_id == None:
+        if db_ifc.getDropdown(user_id = interaction.user.id) :
 
-        dis_log.debug(f"Creating a SHOW PROFILE view for user {interaction.user.id}.")
-        user_id  = interaction.user.id if user == None else user.id
-        profiles = db_ifc.getProfiles(user_id)
-        dis_log.debug(f"User {user_id} returned profile list {profiles}.")
-        view = ddf.DropdownView(ctx      = interaction,
-                                type     = ddf.DropDownTypeEnum.SHOW,
-                                choices  = profiles,
-                                metadata = metadata)
+            await interaction.response.send_message(f'Please close your existing dropdown menu or wait for it to time out.', ephemeral=True, delete_after=9.0)
 
-        await interaction.response.send_message('Select a profile to view:',view=view)
+        else:
+
+            dis_log.debug(f"Creating a SHOW PROFILE view for user {interaction.user.id}.")
+            user_id  = interaction.user.id if user == None else user.id
+            profiles = db_ifc.getProfiles(user_id)
+            dis_log.debug(f"User {user_id} returned profile list {profiles}.")
+            view = ddf.DropdownView(ctx      = interaction,
+                                    type     = ddf.DropDownTypeEnum.SHOW,
+                                    choices  = profiles,
+                                    metadata = metadata)
+
+            await interaction.response.send_message('Select a profile to view:',view=view)
 
     else:
 
@@ -654,84 +657,53 @@ async def showsummary(interaction : dis.Interaction,
 
     opts = {'user_id' : interaction.user.id if user == None else user.id}
 
-    match type:
+    if db_ifc.getDropdown(user_id = interaction.user.id) :
 
-        case SummaryChoices.Characters:
+        await interaction.response.send_message(f'Please close your existing dropdown menu or wait for it to time out.', ephemeral=True, delete_after=9.0)
 
-            dis_log.debug(f"Creating a job with metadata {metadata}.")
-            job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_SUMMARY_CHARACTERS,
-                                       ctx     = interaction,
-                                       options = opts)
+    else :
 
-            dis_log.debug(f"Posting CHARACTERS SUMMARY job {job} to the queue.")
-            result = show_queue.add(metadata = metadata,
-                                    job      = job)
+        match type:
 
-        case SummaryChoices.Economy:
+            case SummaryChoices.Characters:
 
-            dis_log.debug(f"Creating a job with metadata {metadata}.")
-            job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_SUMMARY_ECONOMY,
-                                       ctx     = interaction,
-                                       options = opts)
+                dis_log.debug(f"Creating a job with metadata {metadata}.")
+                job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_SUMMARY_CHARACTERS,
+                                           ctx     = interaction,
+                                           options = opts)
 
-            dis_log.debug(f"Posting ECONOMY SUMMARY job {job} to the queue.")
-            result = show_queue.add(metadata = metadata,
-                                    job      = job)
+                dis_log.debug(f"Posting CHARACTERS SUMMARY job {job} to the queue.")
+                result = show_queue.add(metadata = metadata,
+                                        job      = job)
 
-        case SummaryChoices.Inventory:
+            case SummaryChoices.Economy:
 
-            dis_log.debug(f"Creating a INVENTORY SUMMARY job with metadata {metadata}.")
-            job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_SUMMARY_INVENTORY,
-                                       ctx     = interaction,
-                                       options = opts)
+                dis_log.debug(f"Creating a job with metadata {metadata}.")
+                job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_SUMMARY_ECONOMY,
+                                           ctx     = interaction,
+                                           options = opts)
 
-            dis_log.debug(f"Posting INVENTORY SUMMARY job {job} to the queue.")
-            result = show_queue.add(metadata = metadata,
-                                    job      = job)
+                dis_log.debug(f"Posting ECONOMY SUMMARY job {job} to the queue.")
+                result = show_queue.add(metadata = metadata,
+                                        job      = job)
 
-        case _:
+            case SummaryChoices.Inventory:
 
-            dis_log.Error(f"Given an invalid type of showsummary job {type}!")
-            result = "Error, this is an invalid choice!"
+                dis_log.debug(f"Creating a INVENTORY SUMMARY job with metadata {metadata}.")
+                job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_SUMMARY_INVENTORY,
+                                           ctx     = interaction,
+                                           options = opts)
 
-    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
+                dis_log.debug(f"Posting INVENTORY SUMMARY job {job} to the queue.")
+                result = show_queue.add(metadata = metadata,
+                                        job      = job)
 
+            case _:
 
-#This is commented until the failed inheritance issue can be resolved.
-#@IGSD_client.tree.command()
-#async def testclear(interaction: dis.Interaction):
-#    """A test flood of requests to verify the flush command works.
-#
-#       Input  : None.
-#
-#       Output : None.
-#    """
-#    dis_log = log.getLogger('discord')
-#    rng    = range(1,10)
-#
-#    job = [{ 'metadata' : {
-#                'ctx'    : interaction,
-#                'loop'   : IGSD_client.getLoop(),
-#                'poster' : post
-#           },
-#           'data' : {
-#                #Requests are sorted by guild for rate-limiting
-#                'guild'  : interaction.guild_id,
-#                #This should really be metadata but the rest of the metadata
-#                #can't be pickeled, so this must be passed with the work.
-#                'id'     : x,
-#                'post'   : {'empty'},
-#                'reply'  : "test job"
-#            }
-#        } for x in rng]
-#    dis_log.debug(f"trying to clear the queue.")
-#
-#    for m in rng:
-#        result = job_queue.add(job[m -1])
-#
-#    job_queue.flush()
-#
-#    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
+                dis_log.Error(f"Given an invalid type of showsummary job {type}!")
+                result = "Error, this is an invalid choice!"
+
+        await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(manage_guild=True) #The closest to 'be a mod' Discord has.

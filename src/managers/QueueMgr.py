@@ -11,44 +11,12 @@ from ..utilities import JobFactory as jf
 import logging as log
 import logging.handlers as lh
 import multiprocessing as mp
-#from multiprocessing.queues import Queue
-#from multiprocessing import get_context
 import pathlib as pl
 import queue
 import requests as req
 import time
 
 #####  Queue Class  #####
-
-#class ManagedQueue(Queue):
-#    """This overloads the default MP class to add useful basic functions, like
-#       Queue flushing.
-#    """
-
-#    def __init__(self, maxsize=0, *, ctx=None):
-#        ctx = get_context()
-#        super().__init__(maxsize=maxsize, ctx=ctx)
-
-#    def Flush(self, block=True, timeout=None):
-#        """Empties the base cpython Queue to add useful features from the
-#           underlying dequeue class that weren't exposed for some reason.
-#           Is unable to cancel the current job being processed by the webui.
-#
-#           Inputs: self - Pointer to the current object instance.
-#
-#           Output: None.
-#        """
-#        if self._closed:
-#            raise ValueError(f"Queue {self!r} is closed")
-#        if not self._sem.acquire(block, timeout):
-#            raise Full
-
-#        with self._notempty:
-#            if self._thread is None:
-#                self._start_thread()
-#            self._buffer.clear()
-#            print(f"Cleared! {self.empty()}")
-#            self._notempty.notify()
 
 #####  Package Functions  #####
 
@@ -222,7 +190,7 @@ class Manager:
         while self.keep_going:
 
             if self.flush_queue:
-#                self.queue.flush()
+
                 self.flush_queue = False
                 continue
 

@@ -575,12 +575,12 @@ class MariadbIfc:
 
     def getSummaryEconomy(self,
                           user_id : int) -> dict:
-        """Returns db-calcualted stats about a user's economy.
+        """Returns the db-stored state of a user's economy.
 
             Input: self - Pointer to the current object instance.
                    user_id - user ID to interrogate for economy data.
 
-            Output: dict - A dict of economy stats sorted by rank, if any.
+            Output: dict - A dict of economy stats sorted by group, if any.
         """
 
         categories = ['builder', 'crafter', 'hospital', 'keygen', 'research', 'team', 'worker']
@@ -609,6 +609,42 @@ class MariadbIfc:
                 results[key]['tier_4'] = result[count + 6]
                 results[key]['tier_5'] = result[count + 7]
                 count += 8
+
+
+        return results
+
+    def getSummaryInventory(self,
+                            user_id : int) -> dict:
+        """Returns the db-stored contents of a user's Inventory.
+
+            Input: self - Pointer to the current object instance.
+                   user_id - user ID to interrogate for inventory data.
+
+            Output: dict - A dict of inventory data sorted by rank, if any.
+        """
+
+        count   = 2
+        cursor  = self.con.cursor(buffered=False)
+        results = {}
+
+        self.db_log.info(f"Getting inventory for user {user_id}")
+        cmd = (self.cmds['inv']['get_inventory']) % (user_id)
+        self.db_log.debug(f"Executing command: {cmd}")
+        cursor.execute(cmd)
+
+        result = cursor.fetchone()
+
+        if result:
+        
+            results['dust'] = result[1]
+
+            for tier in range(0,5):
+
+                results[f'tier_{tier}'] = {}
+                results[f'tier_{tier}'][f't{tier}_armor_count']  = result[count + 0]
+                results[f'tier_{tier}'][f't{tier}_key_count']    = result[count + 1]
+                results[f'tier_{tier}'][f't{tier}_weapon_count'] = result[count + 2]
+                count += 3
 
 
         return results

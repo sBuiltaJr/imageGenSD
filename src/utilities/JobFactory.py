@@ -36,6 +36,7 @@ class Job(ABC):
            Note: This function is called in the Job Queue, meaning *only*
                  picklable data is available to it.
         """
+
         pass
 
     @abstractmethod
@@ -49,6 +50,7 @@ class Job(ABC):
 
            Output: N/A.
         """
+
         pass
 
     def _getEmbedBaseForGenerate(self,
@@ -60,6 +62,7 @@ class Job(ABC):
 
            Output: embed - A formatted Embed object.
         """
+
         embed = dis.Embed()
 
         embed.add_field(name='Prompt', value=info['prompt'])
@@ -86,6 +89,7 @@ class Job(ABC):
 
            Output: embed - A formatted Embed object.
         """
+
         embed = dis.Embed()
 
         embed.add_field(name='user', value=f"<@{self.user_id}>")
@@ -118,6 +122,7 @@ class Job(ABC):
 
            Output: embed - A formatted Embed object.
         """
+
         embed = dis.Embed()
         embed.add_field(name='Building', value=f"Assigned Characters\n`{self.summary['builder']['count']:12d}\n`Max Tier\n`{1 + self.summary['builder']['tier']:12d}`")
         embed.add_field(name='Crafting', value=f"Assigned Characters\n`{self.summary['crafter']['count']:12d}\n`Max Tier\n`{1 + self.summary['crafter']['tier']:12d}`")
@@ -129,6 +134,22 @@ class Job(ABC):
 
         return embed
 
+    def _getEmbedBaseForSummaryInventory(self) -> dis.Embed:
+        """Returns a Discord embed object formatted for Economy-Summary style
+           posts.
+
+           Input: self - Pointer to the current object instance.
+                  info - a dict of all the relevent embed parameters.
+
+           Output: embed - A formatted Embed object.
+        """
+
+        embed = dis.Embed()
+
+        embed.add_field(name='user', value=f"<@{self.user_id}>")
+
+        return embed
+
     def _getEmbedBaseForProfiles(self) -> dis.Embed:
         """Returns a Discord embed object formatted for profile-style posts.
 
@@ -137,6 +158,7 @@ class Job(ABC):
 
            Output: embed - A formatted Embed object.
         """
+
         embed = dis.Embed()
 
         favorite = f"<@{self.profile.favorite}>" if self.profile.favorite != 0 else "None. You could be here!"
@@ -412,7 +434,7 @@ class ShowSummaryCharactersJob(Job):
     async def post(self,
                    metadata : dict):
 
-        self.summary = metadata['db_ifc'].getSummaryCharacters(self.user_id)
+        self.summary = metadata['db_ifc'].getSummaryCharacters(user_id=self.user_id)
 
         if not self.summary:
 
@@ -464,12 +486,12 @@ class ShowSummaryEconomyJob(Job):
     async def post(self,
                    metadata : dict):
 
-        self.summary = metadata['db_ifc'].getSummaryEconomy(self.user_id)
+        self.summary = metadata['db_ifc'].getSummaryEconomy(user_id=self.user_id)
 
         if not self.summary:
 
             embed = dis.Embed(title="Error",
-                              description=f"User <@{self.user_id}> doesn't havny any economy built!",
+                              description=f"User <@{self.user_id}> doesn't have any economy built!",
                               color=0xec1802)
 
             await metadata['ctx'].channel.send(content=f"<@{self.author}>", embed=embed)
@@ -487,6 +509,58 @@ class ShowSummaryEconomyJob(Job):
                     tag_src):
         pass
 
+class ShowSummaryInventoryJob(Job):
+
+    def __init__(self,
+                 ctx     : dis.Interaction,
+                 options : dict):
+        """Creates a job object for the /showsummary for economy command.
+
+           Input: self - Pointer to the current object instance.
+                  ctx - the Discord context from the user's slash command.
+                  options - a dict of configs for this job.
+
+           Output: N/A.
+        """
+
+        self.author             = ctx.user.id
+        self.guild              = ctx.guild_id
+        self.randomize          = False
+        self.result             = req.Response()
+        self.result.reason      = "OK"
+        self.result.status_code = 200
+        self.summary            = {}
+        self.user_id            = options['user_id']
+
+    def doWork(self,
+               web_url: str):
+        pass
+
+    async def post(self,
+                   metadata : dict):
+
+        self.summary = metadata['db_ifc'].getSummaryInventory(user_id=self.user_id)
+
+        if not self.summary:
+
+            embed = dis.Embed(title="Error",
+                              description=f"User <@{self.user_id}> doesn't have an inventory!",
+                              color=0xec1802)
+
+            await metadata['ctx'].channel.send(content=f"<@{self.author}>", embed=embed)
+
+        else:
+
+
+            embed   = self._getEmbedBaseForSummaryInventory()
+
+            await metadata['ctx'].channel.send(content=f"<@{self.author}>",
+                                               allowed_mentions=self._getMentions(ids=[self.author]),
+                                               embed=embed)
+
+    def doRandomize(self,
+                    tag_src):
+        pass
 
 class ShowProfileJob(Job):
 

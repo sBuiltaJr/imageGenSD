@@ -163,7 +163,7 @@ async def about(interaction : dis.Interaction):
 
     dis_log = log.getLogger('discord')
 
-    await interaction.response.send_message(f"This is bot version {IGSD_version}!  Invite me to your server with [this link](https://discord.com/api/oauth2/authorize?client_id=1084600126913388564&permissions=534723816512&scope=bot)!  Code found [on GitHub](https://github.com/sBuiltaJr/imageGenSD)", ephemeral=True, delete_after=30.0)
+    await interaction.response.send_message(f"This is bot version {IGSD_version}!  Invite me to your server with [this link](https://discord.com/api/oauth2/authorize?client_id=1084600126913388564&permissions=534723816512&scope=bot)!  Code found [on GitHub](https://github.com/sBuiltaJr/imageGenSD).", ephemeral=True, delete_after=30.0)
 
 
 @IGSD_client.tree.command()
@@ -195,7 +195,12 @@ async def assignkeygen(interaction : dis.Interaction,
     options = db_ifc.getKeyGenParams(user_id = interaction.user.id)
     dis_log.debug(f"Got Key Gen parameters: {options}.")
 
-    if not profiles or 'total' not in options:
+
+    if db_ifc.getDropdown(user_id = interaction.user.id) :
+
+        await interaction.response.send_message(f'Please close your existing dropdown menu or wait for it to time out.', ephemeral=True, delete_after=9.0)
+
+    elif not profiles or 'total' not in options:
 
         await interaction.response.send_message('You need a character first!  Use the /roll command to get one, or free existing profiles from their assignments!', ephemeral=True, delete_after=9.0)
 
@@ -501,16 +506,22 @@ async def removekeygen(interaction : dis.Interaction,
 
     else:
 
-        options['tier'] = tier
-        dis_log.debug(f"Creating a REMOVE KEY GEN view for user {interaction.user.id}.")
+        if db_ifc.getDropdown(user_id = interaction.user.id) :
 
-        view = ddf.DropdownView(ctx      = interaction,
-                                type     = ddf.DropDownTypeEnum.REMOVE_KEY_GEN,
-                                choices  = profiles,
-                                metadata = metadata,
-                                options  = options)
+            await interaction.response.send_message(f'Please close your existing dropdown menu or wait for it to time out.', ephemeral=True, delete_after=9.0)
 
-        await interaction.response.send_message(f'Select a profile to remove from keygen work for tier {tier + 1}:',view=view)
+        else :
+
+            options['tier'] = tier
+            dis_log.debug(f"Creating a REMOVE KEY GEN view for user {interaction.user.id}.")
+
+            view = ddf.DropdownView(ctx      = interaction,
+                                    type     = ddf.DropDownTypeEnum.REMOVE_KEY_GEN,
+                                    choices  = profiles,
+                                    metadata = metadata,
+                                    options  = options)
+
+            await interaction.response.send_message(f'Select a profile to remove from keygen work for tier {tier + 1}:',view=view)
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
@@ -575,7 +586,12 @@ async def showprofile(interaction : dis.Interaction,
                 'queue'   : show_queue
                }
 
-    if profile_id == None:
+
+    if db_ifc.getDropdown(user_id = interaction.user.id) :
+
+        await interaction.response.send_message(f'Please close your existing dropdown menu or wait for it to time out.', ephemeral=True, delete_after=9.0)
+
+    elif profile_id == None:
 
         dis_log.debug(f"Creating a SHOW PROFILE view for user {interaction.user.id}.")
         user_id  = interaction.user.id if user == None else user.id

@@ -1,13 +1,15 @@
 {
     "daily_index"    : "4",
     "del_default"    : "DELETE FROM IGSDUsers WHERE (u_ID = 0) LIMIT 1;",
+    "get_dropdown"   : "SELECT dropdown_active FROM IGSDUsers WHERE (u_ID = %s);",
     "get_owned"      : "SELECT owned FROM IGSDUsers WHERE u_ID = %s;",
     "get_user"       : "SELECT * FROM IGSDUsers WHERE u_ID = %s;",
 	"inc_cmd_ct"     : "UPDATE IGSDUsers SET cmd_ct=cmd_ct+1 WHERE u_ID='%s';",
-    "make_def_tst"   : "INSERT INTO IGSDUsers VALUES (0, SYSDATE(), 0, '{}', False, 0, SYSDATE(), 0, NULL, 0, 0, 0, 0, 1, 0, 0, NULL, 0, 0);",
-    "put_new"        : "INSERT INTO IGSDUsers VALUES ('%s', SYSDATE(), 1, NULL, False, 0, 0, 0, 'ffffffff-ffff-ffff-ffff-fffffffffffe', 0, 0, 0, 0, 0, 0, 0, NULL, 0, 0);",
+    "make_def_tst"   : "INSERT INTO IGSDUsers VALUES (0, SYSDATE(), 0, '{}', False, 0, SYSDATE(), 0, NULL, 0, 0, 0, 0, 1, 0, 0, NULL, 0, 0, False);",
+    "put_dropdown"   : "UPDATE IGSDUsers SET dropdown_active = %s WHERE (u_ID = %s);",
+    "put_new"        : "INSERT INTO IGSDUsers VALUES ('%s', SYSDATE(), 1, NULL, False, 0, 0, 0, 'ffffffff-ffff-ffff-ffff-fffffffffffe', 0, 0, 0, 0, 0, 0, 0, NULL, 0, 0 ,False);",
     "set_owned"      : "UPDATE IGSDUsers SET owned = '%s' WHERE u_ID = %s;",
     "reset_daily"    : "UPDATE IGSDUsers SET daily = False;",
     "set_daily_roll" : "UPDATE IGSDUsers SET daily = True, daily_ct=daily_ct+1, daily_dt=SYSDATE() WHERE u_ID = %s;",
-    "table_fmt"      : "IGSDUsers (u_ID BIGINT UNSIGNED NOT NULL UNIQUE PRIMARY KEY, created DATETIME NOT NULL, cmd_ct BIGINT NOT NULL, owned LONGTEXT, daily BOOLEAN NOT NULL, daily_ct BIGINT NOT NULL, daily_dt DATETIME NOT NULL, dust BIGINT NOT NULL, favorite UUID, gems BIGINT NOT NULL, losses BIGINT NOT NULL, merged_ct BIGINT NOT NULL, mission_ct BIGINT NOT NULL, owned_ct BIGINT NOT NULL, points BIGINT NOT NULL, rank BIGINT NOT NULL, rivals JSON, supers BIGINT NOT NULL, wins BIGINT NOT NULL);"
+    "table_fmt"      : "IGSDUsers (u_ID BIGINT UNSIGNED NOT NULL UNIQUE PRIMARY KEY, created DATETIME NOT NULL, cmd_ct BIGINT NOT NULL, owned LONGTEXT, daily BOOLEAN NOT NULL, daily_ct BIGINT NOT NULL, daily_dt DATETIME NOT NULL, dust BIGINT NOT NULL, favorite UUID, gems BIGINT NOT NULL, losses BIGINT NOT NULL, merged_ct BIGINT NOT NULL, mission_ct BIGINT NOT NULL, owned_ct BIGINT NOT NULL, points BIGINT NOT NULL, rank BIGINT NOT NULL, rivals JSON, supers BIGINT NOT NULL, wins BIGINT NOT NULL, dropdown_active BOOLEAN DEFAULT False);"
 }

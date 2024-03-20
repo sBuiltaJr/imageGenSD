@@ -258,10 +258,36 @@ class MariadbIfc:
 
         return result
 
+    def getDropdown(self,
+                    user_id : int) -> bool:
+        """Returns the 'dropdown active' status of a user.  The current
+           implementation is a 'good enough' measure for the current bot usage.
+
+            Input: self - Pointer to the current object instance.
+                   user_id - Which user to check for an active dropdown.
+
+            Output: bool - whether the user has a dropdown active or not.
+        """
+
+        cmd    = ""
+        cursor = self.con.cursor(buffered=False)
+        result = False
+
+        cmd = (self.cmds['user']['get_dropdown']) % (user_id)
+        self.db_log.debug(f"Executing get dropdown state command {cmd}")
+        cursor.execute(cmd)
+
+        result = bool((cursor.fetchone())[0])
+
+        self.db_log.debug(f"User's dropdown value: {result}")
+
+        return result
+
+
     def getImage(self,
                  picture_id : Optional[str] = None,
                  profile_id : Optional[str] = "ffffffff-ffff-ffff-ffff-fffffffffffe") -> str:
-        """Returns a given profile for a given user.
+        """Returns the profile image for a given profile.
 
             Input: self - Pointer to the current object instance.
                    picture_id - optional picture ID to find, defaults to the ID
@@ -686,6 +712,25 @@ class MariadbIfc:
         self.db_log.debug(f"Profile map output was: {profile}")
 
         return profile
+
+    def putDropdown(self,
+                    user_id : int,
+                    state   : bool):
+        """Sets the 'dropdown active' status of a user.  The current
+           implementation is a 'good enough' measure for the current bot usage.
+
+            Input: self - Pointer to the current object instance.
+                   user_id - Which user to check for an active dropdown.
+
+            Output: N/A
+        """
+
+        cmd    = ""
+        cursor = self.con.cursor(buffered=False)
+
+        cmd = (self.cmds['user']['put_dropdown']) % (state, user_id)
+        self.db_log.debug(f"Executing put dropdown state command {cmd}")
+        cursor.execute(cmd)
 
     def removeKeyGenWork(self,
                          count       : int,

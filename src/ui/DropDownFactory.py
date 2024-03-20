@@ -131,9 +131,11 @@ class KeyGenDropdown(DynamicDropdown):
 
         if str(CANCEL_NAV_VALUE) in self.values :
 
+            self.db.putDropdown(state   = False,
+                                user_id = self.interaction.user.id)
             message = await self.interaction.original_response()
             await message.edit(view=None)
-            
+
         elif str(FORWARD_NAV_VALUE) in self.values or str(BACKWARD_NAV_VALUE) in self.values:
 
             opts          = {'total'        : self.tier_count,
@@ -235,6 +237,8 @@ class RemoveKeyGenDropdown(DynamicDropdown):
 
         if str(CANCEL_NAV_VALUE) in self.values :
 
+            self.db.putDropdown(state   = False,
+                                user_id = self.interaction.user.id)
             message = await self.interaction.original_response()
             await message.edit(view=None)
 
@@ -284,6 +288,7 @@ class ShowDropdown(DynamicDropdown):
         """
 
         self.choices     = choices
+        self.db          = metadata['db_ifc']
         self.interaction = ctx
         self.metadata    = metadata
         self.offset      = 0 if opts == None else int(opts['count'])
@@ -338,6 +343,8 @@ class ShowDropdown(DynamicDropdown):
 
         elif self.values[0] == str(CANCEL_NAV_VALUE) :
 
+            self.db.putDropdown(state   = False,
+                                user_id = self.interaction.user.id)
             message = await self.interaction.original_response()
             await message.edit(view=None)
 
@@ -376,7 +383,14 @@ class DropdownView(dis.ui.View):
 
            Output : None.
         """
+
         self.interaction = ctx
+        self.db          = metadata['db_ifc']
+
+        #This is fine for now since users aren't allowed to control the
+        #dropdown enum provided to the function.
+        self.db.putDropdown(state   = True,
+                            user_id = self.interaction.user.id)
 
         super().__init__(timeout=100)
 
@@ -393,7 +407,9 @@ class DropdownView(dis.ui.View):
 
            Output : None.
         """
-        # remove buttons on timeout
+
+        self.db.putDropdown(state   = False,
+                            user_id = self.interaction.user.id)
         message = await self.interaction.original_response()
         await message.edit(view=None)
 

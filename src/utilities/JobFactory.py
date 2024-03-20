@@ -135,7 +135,7 @@ class Job(ABC):
         return embed
 
     def _getEmbedBaseForSummaryInventory(self) -> dis.Embed:
-        """Returns a Discord embed object formatted for Economy-Summary style
+        """Returns a Discord embed object formatted for Inventory-Summary style
            posts.
 
            Input: self - Pointer to the current object instance.
@@ -147,6 +147,14 @@ class Job(ABC):
         embed = dis.Embed()
 
         embed.add_field(name='user', value=f"<@{self.user_id}>")
+        embed.add_field(name='dust', value=f"`{self.summary['dust']:12d}`")
+        embed.add_field(name='favor', value=f"`{0:12d}`")
+        embed.add_field(name=f'Tier 1 ({rc.RarityList.COMMON.name})',value=f"Keys\n`{self.summary['tier_0']['key_count']:12d}\n`Armor Sets\n`{self.summary['tier_0']['armor_count']:12d}\n`Weapons\n`{self.summary['tier_0']['weapon_count']:12d}\n`")
+        embed.add_field(name=f'Tier 2 ({rc.RarityList.UNCOMMON.name})',value=f"Keys\n`{self.summary['tier_1']['key_count']:12d}\n`Armor Sets\n`{self.summary['tier_1']['armor_count']:12d}\n`Weapons\n`{self.summary['tier_1']['weapon_count']:12d}\n`")
+        embed.add_field(name=f'Tier 3 ({rc.RarityList.RARE.name})',value=f"Keys\n`{self.summary['tier_2']['key_count']:12d}\n`Armor Sets\n`{self.summary['tier_2']['armor_count']:12d}\n`Weapons\n`{self.summary['tier_2']['weapon_count']:12d}\n`")
+        embed.add_field(name=f'Tier 4 ({rc.RarityList.SUPER_RARE.name})',value=f"Keys\n`{self.summary['tier_3']['key_count']:12d}\n`Armor Sets\n`{self.summary['tier_3']['armor_count']:12d}\n`Weapons\n`{self.summary['tier_3']['weapon_count']:12d}\n`")
+        embed.add_field(name=f'Tier 5 ({rc.RarityList.ULTRA_RARE.name})',value=f"Keys\n`{self.summary['tier_4']['key_count']:12d}\n`Armor Sets\n`{self.summary['tier_4']['armor_count']:12d}\n`Weapons\n`{self.summary['tier_4']['weapon_count']:12d}\n`")
+        embed.add_field(name=f'Tier 6 ({rc.RarityList.LEGENDARY.name})',value=f"Keys\n`{self.summary['tier_5']['key_count']:12d}\n`Armor Sets\n`{self.summary['tier_5']['armor_count']:12d}\n`Weapons\n`{self.summary['tier_5']['weapon_count']:12d}\n`")
 
         return embed
 

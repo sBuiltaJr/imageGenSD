@@ -610,6 +610,7 @@ class MariadbIfc:
                 results[key]['tier_5'] = result[count + 7]
                 count += 8
 
+        self.db_log.debug(f"Got results: {results}")
 
         return results
 
@@ -638,14 +639,15 @@ class MariadbIfc:
         
             results['dust'] = result[1]
 
-            for tier in range(0,5):
+            for tier in range(0,6):
 
                 results[f'tier_{tier}'] = {}
-                results[f'tier_{tier}'][f't{tier}_armor_count']  = result[count + 0]
-                results[f'tier_{tier}'][f't{tier}_key_count']    = result[count + 1]
-                results[f'tier_{tier}'][f't{tier}_weapon_count'] = result[count + 2]
+                results[f'tier_{tier}']['armor_count']  = result[count + 0]
+                results[f'tier_{tier}']['key_count']    = result[count + 1]
+                results[f'tier_{tier}']['weapon_count'] = result[count + 2]
                 count += 3
 
+        self.db_log.debug(f"Got results: {results}")
 
         return results
 

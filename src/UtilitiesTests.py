@@ -156,7 +156,7 @@ class TestJobFactory(iatc):
         nr.getRandomName              = MagicMock()
         nr.getRandomName.return_value = "Default Sally"
 
-        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.SHOWPROFILE,
+        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.SHOW_PROFILE,
                                    ctx=self.interaction,
                                    options=opts)
         self.assertNotEqual(job, None)
@@ -182,7 +182,7 @@ class TestJobFactory(iatc):
         nr.getRandomName              = MagicMock()
         nr.getRandomName.return_value = "Default Sally"
 
-        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.SHOWPROFILE,
+        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.SHOW_PROFILE,
                                    ctx=self.interaction,
                                    options=opts)
         self.assertNotEqual(job, None)
@@ -190,6 +190,123 @@ class TestJobFactory(iatc):
         metadata    = {'ctx'    : self.interaction,
                        'db_ifc' : mc.MockDbInterface()}
         job.id = 1
+
+        await job.post(metadata=metadata)
+        self.assertTrue(True)
+
+    async def testRunShowSummaryCharacterJobFlow(self):
+        """Verifies that the ShowSummaryCharacter object returned from the Job
+           Factory will follow all its execution paths.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        opts = {'id'      : 1,
+                'user_id' : 2}
+
+        job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_SUMMARY_CHARACTERS,
+                                   ctx     = self.interaction,
+                                   options = opts)
+
+        self.assertNotEqual(job, None)
+
+        metadata= {'ctx'    : self.interaction,
+                   'db_ifc' : mc.MockDbInterface()}
+
+        await job.post(metadata=metadata)
+        self.assertTrue(True)
+
+        opts = {'id'      : 1,
+                'user_id' : -1}
+
+        job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_SUMMARY_CHARACTERS,
+                                   ctx     = self.interaction,
+                                   options = opts)
+
+        self.assertNotEqual(job, None)
+
+        metadata= {'ctx'    : self.interaction,
+                   'db_ifc' : mc.MockDbInterface()}
+
+        await job.post(metadata=metadata)
+        self.assertTrue(True)
+
+    async def testRunShowSummaryEconomyJobJobFlow(self):
+        """Verifies that the ShowSummaryEconomy object returned from the Job
+           Factory will follow all its execution paths.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        opts = {'id'      : 1,
+                'user_id' : 2}
+
+        job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_SUMMARY_ECONOMY,
+                                   ctx     = self.interaction,
+                                   options = opts)
+
+        self.assertNotEqual(job, None)
+
+        metadata= {'ctx'    : self.interaction,
+                   'db_ifc' : mc.MockDbInterface()}
+
+        await job.post(metadata=metadata)
+        self.assertTrue(True)
+
+        opts = {'id'      : 1,
+                'user_id' : -1}
+
+        job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_SUMMARY_ECONOMY,
+                                   ctx     = self.interaction,
+                                   options = opts)
+
+        self.assertNotEqual(job, None)
+
+        metadata= {'ctx'    : self.interaction,
+                   'db_ifc' : mc.MockDbInterface()}
+
+        await job.post(metadata=metadata)
+        self.assertTrue(True)
+
+    async def testRunShowSummaryInventoryJobFlow(self):
+        """Verifies that the ShowSummaryInventory object returned from the Job
+           Factory will follow all its execution paths.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        opts = {'id'      : 1,
+                'user_id' : 2}
+
+        job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_SUMMARY_INVENTORY,
+                                   ctx     = self.interaction,
+                                   options = opts)
+
+        self.assertNotEqual(job, None)
+
+        metadata= {'ctx'    : self.interaction,
+                   'db_ifc' : mc.MockDbInterface()}
+
+        await job.post(metadata=metadata)
+        self.assertTrue(True)
+
+        opts = {'id'      : 1,
+                'user_id' : -1}
+
+        job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_SUMMARY_INVENTORY,
+                                   ctx     = self.interaction,
+                                   options = opts)
+
+        self.assertNotEqual(job, None)
+
+        metadata= {'ctx'    : self.interaction,
+                   'db_ifc' : mc.MockDbInterface()}
 
         await job.post(metadata=metadata)
         self.assertTrue(True)
@@ -207,7 +324,7 @@ class TestJobFactory(iatc):
         nr.getRandomName              = MagicMock()
         nr.getRandomName.return_value = "Default Sally"
 
-        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.TESTGET,
+        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.TEST_GET,
                                    ctx=self.interaction)
         self.assertNotEqual(job, None)
 
@@ -235,7 +352,7 @@ class TestJobFactory(iatc):
         nr.getRandomName              = MagicMock()
         nr.getRandomName.return_value = "Default Sally"
 
-        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.TESTPOST,
+        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.TEST_POST,
                                    ctx=self.interaction)
         self.assertNotEqual(job, None)
 
@@ -267,7 +384,7 @@ class TestJobFactory(iatc):
         nr.getRandomName              = MagicMock()
         nr.getRandomName.return_value = "Default Sally"
 
-        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.TESTROLL,
+        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.TEST_ROLL,
                                    ctx=self.interaction)
         self.assertNotEqual(job, None)
 
@@ -295,7 +412,7 @@ class TestJobFactory(iatc):
         nr.getRandomName              = MagicMock()
         nr.getRandomName.return_value = "Default Sally"
 
-        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.TESTSHOW,
+        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.TEST_SHOW,
                                    ctx=self.interaction)
         self.assertNotEqual(job, None)
 
@@ -473,7 +590,7 @@ class TestRarityClass(unittest.TestCase):
 
     def testGetProbabilityList(self):
         """Verifies that the getProbabilityList function returns the specific
-           lsit of standard probabilities for the rarity class.
+           list of standard probabilities for the rarity class.
 
            Input: self - Pointer to the current object instance.
 
@@ -488,6 +605,24 @@ class TestRarityClass(unittest.TestCase):
         self.assertIn(0.0135, rarity_list)
         self.assertIn(0.0035, rarity_list)
         self.assertIn(0.0005, rarity_list)
+
+    def testGetStandardValueList(self):
+        """Verifies that the getStandardValueList function returns the specific
+           list of standard rarity values for the rarity class.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        value_list = rc.RarityList.getStandardValueList()
+
+        self.assertEqual(rc.RarityList.COMMON.value,     value_list[0])
+        self.assertEqual(rc.RarityList.UNCOMMON.value,   value_list[1])
+        self.assertEqual(rc.RarityList.RARE.value,       value_list[2])
+        self.assertEqual(rc.RarityList.SUPER_RARE.value, value_list[3])
+        self.assertEqual(rc.RarityList.ULTRA_RARE.value, value_list[4])
+        self.assertEqual(rc.RarityList.LEGENDARY.value,  value_list[5])
 
     def testRarityClassBuilds(self):
         """A simple verification that the Rarity class will build correctly if

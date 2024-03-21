@@ -522,7 +522,7 @@ class ShowSummaryInventoryJob(Job):
     def __init__(self,
                  ctx     : dis.Interaction,
                  options : dict):
-        """Creates a job object for the /showsummary for economy command.
+        """Creates a job object for the /showsummary for inventory command.
 
            Input: self - Pointer to the current object instance.
                   ctx - the Discord context from the user's slash command.

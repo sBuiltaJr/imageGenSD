@@ -38,8 +38,7 @@ def testUtilities():
     #for all tests post-mock.
     suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ut.TestNameRandomizer))
 
-    #TODO: resolve the flaming hell that is import mocking
-    #suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=dt.TestMariadbIfc))
+    suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=dt.TestMariadbIfc))
 
     suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=mt.TestDailyEventManager))
     suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=mt.TestQueueManager))

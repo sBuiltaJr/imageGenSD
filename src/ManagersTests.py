@@ -116,7 +116,7 @@ class TestQueueManager(unittest.TestCase):
         nr.getRandomName              = MagicMock()
         nr.getRandomName.return_value = "Default Sally"
 
-        self.job = jf.JobFactory.getJob(type=jf.JobTypeEnum.TESTGET,
+        self.job = jf.JobFactory.getJob(type=jf.JobTypeEnum.TEST_GET,
                                         ctx=self.metadata['ctx'])
 
     def testQueueManagerBuilds(self):
@@ -153,7 +153,7 @@ class TestQueueManager(unittest.TestCase):
 
         result = self.uut.add(metadata=self.metadata,
                               job=self.job)
-        qm.jobs = {}
+        self.uut.jobs = {}
 
         self.assertEqual(result, "Your job was added to the queue.  Please wait for it to finish before posting another.")
 
@@ -167,10 +167,10 @@ class TestQueueManager(unittest.TestCase):
         """
 
         for x in range (self.uut.max_guilds + 1):
-            qm.jobs[x] = x
+            self.uut.jobs[x] = x
         result = self.uut.add(metadata=self.metadata,
                               job=self.job)
-        qm.jobs = {}
+        self.uut.jobs = {}
 
         self.assertEqual(result, "Bot is currently servicing the maximum number of allowed Guilds.")
 
@@ -187,7 +187,7 @@ class TestQueueManager(unittest.TestCase):
 
         result = self.uut.add(metadata=self.metadata,
                               job=self.job)
-        qm.jobs = {}
+        self.uut.jobs = {}
 
         self.assertEqual(result, "Unable to add your job, too many jobs from this Guild are already in the queue.")
 
@@ -200,7 +200,7 @@ class TestQueueManager(unittest.TestCase):
            Output: none.
         """
 
-        qm.jobs[mc.DEFAULT_GUILD_ID] = {}
+        self.uut.jobs[mc.DEFAULT_GUILD_ID] = {}
 
         result = self.uut.add(metadata=self.metadata,
                               job=self.job)
@@ -209,7 +209,7 @@ class TestQueueManager(unittest.TestCase):
 
         result = self.uut.add(metadata=self.metadata,
                               job=self.job)
-        qm.jobs = {}
+        self.uut.jobs = {}
 
         self.assertEqual(result, "You already have a job on the queue, please wait until it's finished.")
 

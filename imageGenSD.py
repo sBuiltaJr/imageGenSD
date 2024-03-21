@@ -102,7 +102,6 @@ except IndexError as err:
     exit(-5)
 
 #####  Package Classes  #####
-MY_GUILD = dis.Object(id=1084545432253894727)
 
 class IGSDClient(dis.Client):
     def __init__(self, *, intents: dis.Intents):
@@ -134,7 +133,7 @@ class IGSDClient(dis.Client):
         self.loop = asy.get_running_loop()
 
         self.dis_log.debug(f"Syncing Guild Tree to Global.")
-        await self.tree.sync(guild=MY_GUILD)
+        await self.tree.sync()
 
     def getLoop(self):
         """Returns a reference to this client's asyncio event loop.
@@ -631,7 +630,7 @@ class SummaryChoices(Enum):
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
-@dac.describe(user="The Discord user owning the profiles lsited by the command.  If none, it defaults to you.")
+@dac.describe(user="The Discord user owning the profiles listed by the command.  If none, it defaults to you.")
 @dac.describe(type="What kind of summary to show (characters, economy, or inventory.  Defaults to inventory.")
 async def showsummary(interaction : dis.Interaction,
                       type        : Optional[SummaryChoices] = SummaryChoices.Inventory,

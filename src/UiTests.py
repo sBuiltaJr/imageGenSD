@@ -106,12 +106,17 @@ class TestDropdownFactory(iatc):
 
            Output: none.
         """
+        self.metadata = {'db_ifc' : mc.MockDbInterface()}
 
         with self.assertRaises(NotImplementedError):
-            dropdown = ddf.DropDownFactory.getDropDown(type=-1, ctx=self.interaction)
+            dropdown = ddf.DropDownFactory.getDropDown(type=-1,
+                                                       ctx=self.interaction,
+                                                       metadata=self.metadata)
 
         with self.assertRaises(NotImplementedError):
-            view = ddf.DropdownView(type=-1, ctx=self.interaction)
+            view = ddf.DropdownView(type=-1,
+                                    ctx=self.interaction,
+                                    metadata=self.metadata)
 
     async def testDropdownsHandlesSmallLists(self):
         """Verifies that a Dropdown opject will correctly generate limits for a

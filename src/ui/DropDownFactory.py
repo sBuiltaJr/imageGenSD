@@ -352,7 +352,7 @@ class ShowDropdown(DynamicDropdown):
 
             opts = {'id' : self.values[0]}
 
-            job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOWPROFILE,
+            job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_PROFILE,
                                        ctx     = self.interaction,
                                        options = opts)
             result = self.metadata['queue'].add(metadata = self.metadata,

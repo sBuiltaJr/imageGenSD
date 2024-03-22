@@ -18,7 +18,7 @@ has an excellent walkthrough for the newcomer.
 Note that various Stable Diffusion training sets can generate a variety of
 images, heavily influenced by the weight source.  Be prepared for the AI engine
 to return NSFW content if you're not careful.  There effectively nothing the
-bot can do to prevent this as it's a byproduct of the ML training set.  
+bot can do to prevent this as it's a byproduct of the ML training set.
 
 # Dependencies
 
@@ -95,6 +95,12 @@ in numeric order (e.g. `3.8` before `3.9`).
 
 Note: All command require a user to have at least slash command privileges.
 
+`/about`
+
+- Gives basic bot information.
+
+Displays some basic information about the bot, including an invite link.
+
 `assignkeygen {tier}`
 
 - Assign at least one Character Profile to Key Generation work.
@@ -122,7 +128,7 @@ can be combined with a user-supplied prompt.
 
 `/hello`
 
-- Hello
+- Echo the author's name in chat.
 
 Confirms the bot has the bare minimum capability for interacting in the Guild.
 
@@ -178,7 +184,18 @@ the channel underneath the dropdown menu.
 The dropdown contains `next` and `back` options to allow viewing lists greater
 than 25 characters.  The `cancel` command deletes the dropdown.
 
-the dropdown will deactivate after 100 seconds of inactivity.
+The dropdown will deactivate after 100 seconds of inactivity.
+
+`/showsummary {type}`
+
+- Show a summary of different user content.
+
+Displays one of three kinds of player summaries for a given user: Characters,
+Economy, or Inventory.  Each provides generalized information about a player's
+overall status and progress in the game.
+
+The command defaults to showing the author's Inventory information if type nor
+user is provided.
 
 `/testget`
 

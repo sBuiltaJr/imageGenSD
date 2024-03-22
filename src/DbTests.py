@@ -113,7 +113,7 @@ class TestMariadbIfc(unittest.TestCase):
         self.assertNotEqual(profile, "")
 
     def testGetProfilesWorks(self):
-        """Verifies that the getProfile function behaves correctly with valid
+        """Verifies that the getProfiles function behaves correctly with valid
            input.
 
            Input: self - Pointer to the current object instance.

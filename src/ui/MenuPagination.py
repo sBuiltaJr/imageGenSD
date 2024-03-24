@@ -16,12 +16,14 @@ class MenuPagination(dis.ui.View):
 
     def __init__(self,
                  interaction : dis.Interaction,
-                 profiles    :list):
+                 profiles    : list,
+                 user        : dis.user):
 
+        self.index                      = 1
         self.interaction                = interaction
         self.profiles                   = profiles
         self.total_pages: Optional[int] = None
-        self.index                      = 1
+        self.user                       = user
 
         super().__init__(timeout=100)
 
@@ -46,7 +48,7 @@ class MenuPagination(dis.ui.View):
 
             embed.description += f"Name: `{profile[0]}` ID: `{profile[1]}`\n"
 
-        embed.set_author(name=f"Characters owned by {self.interaction.user.display_name}.")
+        embed.set_author(name=f"Characters owned by {self.user.display_name}.")
         embed.set_footer(text=f"Page {page} of {pages}")
 
         return embed, pages

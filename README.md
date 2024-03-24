@@ -18,14 +18,14 @@ has an excellent walkthrough for the newcomer.
 Note that various Stable Diffusion training sets can generate a variety of
 images, heavily influenced by the weight source.  Be prepared for the AI engine
 to return NSFW content if you're not careful.  There effectively nothing the
-bot can do to prevent this as it's a byproduct of the ML training set.  
+bot can do to prevent this as it's a byproduct of the ML training set.
 
 # Dependencies
 
-- [Python](https://www.python.org/) 3.10 or later
+- [Python](https://www.python.org/) 3.11.2 or later
 - [Stable Diffusion UI](https://github.com/AUTOMATIC1111/stable-diffusion-webui) 1.4 or later
 - [Discord.py](https://discordpy.readthedocs.io/en/stable/index.html) 2.2.2 or later
-- [Mariadb](https://mariadb.com/) 11 or later
+- [Mariadb](https://mariadb.com/) 10.11 or later
 - [Mariadb python connector](https://mariadb.com/resources/blog/how-to-connect-python-programs-to-mariadb/) 1.1.9 or later
 - [coverage.py](https://coverage.readthedocs.io/en/latest/index.html) 7.4.3 or later
 
@@ -67,7 +67,7 @@ Note: setup varies by OS.
     1. `CREATE DATABASE IGSD;`
     2. `CREATE USER IF NOT EXISTS 'IGSD_Bot'@'%' IDENTIFIED BY 'password';`
     3. `GRANT ALL PRIVILEGES ON IGSD.* TO 'IGSD_Bot'@'%';`
-4. Enter your Discord Bot's static login token into the `src/config/credentials.json` file.
+5. Enter your Discord Bot's static login token into the `src/config/credentials.json` file.
     1. DO NOT commit this value to a public repo!
 
 ## To run
@@ -94,6 +94,12 @@ in numeric order (e.g. `3.8` before `3.9`).
 ## Supported commands
 
 Note: All command require a user to have at least slash command privileges.
+
+`/about`
+
+- Gives basic bot information.
+
+Displays some basic information about the bot, including an invite link.
 
 `assignkeygen {tier}`
 
@@ -122,7 +128,7 @@ can be combined with a user-supplied prompt.
 
 `/hello`
 
-- Hello
+- Echo the author's name in chat.
 
 Confirms the bot has the bare minimum capability for interacting in the Guild.
 
@@ -178,7 +184,18 @@ the channel underneath the dropdown menu.
 The dropdown contains `next` and `back` options to allow viewing lists greater
 than 25 characters.  The `cancel` command deletes the dropdown.
 
-the dropdown will deactivate after 100 seconds of inactivity.
+The dropdown will deactivate after 100 seconds of inactivity.
+
+`/showsummary {type}`
+
+- Show a summary of different user content.
+
+Displays one of three kinds of player summaries for a given user: Characters,
+Economy, or Inventory.  Each provides generalized information about a player's
+overall status and progress in the game.
+
+The command defaults to showing the author's Inventory information if type nor
+user is provided.
 
 `/testget`
 

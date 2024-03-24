@@ -10,7 +10,6 @@ from .utilities import ProfileGenerator as pg
 import discord as dis
 import json
 import sys
-import mariadb
 import pathlib as pl
 from typing import Callable, Optional, Any
 import unittest
@@ -22,8 +21,8 @@ from unittest.mock import MagicMock
 
 class TestMariadbIfc(unittest.TestCase):
     
-    #@patch('sys.mariadb', new_callable=mc.MockDb)
-    def setUp(self):
+    @patch('src.db.MariadbIfc.mariadb', new_callable=mc.MockDb)
+    def setUp(self, tst):
         """Method called to prepare the test fixture. This is called
            immediately before calling the test method; other than
            AssertionError or SkipTest, any exception raised by this method will
@@ -42,7 +41,7 @@ class TestMariadbIfc(unittest.TestCase):
         with open(cfg_path.absolute()) as json_file:
             params = json.load(json_file)
 
-        #mariadb      = mc.MockDb()
+        mariadb      = mc.MockDb()
         self.options = params['db_opts']
         self.uut     = mdb.MariadbIfc.getInstance(options=self.options)
 
@@ -113,7 +112,7 @@ class TestMariadbIfc(unittest.TestCase):
         self.assertNotEqual(profile, "")
 
     def testGetProfilesWorks(self):
-        """Verifies that the getProfile function behaves correctly with valid
+        """Verifies that the getProfiles function behaves correctly with valid
            input.
 
            Input: self - Pointer to the current object instance.

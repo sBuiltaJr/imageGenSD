@@ -1,3 +1,42 @@
+# Version 0.3.85
+
+## Highlights
+
+- Added the `showsummary` command to show various kinds of player stats.
+- Split `show`-type and `work`-type commands to different queues for better processing.
+- Added a locking mechanism for `dropdown`-style commands to prevent accidental use of stale data.
+- Updated the `/showprofiles` command to edit the same response to minimize profile spam.
+- Enforced allowed mentions on all commands to ensure only authors can be mentioned.
+
+### Specific Changes
+
+- Added the `showsummary` command.
+	- Added 3 new kinds of summaries: `characters`, `economy`, and `inventory`.
+	- Added queries to summarize each kind of show command.
+	- Added new functions in `mariadbIfc.py` to collect and present summary data.
+	- Added a new job for each kind of show command.
+- Added a `showqueue` to handle jobs that only read static data.
+	- Updated all passive commands to use this queue.
+	- Updated the queue logging mechanism to output separate logs per queue.
+	- Allowed users to submit to boths queue simultaneously.
+- Added a `dropdown_active` flag to every user profile.
+	- Added a check for this flag to every command using dropdowns.
+	- Updated all dropdowns to only display their UI if the `dropdown_active` flag is false.
+	- Added code to automatically reset the flag when the UI times-out or is deactivated.
+- Added the `_getMentions` function in `JobFactory.py` to manage user mentions.
+	- defaulted the function's use to only allow an author to be mentioned in a command's use.
+	- Created a `FakeUser` class to work around how `discord.py` gets user IDs internally.
+- Updated the `/showprofiles` command to edit the same response to minimize profile spam.
+- Added the `getStandardValueList` function in `RarityClass.py` to make looping over rarities easier.
+- Updated the `job` enum to be consistent with other constant declarations.
+- Fixed the `mariadb` mock in the `DbTetsts.py` file to correctly mock the `mariadb` package.
+- Added the github URL to the `/about` command.
+- Created a DB update script under `upgrade_scripts/3.85/` for migrating from a version 3.8 DB.
+
+### Notes
+
+- You must run the DB update script in `upgrade_scripts/3.85/` to upgrade an existing 3.8 or earlier DB.
+
 # Version 0.3.8
 
 ## Highlights

@@ -258,10 +258,36 @@ class MariadbIfc:
 
         return result
 
+    def getDropdown(self,
+                    user_id : int) -> bool:
+        """Returns the 'dropdown active' status of a user.  The current
+           implementation is a 'good enough' measure for the current bot usage.
+
+            Input: self - Pointer to the current object instance.
+                   user_id - Which user to check for an active dropdown.
+
+            Output: bool - whether the user has a dropdown active or not.
+        """
+
+        cmd    = ""
+        cursor = self.con.cursor(buffered=False)
+        result = False
+
+        cmd = (self.cmds['user']['get_dropdown']) % (user_id)
+        self.db_log.debug(f"Executing get dropdown state command {cmd}")
+        cursor.execute(cmd)
+
+        result = bool((cursor.fetchone())[0])
+
+        self.db_log.debug(f"User's dropdown value: {result}")
+
+        return result
+
+
     def getImage(self,
                  picture_id : Optional[str] = None,
                  profile_id : Optional[str] = "ffffffff-ffff-ffff-ffff-fffffffffffe") -> str:
-        """Returns a given profile for a given user.
+        """Returns the profile image for a given profile.
 
             Input: self - Pointer to the current object instance.
                    picture_id - optional picture ID to find, defaults to the ID
@@ -466,6 +492,165 @@ class MariadbIfc:
 
         return results
 
+    def getSummaryCharacters(self,
+                             user_id : int) -> dict:
+        """Returns db-calcualted stats about a user's character profiles.
+
+            Input: self - Pointer to the current object instance.
+                   user_id - user ID to interrogate for profiles.
+
+            Output: dict - A dict of profile stats sorted by rank, if any.
+        """
+
+        armed      = 0
+        cmd        = ""
+        cursor     = self.con.cursor(buffered=False)
+        equipped   = 0
+        losses     = 0
+        made_owned = 0
+        most_rare  = rc.RarityList.CUSTOM.value
+        owned      = 0
+        rarities   = rc.RarityList.getStandardValueList()
+        results    = {}
+        total_val  = 0
+        wins       = 0
+        workers    = 0
+        working    = 0
+
+        self.db_log.info(f"Getting character stats for user {user_id}")
+        cmd = (self.cmds['prof']['get_profs_summary']) % (user_id)
+        self.db_log.debug(f"Executing command: {cmd}")
+        cursor.execute(cmd)
+
+        for x in cursor:
+
+            #TODO: split into two commands if non-standard stats are needed.
+            if int(x[0]) in rarities :
+
+                self.db_log.debug(f"Adding result: {x}")
+                results[f'{x[0]}'] = {'avg_stat'       : float(x[1]),
+                                      'avg_std'        : float(x[2]),
+                                      'wins'           : int(x[3]),
+                                      'losses'         : int(x[4]),
+                                      'total_value'    : int(x[5]),
+                                      'equipped'       : int(x[6]),
+                                      'armed'          : int(x[7]),
+                                      'avg_health'     : float(x[8]),
+                                      'made_and_owned' : int(x[9]),
+                                      'owned'          : int(x[10]),
+                                      'occupied'       : int(x[11])}
+
+                #It doesn't make sense to sum all values in the results, since
+                #not all columns have a meaningful sum, so the script does it.
+                armed      += results[f'{x[0]}']['armed']
+                equipped   += results[f'{x[0]}']['equipped']
+                losses     += results[f'{x[0]}']['losses']
+                made_owned += results[f'{x[0]}']['made_and_owned']
+                owned      += results[f'{x[0]}']['owned']
+                total_val  += results[f'{x[0]}']['total_value']
+                wins       += results[f'{x[0]}']['wins']
+                working    += results[f'{x[0]}']['occupied']
+                most_rare  = int(x[0]) if int(x[0]) < most_rare else most_rare
+
+            else :
+
+                self.db_log.debug(f"Ignoring result: {x}")
+
+        if results:
+
+            #This is entirely to avoid key errors and assocaited shenanigans.
+            results['equipped']       = equipped
+            results['armed']          = armed
+            results['highest_rarity'] = most_rare
+            results['losses']         = losses
+            results['made_and_owned'] = made_owned
+            results['occupied']       = working
+            results['owned']          = owned
+            results['total_value']    = total_val
+            results['wins']           = wins
+
+        self.db_log.debug(f"Got results: {results}")
+
+        return results
+
+    def getSummaryEconomy(self,
+                          user_id : int) -> dict:
+        """Returns the db-stored state of a user's economy.
+
+            Input: self - Pointer to the current object instance.
+                   user_id - user ID to interrogate for economy data.
+
+            Output: dict - A dict of economy stats sorted by group, if any.
+        """
+
+        categories = ['builder', 'crafter', 'hospital', 'keygen', 'research', 'team', 'worker']
+        count      = 1
+        cursor     = self.con.cursor(buffered=False)
+        results    = {}
+
+        self.db_log.info(f"Getting econ stats for user {user_id}")
+        cmd = (self.cmds['econ']['get_econ_summary']) % (user_id)
+        self.db_log.debug(f"Executing command: {cmd}")
+        cursor.execute(cmd)
+
+        result = cursor.fetchone()
+
+        if result:
+
+            for key in categories:
+
+                results[key] = {}
+                results[key]['count']  = result[count + 0]
+                results[key]['tier']   = result[count + 1]
+                results[key]['tier_0'] = result[count + 2]
+                results[key]['tier_1'] = result[count + 3]
+                results[key]['tier_2'] = result[count + 4]
+                results[key]['tier_3'] = result[count + 5]
+                results[key]['tier_4'] = result[count + 6]
+                results[key]['tier_5'] = result[count + 7]
+                count += 8
+
+        self.db_log.debug(f"Got results: {results}")
+
+        return results
+
+    def getSummaryInventory(self,
+                            user_id : int) -> dict:
+        """Returns the db-stored contents of a user's Inventory.
+
+            Input: self - Pointer to the current object instance.
+                   user_id - user ID to interrogate for inventory data.
+
+            Output: dict - A dict of inventory data sorted by rank, if any.
+        """
+
+        count   = 2
+        cursor  = self.con.cursor(buffered=False)
+        results = {}
+
+        self.db_log.info(f"Getting inventory for user {user_id}")
+        cmd = (self.cmds['inv']['get_inventory']) % (user_id)
+        self.db_log.debug(f"Executing command: {cmd}")
+        cursor.execute(cmd)
+
+        result = cursor.fetchone()
+
+        if result:
+        
+            results['dust'] = result[1]
+
+            for tier in range(0,6):
+
+                results[f'tier_{tier}'] = {}
+                results[f'tier_{tier}']['armor_count']  = result[count + 0]
+                results[f'tier_{tier}']['key_count']    = result[count + 1]
+                results[f'tier_{tier}']['weapon_count'] = result[count + 2]
+                count += 3
+
+        self.db_log.debug(f"Got results: {results}")
+
+        return results
+
     def getUnoccupiedProfiles(self,
                               user_id : int) -> list:
         """Returns all profiles not marked as 'occupied' for a given user.
@@ -566,6 +751,25 @@ class MariadbIfc:
 
         return profile
 
+    def putDropdown(self,
+                    user_id : int,
+                    state   : bool):
+        """Sets the 'dropdown active' status of a user.  The current
+           implementation is a 'good enough' measure for the current bot usage.
+
+            Input: self - Pointer to the current object instance.
+                   user_id - Which user to check for an active dropdown.
+
+            Output: N/A
+        """
+
+        cmd    = ""
+        cursor = self.con.cursor(buffered=False)
+
+        cmd = (self.cmds['user']['put_dropdown']) % (state, user_id)
+        self.db_log.debug(f"Executing put dropdown state command {cmd}")
+        cursor.execute(cmd)
+
     def removeKeyGenWork(self,
                          count       : int,
                          profile_ids : list,
@@ -612,6 +816,7 @@ class MariadbIfc:
 
         cmd = (self.cmds['econ']['put_keygen_count']) % (count - len(profile_ids), user_id)
         self.db_log.debug(f"Updating user's econ keygen count: {cmd}")
+        cursor.execute(cmd)
 
         #Only update occupied after clearing the work table in case the command
         #fails somehow, ensuring that the table won't have ghost workers.
@@ -861,3 +1066,6 @@ class MariadbIfc:
         all_ok = True;
 
         return all_ok
+
+#TODO: update new profiles to calculate dust value
+#TODO: re-define how able_workers is calculated once the work thesholds are settled.

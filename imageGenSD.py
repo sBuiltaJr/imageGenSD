@@ -8,6 +8,7 @@
 import asyncio as asy
 import discord as dis
 from discord import app_commands as dac
+from enum import Enum, verify, UNIQUE
 import logging as log
 import logging.handlers as lh
 import json
@@ -42,7 +43,11 @@ daily_mgr      = None
 daily_mgr_th   = None
 db_ifc         = None
 dict_path      = ["","",""]
-IGSD_version   = '0.3.8'
+IGSD_version   = '0.3.85'
+job_queue      = None
+job_worker     = None
+show_queue     = None
+show_worker    = None
 tag_randomizer = None
 #This will be modified in the future to accept user-supplied paths.
 #This file must be loaded prior to the logger to allow for user-provided
@@ -96,9 +101,6 @@ except IndexError as err:
     print(f"The tag dictionary is {params['tag_rng_opts']['dict_size']} lines long, shorter than the tag randomizer max size of {params['tag_rng_opts']['max_rand_tag_cnt']} OR Max tags {params['tag_rng_opts']['max_rand_tag_cnt']} is less than min tags {params['tag_rng_opts']['min_rand_tag_cnt']}!")
     exit(-5)
 
-job_queue   = None
-worker      = None
-
 #####  Package Classes  #####
 
 class IGSDClient(dis.Client):
@@ -110,6 +112,7 @@ class IGSDClient(dis.Client):
 
             Output : None
         """
+
         self.dis_log = log.getLogger('discord')
         self.dis_log.debug(f"Intents are: {intents}")
 
@@ -139,6 +142,7 @@ class IGSDClient(dis.Client):
 
             Output : loop - the client's event loop.
         """
+
         return self.loop;
 
 intents = dis.Intents.default()
@@ -155,9 +159,10 @@ async def about(interaction : dis.Interaction):
 
         Output : N/A.
     """
-    dis_log  = log.getLogger('discord')
-    
-    await interaction.response.send_message(f"This is bot version {IGSD_version}!  Invite me to your server with [this link](https://discord.com/api/oauth2/authorize?client_id=1084600126913388564&permissions=534723816512&scope=bot)!", ephemeral=True, delete_after=30.0)
+
+    dis_log = log.getLogger('discord')
+
+    await interaction.response.send_message(f"This is bot version {IGSD_version}!  Invite me to your server with [this link](https://discord.com/api/oauth2/authorize?client_id=1084600126913388564&permissions=534723816512&scope=bot)!  Code found [on GitHub](https://github.com/sBuiltaJr/imageGenSD).", ephemeral=True, delete_after=30.0)
 
 
 @IGSD_client.tree.command()
@@ -172,6 +177,7 @@ async def assignkeygen(interaction : dis.Interaction,
 
         Output : N/A.
     """
+
     dis_log  = log.getLogger('discord')
     metadata = {'ctx'     : interaction,
                 'db_ifc'  : db_ifc,
@@ -188,7 +194,12 @@ async def assignkeygen(interaction : dis.Interaction,
     options = db_ifc.getKeyGenParams(user_id = interaction.user.id)
     dis_log.debug(f"Got Key Gen parameters: {options}.")
 
-    if not profiles or 'total' not in options:
+
+    if db_ifc.getDropdown(user_id = interaction.user.id) :
+
+        await interaction.response.send_message(f'Please close your existing dropdown menu or wait for it to time out.', ephemeral=True, delete_after=9.0)
+
+    elif not profiles or 'total' not in options:
 
         await interaction.response.send_message('You need a character first!  Use the /roll command to get one, or free existing profiles from their assignments!', ephemeral=True, delete_after=9.0)
 
@@ -222,6 +233,7 @@ def bannedWordsFound(prompt: str, banned_words: str) -> bool:
 
        Output : None.
     """
+
     result = False;
 
     #The default prompt is assumed to not be banned.
@@ -273,6 +285,7 @@ async def generate(interaction: dis.Interaction,
 
         Output : N/A.
     """
+
     dis_log = log.getLogger('discord')
     error   = False;
 
@@ -316,6 +329,7 @@ async def hello(interaction: dis.Interaction):
 
        Output : None.
     """
+
     await interaction.response.send_message(f'Hi, {interaction.user.mention}', ephemeral=True, delete_after=9.0)
 
 @IGSD_client.tree.command()
@@ -329,6 +343,7 @@ async def listprofiles(interaction : dis.Interaction,
 
         Output : N/A.
     """
+
     dis_log  = log.getLogger('discord')
     #This has to be in the function body because an arg can't be used to assign
     #another arg in the function call.
@@ -346,7 +361,10 @@ async def listprofiles(interaction : dis.Interaction,
     else:
 
         short_profiles = [(profiles[x].name,profiles[x].id) for x in range(0,len(profiles))]
-        await mp.MenuPagination(interaction, short_profiles).navigate()
+
+        await mp.MenuPagination(interaction = interaction,
+                                profiles    = short_profiles,
+                                user        = user).navigate()
 
 @IGSD_client.event
 async def on_ready():
@@ -360,6 +378,7 @@ async def on_ready():
     global daily_mgr_th
     global db_ifc
     global job_queue
+    global show_queue
     global tag_randomizer
     global worker
 
@@ -388,13 +407,19 @@ async def on_ready():
     dis_log.debug(f"Instantiating the Tag Randomizer.")
     tag_randomizer = tr.TagRandomizer(opts=params['tag_rng_opts'])
 
-
-    dis_log.debug(f"Creating Queue Manager.")
-    job_queue = qm.Manager(manager_id = 1,
+    dis_log.debug(f"Creating Job Queue Manager.")
+    job_queue = qm.Manager(manager_id = 0,
                            opts       = params['queue_opts'])
-    worker    = th.Thread(target = job_queue.putJob,
-                          name   = "Queue mgr",
-                          daemon = True)
+    job_worker = th.Thread(target = job_queue.putJob,
+                           name   = "Job Queue mgr",
+                           daemon = True)
+
+    dis_log.debug(f"Creating Show Queue Manager.")
+    show_queue = qm.Manager(manager_id = 1,
+                            opts       = params['queue_opts'])
+    show_worker = th.Thread(target = show_queue.putJob,
+                            name   = "Show Queue mgr",
+                            daemon = True)
 
     dis_log.debug(f"Creating DB Interface.")
     db_ifc = mdb.MariadbIfc(options=params['db_opts'])
@@ -407,7 +432,8 @@ async def on_ready():
 
     daily_mgr_th.start()
     #Only start the job queue once all other tasks are ready.
-    worker.start()
+    job_worker.start()
+    show_worker.start()
 
     print('------')
 
@@ -450,6 +476,7 @@ async def removekeygen(interaction : dis.Interaction,
 
         Output : N/A.
     """
+
     dis_log  = log.getLogger('discord')
     metadata = {'ctx'     : interaction,
                 'db_ifc'  : db_ifc,
@@ -481,16 +508,22 @@ async def removekeygen(interaction : dis.Interaction,
 
     else:
 
-        options['tier'] = tier
-        dis_log.debug(f"Creating a REMOVE KEY GEN view for user {interaction.user.id}.")
+        if db_ifc.getDropdown(user_id = interaction.user.id) :
 
-        view = ddf.DropdownView(ctx      = interaction,
-                                type     = ddf.DropDownTypeEnum.REMOVE_KEY_GEN,
-                                choices  = profiles,
-                                metadata = metadata,
-                                options  = options)
+            await interaction.response.send_message(f'Please close your existing dropdown menu or wait for it to time out.', ephemeral=True, delete_after=9.0)
 
-        await interaction.response.send_message(f'Select a profile to remove from keygen work for tier {tier + 1}:',view=view)
+        else :
+
+            options['tier'] = tier
+            dis_log.debug(f"Creating a REMOVE KEY GEN view for user {interaction.user.id}.")
+
+            view = ddf.DropdownView(ctx      = interaction,
+                                    type     = ddf.DropDownTypeEnum.REMOVE_KEY_GEN,
+                                    choices  = profiles,
+                                    metadata = metadata,
+                                    options  = options)
+
+            await interaction.response.send_message(f'Select a profile to remove from keygen work for tier {tier + 1}:',view=view)
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
@@ -503,6 +536,7 @@ async def roll(interaction: dis.Interaction):
 
        Note: All slash commands *MUST* respond in 3 seconds or be terminated.
     """
+
     dis_log = log.getLogger('discord')
 
     if db_ifc.dailyDone(interaction.user.id) :
@@ -532,88 +566,146 @@ async def roll(interaction: dis.Interaction):
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
-@dac.describe(user="The Discord user owning the profiles lsited by the command.  If none, it defaults to you.")
 @dac.describe(profile_id="The profile ID of the character you'd like to view.  Use /listprofiles to see the name and ID for profiles!")
+@dac.describe(user="The Discord user owning the profiles lsited by the command.  If none, it defaults to you.")
 async def showprofile(interaction : dis.Interaction,
-                      user        : Optional[dis.User] = None,
-                      profile_id  : Optional[dac.Range[str, 0, 36]] = None): #The length of a UUID
+                      profile_id  : Optional[dac.Range[str, 0, 36]] = None,  #The length of a UUID
+                      user        : Optional[dis.User] = None):
     """Displays the profile associated with the provided ID.
 
         Input  : interaction - the interaction context from Discord.
-                 id - the profile ID to retrieve.
+                 profile_id - the profile ID to retrieve.
+                 user - which user's profiles to show; defaults to the author.
 
         Output : N/A.
     """
+
     dis_log  = log.getLogger('discord')
     metadata = {'ctx'     : interaction,
                 'db_ifc'  : db_ifc,
                 'loop'    : IGSD_client.getLoop(),
                 'post_fn' : post,
-                'queue'   : job_queue
+                'queue'   : show_queue
                }
+
+
 
     if profile_id == None:
 
-        dis_log.debug(f"Creating a SHOW PROFILE view for user {interaction.user.id}.")
-        user_id  = interaction.user.id if user == None else user.id
-        profiles = db_ifc.getProfiles(user_id)
-        dis_log.debug(f"User {user_id} returned profile list {profiles}.")
-        view = ddf.DropdownView(ctx      = interaction,
-                                type     = ddf.DropDownTypeEnum.SHOW,
-                                choices  = profiles,
-                                metadata = metadata)
+        if db_ifc.getDropdown(user_id = interaction.user.id) :
 
-        await interaction.response.send_message('Select a profile to view:',view=view)
+            await interaction.response.send_message(f'Please close your existing dropdown menu or wait for it to time out.', ephemeral=True, delete_after=9.0)
+
+        else:
+
+            dis_log.debug(f"Creating a SHOW PROFILE view for user {interaction.user.id}.")
+            user_id  = interaction.user.id if user == None else user.id
+            profiles = db_ifc.getProfiles(user_id)
+            dis_log.debug(f"User {user_id} returned profile list {profiles}.")
+            view = ddf.DropdownView(ctx      = interaction,
+                                    type     = ddf.DropDownTypeEnum.SHOW,
+                                    choices  = profiles,
+                                    metadata = metadata)
+
+            await interaction.response.send_message('Select a profile to view:',view=view)
 
     else:
 
         opts = {'id' : profile_id}
 
         dis_log.debug(f"Creating a job with metadata {metadata} and options {opts}.")
-        job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOWPROFILE,
+        job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_PROFILE,
                                    ctx     = interaction,
                                    options = opts)
         dis_log.debug(f"Posting SHOW job {job} to the queue.")
-        result = job_queue.add(metadata = metadata,
-                               job      = job)
+        result = show_queue.add(metadata = metadata,
+                                job      = job)
 
         await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
-#This is commented until the failed inheritance issue can be resolved.
-#@IGSD_client.tree.command()
-#async def testclear(interaction: dis.Interaction):
-#    """A test flood of requests to verify the flush command works.
-#
-#       Input  : None.
-#
-#       Output : None.
-#    """
-#    dis_log = log.getLogger('discord')
-#    rng    = range(1,10)
-#
-#    job = [{ 'metadata' : {
-#                'ctx'    : interaction,
-#                'loop'   : IGSD_client.getLoop(),
-#                'poster' : post
-#           },
-#           'data' : {
-#                #Requests are sorted by guild for rate-limiting
-#                'guild'  : interaction.guild_id,
-#                #This should really be metadata but the rest of the metadata
-#                #can't be pickeled, so this must be passed with the work.
-#                'id'     : x,
-#                'post'   : {'empty'},
-#                'reply'  : "test job"
-#            }
-#        } for x in rng]
-#    dis_log.debug(f"trying to clear the queue.")
-#
-#    for m in rng:
-#        result = job_queue.add(job[m -1])
-#
-#    job_queue.flush()
-#
-#    await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
+
+@verify(UNIQUE)
+class SummaryChoices(Enum):
+    #lower case since it's user-facing
+    Characters = 0
+    Economy    = 1
+    Inventory  = 2
+
+@IGSD_client.tree.command()
+@dac.checks.has_permissions(use_application_commands=True)
+@dac.describe(user="The Discord user owning the profiles listed by the command.  If none, it defaults to you.")
+@dac.describe(type="What kind of summary to show (characters, economy, or inventory.  Defaults to inventory.")
+async def showsummary(interaction : dis.Interaction,
+                      type        : Optional[SummaryChoices] = SummaryChoices.Inventory,
+                      user        : Optional[dis.User] = None):
+    """Displays various kinds of summaries for a particular player.  Defaults
+       to showing the user's inventory.
+
+        Input  : interaction - the interaction context from Discord.
+                 type - what kind of summary to show.
+                 user - which user's profiles to show; defaults to the author.
+
+        Output : N/A.
+    """
+
+    dis_log  = log.getLogger('discord')
+    metadata = {'ctx'     : interaction,
+                'db_ifc'  : db_ifc,
+                'loop'    : IGSD_client.getLoop(),
+                'post_fn' : post,
+                'queue'   : show_queue
+               }
+
+
+    opts = {'user_id' : interaction.user.id if user == None else user.id}
+
+    if db_ifc.getDropdown(user_id = interaction.user.id) :
+
+        await interaction.response.send_message(f'Please close your existing dropdown menu or wait for it to time out.', ephemeral=True, delete_after=9.0)
+
+    else :
+
+        match type:
+
+            case SummaryChoices.Characters:
+
+                dis_log.debug(f"Creating a job with metadata {metadata}.")
+                job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_SUMMARY_CHARACTERS,
+                                           ctx     = interaction,
+                                           options = opts)
+
+                dis_log.debug(f"Posting CHARACTERS SUMMARY job {job} to the queue.")
+                result = show_queue.add(metadata = metadata,
+                                        job      = job)
+
+            case SummaryChoices.Economy:
+
+                dis_log.debug(f"Creating a job with metadata {metadata}.")
+                job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_SUMMARY_ECONOMY,
+                                           ctx     = interaction,
+                                           options = opts)
+
+                dis_log.debug(f"Posting ECONOMY SUMMARY job {job} to the queue.")
+                result = show_queue.add(metadata = metadata,
+                                        job      = job)
+
+            case SummaryChoices.Inventory:
+
+                dis_log.debug(f"Creating a INVENTORY SUMMARY job with metadata {metadata}.")
+                job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_SUMMARY_INVENTORY,
+                                           ctx     = interaction,
+                                           options = opts)
+
+                dis_log.debug(f"Posting INVENTORY SUMMARY job {job} to the queue.")
+                result = show_queue.add(metadata = metadata,
+                                        job      = job)
+
+            case _:
+
+                dis_log.Error(f"Given an invalid type of showsummary job {type}!")
+                result = "Error, this is an invalid choice!"
+
+        await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(manage_guild=True) #The closest to 'be a mod' Discord has.
@@ -632,12 +724,12 @@ async def testget(interaction: dis.Interaction):
                 'post_fn' : post
                }
     dis_log.debug(f"Creating a job with metadata {metadata}.")
-    job = jf.JobFactory.getJob(type = jf.JobTypeEnum.TESTGET,
+    job = jf.JobFactory.getJob(type = jf.JobTypeEnum.TEST_GET,
                                ctx  = interaction)
 
     dis_log.debug(f"Posting test GET job {job} to the queue.")
-    result = job_queue.add(metadata = metadata,
-                           job      = job)
+    result = show_queue.add(metadata = metadata,
+                            job      = job)
 
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
@@ -660,7 +752,7 @@ async def testpost(interaction: dis.Interaction):
                 'post_fn' : post
                }
     dis_log.debug(f"Creating a job with metadata {metadata}.")
-    job = jf.JobFactory.getJob(type = jf.JobTypeEnum.TESTPOST,
+    job = jf.JobFactory.getJob(type = jf.JobTypeEnum.TEST_POST,
                                ctx  = interaction)
     dis_log.debug(f"Posting test PUT job {job} to the queue.")
     result = job_queue.add(metadata = metadata,
@@ -686,7 +778,7 @@ async def testroll(interaction: dis.Interaction):
                 'post_fn' : post
                }
     dis_log.debug(f"Creating a job with metadata {metadata}.")
-    job = jf.JobFactory.getJob(type = jf.JobTypeEnum.TESTROLL,
+    job = jf.JobFactory.getJob(type = jf.JobTypeEnum.TEST_ROLL,
                                ctx  = interaction)
     dis_log.debug(f"Posting test ROLL job {job} to the queue.")
     result = job_queue.add(metadata = metadata,
@@ -713,11 +805,11 @@ async def testshowprofile(interaction: dis.Interaction):
                 'post_fn' : post
                }
     dis_log.debug(f"Creating a job with metadata {metadata}.")
-    job = jf.JobFactory.getJob(type = jf.JobTypeEnum.TESTSHOW,
+    job = jf.JobFactory.getJob(type = jf.JobTypeEnum.TEST_SHOW,
                                ctx  = interaction)
     dis_log.debug(f"Posting test SHOW job {job} to the queue.")
-    result = job_queue.add(metadata = metadata,
-                           job      = job)
+    result = show_queue.add(metadata = metadata,
+                            job      = job)
 
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
@@ -731,6 +823,7 @@ def Startup():
 
        Output : None.
     """
+
     global params
     global creds
     global job_queue

@@ -27,7 +27,17 @@ class RarityList(Enum):
 
            Output: List - An iterable list of rarities.
         """
-        return [ cls.COMMON, cls.UNCOMMON, cls.RARE, cls.SUPER_RARE, cls.ULTRA_RARE, cls.LEGENDARY]
+        return [cls.COMMON, cls.UNCOMMON, cls.RARE, cls.SUPER_RARE, cls.ULTRA_RARE, cls.LEGENDARY]
+
+    @classmethod
+    def getStandardValueList(cls) -> list:
+        """Returns the values of rarities as an iterable list starting with common.
+
+           Input: self - A class instance reference.
+
+           Output: List - An iterable list of rarity values.
+        """
+        return [cls.COMMON.value, cls.UNCOMMON.value, cls.RARE.value, cls.SUPER_RARE.value, cls.ULTRA_RARE.value, cls.LEGENDARY.value]
 
     @classmethod
     def getProbabilityList(cls) -> list:

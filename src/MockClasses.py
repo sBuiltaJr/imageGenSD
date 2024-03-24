@@ -2,6 +2,7 @@
 
 from .utilities import JobFactory as jf
 from .utilities import ProfileGenerator as pg
+from .utilities import RarityClass as rc
 import discord as dis
 from typing import Callable, Optional, Any
 import unittest
@@ -10,6 +11,8 @@ from unittest.mock import MagicMock
 DEFAULT_DISPLAY_NAME = "UNIT TESTER 9000"
 DEFAULT_GUILD_ID     = 1111111111
 DEFAULT_PROFILE_ID   = 1234567890
+DEFAULT_USER_ID      = 999999999999999999
+DEFAULT_USER_NAME    = "DEFAULT_USER_NAME"
 DEFAULT_UUID         = "ffffffff-ffff-ffff-ffff-fffffffffffe"
 
 
@@ -17,45 +20,45 @@ DEFAULT_UUID         = "ffffffff-ffff-ffff-ffff-fffffffffffe"
 
 class MockDb():
 
-    class MockCursor():
-
-        def __init__(self,
-                     buffered : bool):
-            """A bare minimum mock to ensure test compatability.
-
-               Input: self - Pointer to the current object instance.
-                      buffered - If the cursor should be buffered or not.
-
-               Output: none.
-            """
-
-            self.buffered = buffered
-            self.last_cmd = ""
-
-        def execute(self,
-                    cmd : Optional[str] = None):
-            """A bare minimum mock to ensure test compatability.
-
-               Input: self - Pointer to the current object instance.
-                      cmd - What command to execute.
-
-               Output: none.
-            """
-
-            self.last_cmd = cmd
-            return
-
-        def fetchone(self):
-            """A bare minimum mock to ensure test compatability.
-
-               Input: self - Pointer to the current object instance.
-
-               Output: none.
-            """
-
-            return self.last_cmd
-
     class MockConnection():
+
+        class cursor():
+
+            def __init__(self,
+                         buffered : bool):
+                """A bare minimum mock to ensure test compatability.
+
+                   Input: self - Pointer to the current object instance.
+                          buffered - If the cursor should be buffered or not.
+
+                   Output: none.
+                """
+
+                self.buffered = buffered
+                self.last_cmd = ""
+
+            def execute(self,
+                        cmd : Optional[str] = None):
+                """A bare minimum mock to ensure test compatability.
+
+                   Input: self - Pointer to the current object instance.
+                          cmd - What command to execute.
+
+                   Output: none.
+                """
+
+                self.last_cmd = cmd
+                return
+
+            def fetchone(self):
+                """A bare minimum mock to ensure test compatability.
+
+                   Input: self - Pointer to the current object instance.
+
+                   Output: none.
+                """
+
+                return self.last_cmd
 
         def __init__(self):
             """A bare minimum mock to ensure test compatability.
@@ -70,7 +73,6 @@ class MockDb():
 
             self.auto_reconnect = False
             self.database       = ""
-            self.cursor         = MockCursor(buffered=False)
 
         def execute(self,
                     cmd : Optional[str] = None) -> str :
@@ -101,7 +103,8 @@ class MockDb():
 
            Output: MockConnection - a fake DB connection.
         """
-        return MockConnection()
+
+        return self.MockConnection()
 
 class MockDbInterface():
 
@@ -138,6 +141,36 @@ class MockDbInterface():
 
         return (id != DEFAULT_PROFILE_ID)
 
+    def getDropdown(self,
+                    user_id : int) :
+        """A bare minimum mock to ensure test compatability.
+
+           Input: self - Pointer to the current object instance.
+                  state - the state to put the boolean.
+
+           Output: N/A
+        """
+
+        pass
+
+    def getImage(self,
+                 profile_id : Optional[str] = DEFAULT_PROFILE_ID) -> Optional[str]:
+        """A bare minimum mock to ensure test compatability.
+
+           Input: self - Pointer to the current object instance.
+                  profile_id - the IGSD character profile to show.
+
+           Output: bool - if the user has already rolled a daily
+        """
+
+        if profile_id != None and profile_id == DEFAULT_PROFILE_ID:
+
+            return "iVBORw0KGgoAAAANSUhEUgAABAAA"
+
+        else:
+
+            return None
+
     def getInstance(self,
                     options : dict) ->bool:
         """A bare minimum mock to ensure test compatability.
@@ -168,23 +201,126 @@ class MockDbInterface():
 
             return None
 
-    def getImage(self,
-                 profile_id : Optional[str] = DEFAULT_PROFILE_ID) -> Optional[str]:
+    def getSummaryCharacters(self,
+                             user_id : int) -> dict:
         """A bare minimum mock to ensure test compatability.
 
            Input: self - Pointer to the current object instance.
-                  profile_id - the IGSD character profile to show.
+                  user_id - the user_id to query. -1 means return error.
 
-           Output: bool - if the user has already rolled a daily
+           Output: N/A
         """
 
-        if profile_id != None and profile_id == DEFAULT_PROFILE_ID:
+        results = {}
 
-            return "iVBORw0KGgoAAAANSUhEUgAABAAA"
-
-        else:
+        if user_id < 0:
 
             return None
+
+        else :
+
+            rarities = rc.RarityList.getStandardValueList()
+
+            for x in rarities :
+
+                results[f'{x}'] = {'avg_stat'       : 1.1,
+                                   'avg_std'        : 1.1,
+                                   'wins'           : 1,
+                                   'losses'         : 1,
+                                   'total_value'    : 1,
+                                   'equipped'       : 1,
+                                   'armed'          : 1,
+                                   'avg_health'     : 1.1,
+                                   'made_and_owned' : 1,
+                                   'owned'          : 1,
+                                   'occupied'       : 1}
+
+            results['equipped']       = 1
+            results['armed']          = 1
+            results['highest_rarity'] = rc.RarityList.COMMON.value
+            results['losses']         = 1
+            results['made_and_owned'] = 1
+            results['occupied']       = 1
+            results['owned']          = 1
+            results['total_value']    = 1
+            results['wins']           = 1
+
+        return results
+
+    def getSummaryEconomy(self,
+                          user_id : int) -> dict:
+        """A bare minimum mock to ensure test compatability.
+
+           Input: self - Pointer to the current object instance.
+                  user_id - the user_id to query. -1 means return error.
+
+           Output: N/A
+        """
+
+        categories = ['builder', 'crafter', 'hospital', 'keygen', 'research', 'team', 'worker']
+        results    = {}
+
+        if user_id < 0:
+
+            return None
+
+        else :
+
+            for key in categories:
+
+                results[key] = {}
+                results[key]['count']  = 1
+                results[key]['tier']   = 1
+                results[key]['tier_0'] = 1
+                results[key]['tier_1'] = 1
+                results[key]['tier_2'] = 1
+                results[key]['tier_3'] = 1
+                results[key]['tier_4'] = 1
+                results[key]['tier_5'] = 1
+
+        return results
+
+    def getSummaryInventory(self,
+                            user_id : int) -> dict:
+        """A bare minimum mock to ensure test compatability.
+
+           Input: self - Pointer to the current object instance.
+                  user_id - the user_id to query. -1 means return error.
+
+           Output: N/A
+        """
+
+        results = {}
+
+        if user_id < 0:
+
+            return None
+
+        else :
+
+            results['dust'] = 1
+
+            for tier in range(0,6):
+
+                results[f'tier_{tier}'] = {}
+                results[f'tier_{tier}']['armor_count']  = 1
+                results[f'tier_{tier}']['key_count']    = 1
+                results[f'tier_{tier}']['weapon_count'] = 1
+
+        return results
+
+    def putDropdown(self,
+                    state : bool,
+                    user_id : int) :
+        """A bare minimum mock to ensure test compatability.
+
+           Input: self - Pointer to the current object instance.
+                  state - the state to put the boolean.
+
+           Output: N/A
+        """
+
+        pass
 
     def resetDailyRoll(self) ->bool:
         """A bare minimum mock to ensure test compatability.
@@ -255,14 +391,16 @@ class MockInteraction():
     class InteractionChannel():
 
         async def send(self,
-                       content : Optional[str]       = None,
-                       embed   : Optional[dis.Embed] = None,
-                       file    : Optional[dis.File]  = None):
+                       content          : Optional[str]       = None,
+                       embed            : Optional[dis.Embed] = None,
+                       allowed_mentions : Optional[Any]       = None,
+                       file             : Optional[dis.File]  = None):
             """A bare minimum mock to ensure test compatability.
 
                Input: self - Pointer to the current object instance.
                       content - Waht data to post to the channel.
                       embed - An optional embed to add to the message.
+                      allowed_mentions - Which users can be mentioned in this reply.
                       file - An optional fileadd to the message.
 
                Output: none.
@@ -287,16 +425,18 @@ class MockInteraction():
     class InteractionResponse():
 
         async def send_message(self,
-                               content      : Optional[str]       = None,
-                               delete_after : Optional[float]     = None,
-                               embed        : Optional[dis.Embed] = None,
-                               ephemeral    : Optional[bool]      = None,
-                               view         : Optional[Any]       = None):
+                               content          : Optional[str]       = None,
+                               delete_after     : Optional[float]     = None,
+                               embed            : Optional[dis.Embed] = None,
+                               allowed_mentions : Optional[Any]       = None,
+                               ephemeral        : Optional[bool]      = None,
+                               view             : Optional[Any]       = None):
             """A bare minimum mock to ensure test compatability.
 
                Input: self - Pointer to the current object instance.
                       delete_after - How long to display the message if ephemeral.
                       embed - An optional embed to add to the message.
+                      allowed_mentions - Which users can be mentioned in this reply.
                       ephemeral - If the message should be automatically deleted.
                       view - Which discord view to edit.
 
@@ -357,6 +497,19 @@ class MockInteraction():
         """
 
         return self.message
+
+    async def edit_original_response(self,
+                                     content     : Optional[str]       = None,
+                                     embed       : Optional[dis.Embed] = None,
+                                     attachments : Optional[Any]       = None):
+        """A bare minimum mock to ensure test compatability.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: message - a mock Discord message.
+        """
+
+        pass
 
 #####  Mock Loop Class  #####
 
@@ -474,6 +627,28 @@ class MockUiButton():
 
            Output: N.A
         """
+
+        pass
+
+
+#####  Mock User Class  #####
+
+class MockUser():
+
+    def __init__(self,
+                 id           : Optional[int] = DEFAULT_USER_ID,
+                 display_name : Optional[str] = DEFAULT_DISPLAY_NAME,
+                 name         : Optional[str] = DEFAULT_USER_NAME):
+        """A bare minimum mock to ensure test compatability.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        self.id           = id
+        self.display_name = DEFAULT_DISPLAY_NAME
+        self.name         = name
 
         pass
 

@@ -106,12 +106,17 @@ class TestDropdownFactory(iatc):
 
            Output: none.
         """
+        self.metadata = {'db_ifc' : mc.MockDbInterface()}
 
         with self.assertRaises(NotImplementedError):
-            dropdown = ddf.DropDownFactory.getDropDown(type=-1, ctx=self.interaction)
+            dropdown = ddf.DropDownFactory.getDropDown(type=-1,
+                                                       ctx=self.interaction,
+                                                       metadata=self.metadata)
 
         with self.assertRaises(NotImplementedError):
-            view = ddf.DropdownView(type=-1, ctx=self.interaction)
+            view = ddf.DropdownView(type=-1,
+                                    ctx=self.interaction,
+                                    metadata=self.metadata)
 
     async def testDropdownsHandlesSmallLists(self):
         """Verifies that a Dropdown opject will correctly generate limits for a
@@ -333,11 +338,13 @@ class TestMenuPagination(iatc):
 
         self.interaction = mc.MockInteraction()
         profile          = pg.getDefaultProfile()
+        user             = mc.MockUser()
 
         with patch('discord.ui.View') as mc.MockView, patch('discord.ui.Button') as mc.MockUiButton:
 
             self.uut = mp.MenuPagination(interaction = self.interaction,
-                                         profiles    = [(profile.name, profile.id) for x in range(0,25)])
+                                         profiles    = [(profile.name, profile.id) for x in range(0,25)],
+                                         user        = user)
 
     async def testInteractionCheckPasses(self):
         """Verifies that the interaction_check function verifies only the post

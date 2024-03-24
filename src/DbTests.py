@@ -10,7 +10,6 @@ from .utilities import ProfileGenerator as pg
 import discord as dis
 import json
 import sys
-#import mariadb
 import pathlib as pl
 from typing import Callable, Optional, Any
 import unittest

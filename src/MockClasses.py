@@ -11,6 +11,8 @@ from unittest.mock import MagicMock
 DEFAULT_DISPLAY_NAME = "UNIT TESTER 9000"
 DEFAULT_GUILD_ID     = 1111111111
 DEFAULT_PROFILE_ID   = 1234567890
+DEFAULT_USER_ID      = 999999999999999999
+DEFAULT_USER_NAME    = "DEFAULT_USER_NAME"
 DEFAULT_UUID         = "ffffffff-ffff-ffff-ffff-fffffffffffe"
 
 
@@ -625,6 +627,28 @@ class MockUiButton():
 
            Output: N.A
         """
+
+        pass
+
+
+#####  Mock User Class  #####
+
+class MockUser():
+
+    def __init__(self,
+                 id           : Optional[int] = DEFAULT_USER_ID,
+                 display_name : Optional[str] = DEFAULT_DISPLAY_NAME,
+                 name         : Optional[str] = DEFAULT_USER_NAME):
+        """A bare minimum mock to ensure test compatability.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        self.id           = id
+        self.display_name = DEFAULT_DISPLAY_NAME
+        self.name         = name
 
         pass
 

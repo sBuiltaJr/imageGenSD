@@ -361,7 +361,10 @@ async def listprofiles(interaction : dis.Interaction,
     else:
 
         short_profiles = [(profiles[x].name,profiles[x].id) for x in range(0,len(profiles))]
-        await mp.MenuPagination(interaction, short_profiles).navigate()
+
+        await mp.MenuPagination(interaction = interaction,
+                                profiles    = short_profiles,
+                                user        = user).navigate()
 
 @IGSD_client.event
 async def on_ready():

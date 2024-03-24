@@ -5,6 +5,7 @@
 - Added the `showsummary` command to show various kinds of player stats.
 - Split `show`-type and `work`-type commands to different queues for better processing.
 - Added a locking mechanism for `dropdown`-style commands to prevent accidental use of stale data.
+- Updated the `/showprofiles` command to edit the same response to minimize profile spam.
 - Enforced allowed mentions on all commands to ensure only authors can be mentioned.
 
 ### Specific Changes
@@ -25,6 +26,7 @@
 - Added the `_getMentions` function in `JobFactory.py` to manage user mentions.
 	- defaulted the function's use to only allow an author to be mentioned in a command's use.
 	- Created a `FakeUser` class to work around how `discord.py` gets user IDs internally.
+- Updated the `/showprofiles` command to edit the same response to minimize profile spam.
 - Added the `getStandardValueList` function in `RarityClass.py` to make looping over rarities easier.
 - Updated the `job` enum to be consistent with other constant declarations.
 - Fixed the `mariadb` mock in the `DbTetsts.py` file to correctly mock the `mariadb` package.

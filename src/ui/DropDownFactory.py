@@ -109,9 +109,9 @@ class KeyGenDropdown(DynamicDropdown):
             slice = range(0, len(self.choices) - self.offset)
 
         options = [dis.SelectOption(label=self.choices[self.offset + x].name,value=self.choices[self.offset + x].id) for x in slice]
-        options.append(dis.SelectOption(label='Next',   value=FORWARD_NAV_VALUE))
-        options.append(dis.SelectOption(label='Back',   value=BACKWARD_NAV_VALUE))
-        options.append(dis.SelectOption(label='Cancel', value=CANCEL_NAV_VALUE))
+        options.insert(0, dis.SelectOption(label='Next',   value=FORWARD_NAV_VALUE))
+        options.insert(0, dis.SelectOption(label='Back',   value=BACKWARD_NAV_VALUE))
+        options.insert(0, dis.SelectOption(label='Cancel', value=CANCEL_NAV_VALUE))
 
         select_limit = self.limit - self.tier_data['count']
 
@@ -309,9 +309,9 @@ class ShowDropdown(DynamicDropdown):
             slice = range(0, len(self.choices) - self.offset)
 
         options = [dis.SelectOption(label=self.choices[self.offset + x].name,value=self.choices[self.offset + x].id) for x in slice]
-        options.append(dis.SelectOption(label='Next',   value=FORWARD_NAV_VALUE))
-        options.append(dis.SelectOption(label='Back',   value=BACKWARD_NAV_VALUE))
-        options.append(dis.SelectOption(label='Cancel', value=CANCEL_NAV_VALUE))
+        options.insert(0, dis.SelectOption(label='Next',   value=FORWARD_NAV_VALUE))
+        options.insert(0, dis.SelectOption(label='Back',   value=BACKWARD_NAV_VALUE))
+        options.insert(0, dis.SelectOption(label='Cancel', value=CANCEL_NAV_VALUE))
 
         super().__init__(placeholder='Select a character to display.', min_values=1, max_values=1, options=options)
 

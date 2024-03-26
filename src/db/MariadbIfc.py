@@ -748,6 +748,7 @@ class MariadbIfc:
         prof_opts['occupied'] = query[23]
         profile=pg.Profile(opts=prof_opts)
         self.db_log.debug(f"Profile map output was: {profile}")
+        self.db_log.debug(f"Info was: {profile.info}")
 
         return profile
 

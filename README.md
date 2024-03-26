@@ -147,7 +147,7 @@ Not specifying `user` will cause the menu to show the author's profiles.
 
 Only the command author is allowed to use the navigation buttons.
 
-`removekeygen( {tier}`
+`removekeygen {tier}`
 
 - Remove at least one Character Profile from Key Generation work.
 

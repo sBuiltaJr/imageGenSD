@@ -258,6 +258,56 @@ class MariadbIfc:
 
         return result
 
+    def getAssignParams(self,
+                    user_id : int) -> dict:
+        """Returns the all worker parameters and current assigned workers for a
+           given user (limit, count, worker ids, etc).
+
+            Input: self - Pointer to the current object instance.
+                   user_id - user ID to interrogate for their keygen limit.
+
+            Output: dict - the current user keygen stats.
+        """
+        cmd    = ""
+        cursor = self.con.cursor(buffered=False)
+        results = {}
+
+        self.db_log.info(f"Getting keygen worker limit for user {user_id}")
+        cmd = (self.cmds['econ']['get_keygen_params']) % (user_id)
+        self.db_log.debug(f"Executing command: {cmd}")
+        cursor.execute(cmd)
+
+        result = cursor.fetchone()
+        self.db_log.debug(f"Got result: {result}")
+
+        if result:
+
+            #This mapping is to minimize code changes if the paramaters change.
+            results = {'total'        : result[0],
+                       'current_tier' : result[1],
+                       'limit_t0'     : result[2],
+                       'limit_t1'     : result[3],
+                       'limit_t2'     : result[4],
+                       'limit_t3'     : result[5],
+                       'limit_t4'     : result[6],
+                       'limit_t5'     : result[7]}
+
+        prof = {}
+
+        cmd = (self.cmds['keyg']['get_tier_all']) % (user_id)
+        self.db_log.debug(f"Getting current user keygen worker allocation: {cmd}")
+        cursor.execute(cmd)
+        #This is returned as a tuple, so either way it has to be converted to a
+        #dict at some point.
+        result = cursor.fetchone()
+        self.db_log.debug(f"Current user keygen allocation is: {result}")
+        prof['workers'] = self.mapQueryToKeyGenInfo(query=result)
+        self.db_log.debug(f"Worker stats are: {prof['workers']}")
+
+        results |= prof
+
+        return results
+
     def getDropdown(self,
                     user_id : int) -> bool:
         """Returns the 'dropdown active' status of a user.  The current

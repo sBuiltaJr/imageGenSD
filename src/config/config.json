@@ -10,7 +10,7 @@
     "max_bytes"     : "33554432",
     "options"       :
     {
-        "banned_words"     : "sex,nipple,vagina,vaginal,dick,penis,orgasm,oral,cum,semen,slut,whore,cunt,bitch,poop,shit,piss,pee,orgy,loli,child,shota,kid,anal,intercourse,NSFW",
+        "banned_words"     : "sex,nipple,vagina,vaginal,dick,penis,orgasm,oral,cum,semen,slut,whore,cunt,bitch,poop,shit,piss,pee,orgy,loli,child,shota,kid,anal,intercourse,NSFW,censor",
         "banned_neg_words" : "clothed,adult,mature",
         "cfg"              : "18",
         "HDR"              : "false",

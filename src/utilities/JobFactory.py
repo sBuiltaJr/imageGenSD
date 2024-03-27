@@ -168,6 +168,7 @@ class Job(ABC):
         """
 
         count = 0
+        dict_str = None
         #Displaying multiple embds requires providing them in list format to
         #the send message command.
         embeds = [dis.Embed(), dis.Embed()]
@@ -192,8 +193,12 @@ class Job(ABC):
         embeds[0].add_field(name='Profile ID', value=self.profile.id)
 
         #Apparently the JSON format returned by SD isn't quite compliant with
-        #Json's formatter, requiring some replacements.
-        info_dict = json.loads(self.profile.info.replace('\n', ' ')) if isinstance(self.profile.info, str) else self.profile.info
+        #JSON's formatter, requiring some replacements.
+        if isinstance(self.profile.info, str):
+            self.profile.info = self.profile.info.replace('\\', ' ')
+            dict_str          = self.profile.info[:self.profile.info.find("all_prompts")-3] + '}'
+            
+        info_dict = json.loads(dict_str) if dict_str != None else self.profile.info
         prompts   = info_dict['prompt'].split(',')
         #This is because all prompts, other than the first, have a space
         prompts[0] = " " + prompts[0]

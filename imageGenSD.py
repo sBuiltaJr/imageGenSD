@@ -43,7 +43,7 @@ daily_mgr      = None
 daily_mgr_th   = None
 db_ifc         = None
 dict_path      = ["","",""]
-IGSD_version   = '0.3.85'
+IGSD_version   = '0.3.9'
 job_queue      = None
 job_worker     = None
 show_queue     = None
@@ -165,17 +165,35 @@ async def about(interaction : dis.Interaction):
     await interaction.response.send_message(f"This is bot version {IGSD_version}!  Invite me to your server with [this link](https://discord.com/api/oauth2/authorize?client_id=1084600126913388564&permissions=534723816512&scope=bot)!  Code found [on GitHub](https://github.com/sBuiltaJr/imageGenSD).", ephemeral=True, delete_after=30.0)
 
 
+@verify(UNIQUE)
+class AssignChoices(Enum):
+    #lower case since it's user-facing
+    #The numbers aren't sequential to allow use as an index for the econ query.
+    Building         = 0
+    Crafting         = 1
+    Dungeon_Keys     = 2
+    Exploration_Team = 3
+    Hospital_Staff   = 4
+    Research         = 5
+    Workers          = 6
+
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
-@dac.describe(tier="Which tier to manage character assignments in.  1 mean 'common', 6 means 'legendary'.") #TODO: cycle through the tiers?
-async def assignkeygen(interaction : dis.Interaction,
-                       tier        : Optional[dac.Range[int, 1, 6]] = 1):
-    """Assigns selected characters to key generation.  Only characters wtih stats above the average for their can be assigned to work on this job.
+@dac.describe(tier="Which tier to manage character assignments in.  1 means 'Base', 6 means 'Master'.") #TODO: cycle through the tiers?
+@dac.describe(type="Where to assign work.  Defaults to Exploration_Team.")
+async def assign(interaction : dis.Interaction,
+                 tier        : Optional[dac.Range[int, 1, 6]] = 1,
+                 type        : Optional[AssignChoices] = AssignChoices.Exploration_Team):
+    """Assigns selected characters to a type of work.
 
         Input  : interaction - the interaction context from Discord.
                  tier - what rarity tier to assign for (1-based for the average user)
+                 type - what type of work to assign the characters to.
 
         Output : N/A.
+        
+        Note: This function intentionally bundles several disparate commands
+              together for user convenience.
     """
 
     dis_log  = log.getLogger('discord')
@@ -189,10 +207,10 @@ async def assignkeygen(interaction : dis.Interaction,
     tier -= 1
 
     profiles = db_ifc.getUnoccupiedProfiles(user_id = interaction.user.id)
-    dis_log.debug(f"Got profiles for assign Key Gen: {profiles}.")
+    dis_log.debug(f"Got profiles for Assign: {profiles}.")
 
-    options = db_ifc.getKeyGenParams(user_id = interaction.user.id)
-    dis_log.debug(f"Got Key Gen parameters: {options}.")
+    options = db_ifc.getSummaryEconom(user_id = interaction.user.id)
+    dis_log.debug(f"Got Assign parameters: {options}.")
 
 
     if db_ifc.getDropdown(user_id = interaction.user.id) :
@@ -203,26 +221,30 @@ async def assignkeygen(interaction : dis.Interaction,
 
         await interaction.response.send_message('You need a character first!  Use the /roll command to get one, or free existing profiles from their assignments!', ephemeral=True, delete_after=9.0)
 
-    elif int(options['current_tier']) < tier:
+    elif int(options[type.value]['current_tier']) < tier:
 
-        await interaction.response.send_message(f"You don't have access to this tier yet!  Right now you can access tier {options['current_tier'] + 1}. Start some /research and /building to upgrade!", ephemeral=True, delete_after=9.0)
+        await interaction.response.send_message(f"You don't have access to this tier yet!  Right now you can access tier {options[type.value]['current_tier'] + 1}. Start some research and building with /assign to upgrade!", ephemeral=True, delete_after=9.0)
 
-    elif int(options['workers'][f'tier_{tier}']['count']) >= int(options[f'limit_t{tier}']):
+    elif int(options[type.value]['workers'][f'tier_{tier}']['count']) >= int(options[type.value]['workers'][f'limit_t{tier}']):
 
         await interaction.response.send_message(f"You've assigned all possible workers for tier {tier + 1}!  Either remove a worker or research more slots.", ephemeral=True, delete_after=9.0)
 
     else:
 
-        options['tier'] = tier
-        dis_log.debug(f"Creating a ASSIGN KEY GEN view for user {interaction.user.id}.")
+        match type:
 
-        view = ddf.DropdownView(ctx      = interaction,
-                                type     = ddf.DropDownTypeEnum.ASSIGN_KEY_GEN,
-                                choices  = profiles,
-                                metadata = metadata,
-                                options  = options)
+            case AssignChoices.Dungeon_Keys:
 
-        await interaction.response.send_message(f'Select a profile to assign to keygen work for tier {tier + 1}:',view=view)
+                options['tier'] = tier
+                dis_log.debug(f"Creating a ASSIGN KEY GEN view for user {interaction.user.id}.")
+
+                view = ddf.DropdownView(ctx      = interaction,
+                                        type     = ddf.DropDownTypeEnum.ASSIGN_KEY_GEN,
+                                        choices  = profiles,
+                                        metadata = metadata,
+                                        options  = options)
+
+        await interaction.response.send_message(f"Select a profile to assign to {type.name} for tier {tier + 1}:",view=view)
 
 def bannedWordsFound(prompt: str, banned_words: str) -> bool:
     """Tests if banded words exist in the provided parameters.  This is written
@@ -466,7 +488,7 @@ async def post(job      : jf.Job,
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
-@dac.describe(tier="Which tier to manage character assignments in.  1 mean 'common', 6 means 'legendary'.") #TODO: cycle through the tiers?
+@dac.describe(tier="Which tier to manage character assignments in.  1 means 'Base', 6 means 'Master'.") #TODO: cycle through the tiers?
 async def removekeygen(interaction : dis.Interaction,
                        tier        : Optional[dac.Range[int, 1, 6]] = 1):
     """Creates a dropdown for removing characters from the Key Generation job.
@@ -634,7 +656,7 @@ class SummaryChoices(Enum):
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
 @dac.describe(user="The Discord user owning the profiles listed by the command.  If none, it defaults to you.")
-@dac.describe(type="What kind of summary to show (characters, economy, or inventory.  Defaults to inventory.")
+@dac.describe(type="What kind of summary to show (characters, economy, or inventory).  Defaults to inventory.")
 async def showsummary(interaction : dis.Interaction,
                       type        : Optional[SummaryChoices] = SummaryChoices.Inventory,
                       user        : Optional[dis.User] = None):
@@ -857,10 +879,4 @@ if __name__ == '__main__':
     Startup()
 
 
-#/assignresearch
-#/assignCrafting?
-#/assignWorker?
-#/CreateTeam
-#/assignDungeon
-#/hospital
 #/shop

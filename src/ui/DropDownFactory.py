@@ -2,14 +2,14 @@
 
 
 #####  Imports  #####
-from ..db import MariadbIfc as mdb
 from abc import ABC, abstractmethod
 import base64 as b64
 import discord as dis
 from enum import IntEnum, verify, UNIQUE
 import io
+import src.characters.StatsClass as sc
 import src.utilities.JobFactory as jf
-import src.utilities.StatsClass as sc
+import src.db.MariadbIfc as mdb
 from typing import Callable, Optional
 import traceback
 

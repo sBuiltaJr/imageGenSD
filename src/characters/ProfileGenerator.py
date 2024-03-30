@@ -4,9 +4,9 @@
 #####  Imports  #####
 from enum import Enum
 import logging as log
-from . import NameRandomizer as nr
-from . import RarityClass as rc
-from . import StatsClass as sc
+import src.characters.RarityClass as rc
+import src.characters.StatsClass as sc
+import src.utilities.NameRandomizer as nr
 from typing import Literal, Optional
 
 

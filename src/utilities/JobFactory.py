@@ -12,8 +12,8 @@ import io
 import json
 import requests as req
 import src.db.MariadbIfc as mdb
-import src.utilities.ProfileGenerator as pg
-import src.utilities.RarityClass as rc
+import src.characters.ProfileGenerator as pg
+import src.characters.RarityClass as rc
 from typing import Optional
 from urllib.parse import urljoin
 

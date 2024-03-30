@@ -16,6 +16,7 @@ import multiprocessing as mp
 import os
 import pathlib as pl
 import requests as req
+import src.characters.ProfileGenerator as pg
 import src.db.MariadbIfc as mdb
 import src.managers.DailyEventMgr as dem
 import src.managers.QueueMgr as qm
@@ -23,7 +24,6 @@ import src.ui.DropDownFactory as ddf
 import src.ui.MenuPagination as mp
 import src.utilities.JobFactory as jf
 import src.utilities.NameRandomizer as nr
-import src.utilities.ProfileGenerator as pg
 import src.utilities.TagRandomizer as tr
 import threading as th
 import time

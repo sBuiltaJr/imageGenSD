@@ -1,6 +1,6 @@
-#Defines all unit tests for the files under the /utilities folder.  This file
+#Defines all unit tests for the files under the /characters folder.  This file
 #must be defiend at a Package level that encapsulates all includes for the
-#utilities Pacakges.
+#characters Pacakges.
 
 #####  Imports  #####
 

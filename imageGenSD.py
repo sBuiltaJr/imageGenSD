@@ -8,7 +8,7 @@
 import asyncio as asy
 import discord as dis
 from discord import app_commands as dac
-from enum import Enum, verify, UNIQUE
+from enum import Enum, IntEnum, verify, UNIQUE
 import logging as log
 import logging.handlers as lh
 import json
@@ -16,6 +16,7 @@ import multiprocessing as mp
 import os
 import pathlib as pl
 import requests as req
+import src.characters.CharacterJobs as cj
 import src.characters.ProfileGenerator as pg
 import src.db.MariadbIfc as mdb
 import src.managers.DailyEventMgr as dem
@@ -166,16 +167,16 @@ async def about(interaction : dis.Interaction):
 
 
 @verify(UNIQUE)
-class AssignChoices(Enum):
+class AssignChoices(IntEnum):
     #lower case since it's user-facing
     #The numbers aren't sequential to allow use as an index for the econ query.
-    Building         = 0
-    Crafting         = 1
-    Dungeon_Keys     = 2
-    Exploration_Team = 3
-    Hospital_Staff   = 4
-    Research         = 5
-    Workers          = 6
+    Building         = cj.CharacterJobTypeEnum.BUILDER_t0.value
+    Crafting         = cj.CharacterJobTypeEnum.CRAFTER_t0.value
+    Hospital_Staff   = cj.CharacterJobTypeEnum.HOSPITAL_t0.value
+    Dungeon_Keys     = cj.CharacterJobTypeEnum.KEY_GENERATION_t0.value
+    Research         = cj.CharacterJobTypeEnum.RESEARCH_t0.value
+    Exploration_Team = cj.CharacterJobTypeEnum.DUNGEON_TEAM_t0.value
+    Workers          = cj.CharacterJobTypeEnum.WORKER_t0.value
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
@@ -208,34 +209,38 @@ async def assign(interaction : dis.Interaction,
 
     profiles = db_ifc.getUnoccupiedProfiles(user_id = interaction.user.id)
     dis_log.debug(f"Got profiles for Assign: {profiles}.")
+    
+    options = db_ifc.getWorkerCountsInTier(user_id = interaction.user.id)
+    dis_log.debug(f"Got worker counts for Assign: {options}.")
 
-    options = db_ifc.getSummaryEconom(user_id = interaction.user.id)
+    options |= db_ifc.getSummaryEconomy(categories = AssignChoices,
+                                        user_id    = interaction.user.id)
     dis_log.debug(f"Got Assign parameters: {options}.")
-
 
     if db_ifc.getDropdown(user_id = interaction.user.id) :
 
         await interaction.response.send_message(f'Please close your existing dropdown menu or wait for it to time out.', ephemeral=True, delete_after=9.0)
 
-    elif not profiles or 'total' not in options:
+    elif not profiles or not options:
 
         await interaction.response.send_message('You need a character first!  Use the /roll command to get one, or free existing profiles from their assignments!', ephemeral=True, delete_after=9.0)
 
-    elif int(options[type.value]['current_tier']) < tier:
+    elif int(options[type.value]['tier']) < tier:
 
         await interaction.response.send_message(f"You don't have access to this tier yet!  Right now you can access tier {options[type.value]['current_tier'] + 1}. Start some research and building with /assign to upgrade!", ephemeral=True, delete_after=9.0)
 
-    elif int(options[type.value]['workers'][f'tier_{tier}']['count']) >= int(options[type.value]['workers'][f'limit_t{tier}']):
+    elif int(options['counts'][type.value + tier]) >= int(options[type.value][f'tier_{tier}']):
 
         await interaction.response.send_message(f"You've assigned all possible workers for tier {tier + 1}!  Either remove a worker or research more slots.", ephemeral=True, delete_after=9.0)
 
     else:
 
+        options['tier']   = tier
+        options['counts'] = options['counts'][type.value + tier]
+
         match type:
 
             case AssignChoices.Dungeon_Keys:
-
-                options['tier'] = tier
                 dis_log.debug(f"Creating a ASSIGN KEY GEN view for user {interaction.user.id}.")
 
                 view = ddf.DropdownView(ctx      = interaction,
@@ -244,7 +249,7 @@ async def assign(interaction : dis.Interaction,
                                         metadata = metadata,
                                         options  = options)
 
-        await interaction.response.send_message(f"Select a profile to assign to {type.name} for tier {tier + 1}:",view=view)
+        await interaction.response.send_message(f"Select profile(s) to assign to {type.name} for tier {tier + 1}:",view=view)
 
 def bannedWordsFound(prompt: str, banned_words: str) -> bool:
     """Tests if banded words exist in the provided parameters.  This is written

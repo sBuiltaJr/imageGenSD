@@ -85,7 +85,7 @@ class KeyGenDropdown(DynamicDropdown):
         self.metadata    = metadata
         self.offset      = 0 if 'count' not in opts else int(opts['count'])
         self.tier        = int(opts['tier']) if 'tier' in opts else 0
-        self.limit_key   = f'limit_t{self.tier}'
+        self.limit_key   = f'tier_t{self.tier}'
         self.limit       = int(opts[self.limit_key])
         self.tier_count  = opts['total']
         self.tier_key    = f'tier_{self.tier}'

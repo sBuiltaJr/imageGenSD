@@ -7,6 +7,7 @@
 
 #####  Imports  #####
 
+from enum import IntEnum
 import json
 import logging as log
 import logging.handlers as lh
@@ -498,7 +499,7 @@ class MariadbIfc:
         cmd     = ""
         cursor  = self.con.cursor(buffered=False)
         #This is a workaround to the cursor interpreting None as 'None'.
-        ids    = [INDICATOR.NULL for x in range(0, int(self.cmds['econ']['max_workers_per_tier']))]
+        ids    = [INDICATOR.NULL for x in range(0, int(self.cmds['econ']['max_workers']))]
         index   = 0
         results = []
 
@@ -615,16 +616,17 @@ class MariadbIfc:
         return results
 
     def getSummaryEconomy(self,
-                          user_id : int) -> dict:
+                          categories : IntEnum,
+                          user_id    : int) -> dict:
         """Returns the db-stored state of a user's economy.
 
             Input: self - Pointer to the current object instance.
+                   categories - how to sort the worker types.
                    user_id - user ID to interrogate for economy data.
 
             Output: dict - A dict of economy stats sorted by group, if any.
         """
 
-        categories = ['builder', 'crafter', 'hospital', 'keygen', 'research', 'team', 'worker']
         count      = 1
         cursor     = self.con.cursor(buffered=False)
         results    = {}
@@ -640,15 +642,15 @@ class MariadbIfc:
 
             for key in categories:
 
-                results[key] = {}
-                results[key]['count']  = result[count + 0]
-                results[key]['tier']   = result[count + 1]
-                results[key]['tier_0'] = result[count + 2]
-                results[key]['tier_1'] = result[count + 3]
-                results[key]['tier_2'] = result[count + 4]
-                results[key]['tier_3'] = result[count + 5]
-                results[key]['tier_4'] = result[count + 6]
-                results[key]['tier_5'] = result[count + 7]
+                results[key.value] = {}
+                results[key.value]['count']  = result[count + 0]
+                results[key.value]['tier']   = result[count + 1]
+                results[key.value]['tier_0'] = result[count + 2]
+                results[key.value]['tier_1'] = result[count + 3]
+                results[key.value]['tier_2'] = result[count + 4]
+                results[key.value]['tier_3'] = result[count + 5]
+                results[key.value]['tier_4'] = result[count + 6]
+                results[key.value]['tier_5'] = result[count + 7]
                 count += 8
 
         self.db_log.debug(f"Got results: {results}")
@@ -714,6 +716,42 @@ class MariadbIfc:
 
             self.db_log.debug(f"Adding result: {x}")
             results.append(self.mapQueryToProfile(query=x))
+
+        self.db_log.debug(f"Got results: {results}")
+
+        return results
+
+    def getWorkerCountsInTier(self,
+                              user_id : int) -> dict:
+        """Returns the count of workers assigned to each tier of a job for a
+           given user.
+
+            Input: self - Pointer to the current object instance.
+                   user_id - user ID to interrogate for economy data.
+
+            Output: dict - A dict of worker stats sorted by group, if any.
+        """
+
+        count      = 1
+        cursor     = self.con.cursor(buffered=False)
+        JOB_ID     = 0
+        JOB_COUNT  = 1
+        results    = {}
+
+        self.db_log.info(f"Getting worker stats for user {user_id}")
+        cmd = (self.cmds['prof']['get_worker_counts']) % (user_id)
+        self.db_log.debug(f"Executing command: {cmd}")
+        cursor.execute(cmd)
+
+        result = cursor.fetchall()
+
+        if result:
+
+            results['counts'] = {}
+
+            for row in result:
+
+                results['counts'][row[JOB_ID]] = row[JOB_COUNT]
 
         self.db_log.debug(f"Got results: {results}")
 

@@ -162,11 +162,11 @@ class KeyGenDropdown(DynamicDropdown):
 
                     names += choice.name + ", "
 
-            result = self.db.assignKeyGenWork(count       = self.tier_count,
+            result = self.db.assignKeyGenWork(count       = self.active_workers,
                                               profile_ids = self.values,
                                               tier        = self.tier,
                                               user_id     = self.interaction.user.id,
-                                              workers     = workers)
+                                              workers     = self.workers)
 
             await interaction.response.edit_message(content=f"Assigned the chosen characters: {names}to keygen work in tier {self.tier + 1}!",view=None)
 

@@ -136,17 +136,17 @@ class MariadbIfc:
                          count       : int,
                          profile_ids : list,
                          tier        : int,
-                         tier_data   : dict,
-                         user_id     : int):
+                         user_id     : int,
+                         workers     : list):
         """Assigns a given list of profile IDs to the 'KeyGen' work action,
            including updating the relevant profile and econ table entries.
 
             Input: self - Pointer to the current object instance.
                    count - the User's total worker count of this type of work.
-                   profile_ids - a (verified) lsit of IDs to assign to work.
+                   profile_ids - a (verified) list of IDs to assign to work.
                    tier - what level of work is being assigned.
-                   tier_data - the worker data for this tier.
                    user_id - The Discord user assocaited with the action.
+                   workers - a list of existing worker for this tier.
 
             Output: N/A.
         """
@@ -154,33 +154,24 @@ class MariadbIfc:
         cursor     = self.con.cursor(buffered=False)
         work_tier  = cj.CharacterJobTypeEnum.KEY_GENERATION_t0.value + tier
         #This is a workaround to the cursor interpreting None as 'None'
-        new_entry  = [work_tier, user_id, INDICATOR.NULL,INDICATOR.NULL,INDICATOR.NULL,INDICATOR.NULL,INDICATOR.NULL]
-        worker_cnt = count
+        new_entry  = [work_tier, user_id, INDICATOR.NULL, INDICATOR.NULL, INDICATOR.NULL, INDICATOR.NULL, INDICATOR.NULL]
 
-        #The remove function ensures that any existing workers always occupy
-        #the front slots (and that empty slots are at the end)
-        for worker in range(0, len(tier_data['workers'])):
+        for worker in range(0, count):
 
             #offset for the front-loaded spaces in new_entry
-            new_entry[worker + 2] = tier_data[worker]
-            worker_cnt += 1
+            new_entry[worker + 2] = workers[worker]
 
         for slot in range(0, len(profile_ids)) :
 
             #offset for the front-loaded spaces in new_entry
-            new_entry[slot + tier_data['count'] + 2] = profile_ids[slot]
-            worker_cnt += 1
+            new_entry[count + 2] = profile_ids[slot]
+            count += 1
 
-        data = tuple(new_entry)
-
-        cmd  = (self.cmds['prof']['put_workers']) % (work_tier, user_id, new_entry[0], new_entry[1], new_entry[2], new_entry[3], new_entry[4])
+        cmd  = (self.cmds['prof']['put_workers']) % (new_entry[0], new_entry[1], new_entry[2], new_entry[3], new_entry[4], new_entry[5], new_entry[6])
         self.db_log.debug(f"Updating user's keygen work list for tier {tier}: {cmd}")
-        #This must be done as implemented due to how the mariadb python cursor
-        #handles (or rather, doesn't handle) NULL entries. See
-        #https://mariadb-corporation.github.io/mariadb-connector-python/usage.html#using-indicators
-        cursor.execute(self.cmds['prof']['put_workers'], data)
+        cursor.execute(cmd)
 
-        cmd = (self.cmds['econ']['put_keygen_count']) % (worker_cnt, user_id)
+        cmd = (self.cmds['econ']['put_keygen_count']) % (count, user_id)
         self.db_log.debug(f"Updating user's econ keygen count: {cmd}")
         cursor.execute(cmd)
 

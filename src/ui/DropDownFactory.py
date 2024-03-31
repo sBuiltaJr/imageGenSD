@@ -168,7 +168,10 @@ class KeyGenDropdown(DynamicDropdown):
                                               user_id     = self.interaction.user.id,
                                               workers     = self.workers)
 
-            await interaction.response.edit_message(content=f"Assigned the chosen characters: {names}to keygen work in tier {self.tier + 1}!",view=None)
+            self.db.putDropdown(state   = False,
+                                user_id = self.interaction.user.id)
+
+            await interaction.response.edit_message(content=f"Assigned the chosen characters: {names}to keygen work in tier {self.tier + 1}!", view=None)
 
     #Note: this view gates by occupied == True and stats_avg >= range average
     def trimByGatingCriteria(self,
@@ -207,17 +210,14 @@ class RemoveKeyGenDropdown(DynamicDropdown):
 
         self.choices     = choices
         self.db          = metadata['db_ifc']
+        self.ID          = 0
         self.interaction = ctx
         self.metadata    = metadata
+        self.NAME        = 1
         self.tier        = int(opts['tier']) if 'tier' in opts else 0
-        self.limit_key   = f'limit_t{self.tier}'
-        self.limit       = int(opts[self.limit_key])
-        self.tier_count  = opts['total']
-        self.tier_key    = f'tier_{self.tier}'
-        self.tier_data   = opts['workers'][self.tier_key]
-        self.count       = int(self.tier_data['count']) #There can only ever be, at most, 5.
+        self.count       = opts['active_workers'] #There can only ever be, at most, 5.
 
-        options = [dis.SelectOption(label=self.choices[x].name,value=self.choices[x].id) for x in range (0, self.count)]
+        options = [dis.SelectOption(label=self.choices[x][self.NAME],value=self.choices[x][self.ID]) for x in range (0, self.count)]
         options.append(dis.SelectOption(label='Cancel', value=CANCEL_NAV_VALUE))
 
         super().__init__(placeholder=f'Select at most {self.count} characters to remove.', min_values=1, max_values=self.count, options=options)
@@ -248,15 +248,17 @@ class RemoveKeyGenDropdown(DynamicDropdown):
             for choice in self.choices :
 
                 #If only the select object also tracked choice labels.
-                if choice.id in self.values :
+                if choice[self.ID] in self.values :
 
-                    names += choice.name + ", "
+                    names += choice[self.NAME] + ", "
 
-            result = self.db.removeKeyGenWork(count       = self.tier_count,
-                                              profile_ids = self.values,
+            result = self.db.removeKeyGenWork(profile_ids = self.values,
                                               tier        = self.tier,
-                                              tier_data   = self.tier_data,
-                                              user_id     = self.interaction.user.id)
+                                              user_id     = self.interaction.user.id,
+                                              workers     = self.choices)
+
+            self.db.putDropdown(state   = False,
+                                user_id = self.interaction.user.id)
 
             await interaction.response.edit_message(content=f"Removed the chosen characters: {names}from keygen work in tier {self.tier + 1}!",view=None)
 

@@ -12,6 +12,7 @@ import io
 import json
 import requests as req
 import src.db.MariadbIfc as mdb
+import src.characters.CharacterJobs as cj
 import src.characters.ProfileGenerator as pg
 import src.characters.RarityClass as rc
 from typing import Optional
@@ -124,13 +125,13 @@ class Job(ABC):
         """
 
         embed = dis.Embed()
-        embed.add_field(name='Building', value=f"Assigned Characters\n`{self.summary['builder']['count']:12d}\n`Max Tier\n`{1 + self.summary['builder']['tier']:12d}`")
-        embed.add_field(name='Crafting', value=f"Assigned Characters\n`{self.summary['crafter']['count']:12d}\n`Max Tier\n`{1 + self.summary['crafter']['tier']:12d}`")
-        embed.add_field(name='Hospitals', value=f"Assigned Characters\n`{self.summary['hospital']['count']:12d}\n`Max Tier\n`{1  + self.summary['hospital']['tier']:12d}`")
-        embed.add_field(name='Key Generation', value=f"Assigned Characters\n`{self.summary['keygen']['count']:12d}\n`Max Tier\n`{1 + self.summary['keygen']['tier']:12d}`")
-        embed.add_field(name='Research', value=f"Assigned Characters\n`{self.summary['research']['count']:12d}\n`Max Tier\n`{1 + self.summary['research']['tier']:12d}`")
-        embed.add_field(name='Dungeon Teams', value=f"Assigned Characters\n`{self.summary['team']['count']:12d}\n`Max Tier\n`{1 + self.summary['team']['tier']:12d}`")
-        embed.add_field(name='Workers', value=f"Assigned Characters\n`{self.summary['worker']['count']:12d}\n`Max Tier\n`{1 + self.summary['worker']['tier']:12d}`")
+        embed.add_field(name='Building', value=f"Assigned Characters\n`{self.summary[cj.AssignChoices.Building.value]['count']:12d}\n`Max Tier\n`{1 + self.summary[cj.AssignChoices.Building.value]['tier']:12d}`")
+        embed.add_field(name='Crafting', value=f"Assigned Characters\n`{self.summary[cj.AssignChoices.Crafting.value]['count']:12d}\n`Max Tier\n`{1 + self.summary[cj.AssignChoices.Crafting.value]['tier']:12d}`")
+        embed.add_field(name='Hospitals', value=f"Assigned Characters\n`{self.summary[cj.AssignChoices.Hospital_Staff.value]['count']:12d}\n`Max Tier\n`{1  + self.summary[cj.AssignChoices.Hospital_Staff.value]['tier']:12d}`")
+        embed.add_field(name='Key Generation', value=f"Assigned Characters\n`{self.summary[cj.AssignChoices.Dungeon_Keys.value]['count']:12d}\n`Max Tier\n`{1 + self.summary[cj.AssignChoices.Dungeon_Keys.value]['tier']:12d}`")
+        embed.add_field(name='Research', value=f"Assigned Characters\n`{self.summary[cj.AssignChoices.Research.value]['count']:12d}\n`Max Tier\n`{1 + self.summary[cj.AssignChoices.Research.value]['tier']:12d}`")
+        embed.add_field(name='Dungeon Teams', value=f"Assigned Characters\n`{self.summary[cj.AssignChoices.Exploration_Team.value]['count']:12d}\n`Max Tier\n`{1 + self.summary[cj.AssignChoices.Exploration_Team.value]['tier']:12d}`")
+        embed.add_field(name='Workers', value=f"Assigned Characters\n`{self.summary[cj.AssignChoices.Workers.value]['count']:12d}\n`Max Tier\n`{1 + self.summary[cj.AssignChoices.Workers.value]['tier']:12d}`")
 
         return embed
 
@@ -181,7 +182,7 @@ class Job(ABC):
         embeds[0].add_field(name='Owner', value=f"<@{self.profile.owner}>")
         embeds[0].add_field(name='Name', value=self.profile.name)
         embeds[0].add_field(name='Rarity', value=self.profile.rarity.name)
-        embeds[0].add_field(name='Occupied', value=self.profile.occupied)
+        embeds[0].add_field(name='Job', value=self.profile.job.name)
         embeds[0].add_field(name='Stats Average', value=f"{self.profile.stats.average:.2f}")
         embeds[0].add_field(name='Agility', value=self.profile.stats.agility)
         embeds[0].add_field(name='Defense', value=self.profile.stats.defense)

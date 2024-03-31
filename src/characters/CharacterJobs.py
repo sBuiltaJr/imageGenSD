@@ -57,3 +57,32 @@ class CharacterJobTypeEnum(IntEnum):
     WORKER_t3         =   40
     WORKER_t4         =   41
     WORKER_t5         =   42
+
+    @classmethod
+    def getEmptyJobTypeList(cls) -> dict:
+        """Returns a dict of jobs mapped to their ids with default values.
+
+           Input: self - A class instance reference.
+
+           Output: List - A dict of job type counts.
+        """
+        out = {}
+
+        for key in cls :
+
+            out[key.value] = 0
+
+        return out
+
+
+@verify(UNIQUE)
+class AssignChoices(IntEnum):
+    #lower case since it's user-facing
+    #The names aren't alphabetical for indexing into the econ table.
+    Building         = CharacterJobTypeEnum.BUILDER_t0.value
+    Crafting         = CharacterJobTypeEnum.CRAFTER_t0.value
+    Hospital_Staff   = CharacterJobTypeEnum.HOSPITAL_t0.value
+    Dungeon_Keys     = CharacterJobTypeEnum.KEY_GENERATION_t0.value
+    Research         = CharacterJobTypeEnum.RESEARCH_t0.value
+    Exploration_Team = CharacterJobTypeEnum.DUNGEON_TEAM_t0.value
+    Workers          = CharacterJobTypeEnum.WORKER_t0.value

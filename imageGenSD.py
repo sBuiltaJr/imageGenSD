@@ -44,7 +44,7 @@ daily_mgr      = None
 daily_mgr_th   = None
 db_ifc         = None
 dict_path      = ["","",""]
-IGSD_version   = '0.3.9'
+IGSD_version   = '0.3.87'
 job_queue      = None
 job_worker     = None
 show_queue     = None
@@ -165,26 +165,13 @@ async def about(interaction : dis.Interaction):
 
     await interaction.response.send_message(f"This is bot version {IGSD_version}!  Invite me to your server with [this link](https://discord.com/api/oauth2/authorize?client_id=1084600126913388564&permissions=534723816512&scope=bot)!  Code found [on GitHub](https://github.com/sBuiltaJr/imageGenSD).", ephemeral=True, delete_after=30.0)
 
-
-@verify(UNIQUE)
-class AssignChoices(IntEnum):
-    #lower case since it's user-facing
-    #The names aren't alphabetical for indexing into the econ table.
-    Building         = cj.CharacterJobTypeEnum.BUILDER_t0.value
-    Crafting         = cj.CharacterJobTypeEnum.CRAFTER_t0.value
-    Hospital_Staff   = cj.CharacterJobTypeEnum.HOSPITAL_t0.value
-    Dungeon_Keys     = cj.CharacterJobTypeEnum.KEY_GENERATION_t0.value
-    Research         = cj.CharacterJobTypeEnum.RESEARCH_t0.value
-    Exploration_Team = cj.CharacterJobTypeEnum.DUNGEON_TEAM_t0.value
-    Workers          = cj.CharacterJobTypeEnum.WORKER_t0.value
-
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
 @dac.describe(tier="Which tier to manage character assignments in.  1 means 'Base', 6 means 'Master'.") #TODO: cycle through the tiers?
 @dac.describe(type="Where to assign work.  Defaults to Exploration_Team.")
 async def assign(interaction : dis.Interaction,
                  tier        : Optional[dac.Range[int, 1, 6]] = 1,
-                 type        : Optional[AssignChoices] = AssignChoices.Exploration_Team):
+                 type        : Optional[cj.AssignChoices] = cj.AssignChoices.Exploration_Team):
     """Assigns selected characters to a type of work.
 
         Input  : interaction - the interaction context from Discord.
@@ -192,7 +179,7 @@ async def assign(interaction : dis.Interaction,
                  type - what type of work to assign the characters to.
 
         Output : N/A.
-        
+
         Note: This function intentionally bundles several disparate commands
               together for user convenience.
     """
@@ -209,12 +196,11 @@ async def assign(interaction : dis.Interaction,
 
     profiles = db_ifc.getUnoccupiedProfiles(user_id = interaction.user.id)
     dis_log.debug(f"Got profiles for Assign: {profiles}.")
-    
+
     options = db_ifc.getWorkerCountsInTier(user_id = interaction.user.id)
     dis_log.debug(f"Got worker counts for Assign: {options}.")
 
-    options |= db_ifc.getSummaryEconomy(categories = AssignChoices,
-                                        user_id    = interaction.user.id)
+    options |= db_ifc.getSummaryEconomy(user_id    = interaction.user.id)
     dis_log.debug(f"Got Assign parameters: {options}.")
 
     if db_ifc.getDropdown(user_id = interaction.user.id) :
@@ -243,7 +229,8 @@ async def assign(interaction : dis.Interaction,
 
         match type:
 
-            case AssignChoices.Dungeon_Keys:
+            case cj.AssignChoices.Dungeon_Keys:
+
                 dis_log.debug(f"Creating a ASSIGN KEY GEN view for user {interaction.user.id}.")
 
                 view = ddf.DropdownView(ctx      = interaction,
@@ -252,7 +239,11 @@ async def assign(interaction : dis.Interaction,
                                         metadata = metadata,
                                         options  = options)
 
-        await interaction.response.send_message(f"Select profile(s) to assign to {type.name} for tier {tier + 1}:",view=view)
+                await interaction.response.send_message(f"Select profile(s) to assign to {type.name} for tier {tier + 1}:",view=view)
+
+            case _:
+
+                await interaction.response.send_message("This interaction is not yet implemented!", ephemeral=True, delete_after=9.0)
 
 def bannedWordsFound(prompt: str, banned_words: str) -> bool:
     """Tests if banded words exist in the provided parameters.  This is written
@@ -497,8 +488,10 @@ async def post(job      : jf.Job,
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
 @dac.describe(tier="Which tier to manage character assignments in.  1 means 'Base', 6 means 'Master'.") #TODO: cycle through the tiers?
-async def removekeygen(interaction : dis.Interaction,
-                       tier        : Optional[dac.Range[int, 1, 6]] = 1):
+@dac.describe(type="Where to assign work.  Defaults to Exploration_Team.")
+async def remove(interaction : dis.Interaction,
+                 tier        : Optional[dac.Range[int, 1, 6]] = 1,
+                 type        : Optional[cj.AssignChoices] = cj.AssignChoices.Exploration_Team):
     """Creates a dropdown for removing characters from the Key Generation job.
 
         Input  : interaction - the interaction context from Discord.
@@ -514,46 +507,54 @@ async def removekeygen(interaction : dis.Interaction,
                 'post_fn' : post,
                 'queue'   : job_queue
                }
+
     #one-based counting is purely for user convenience.
     tier -= 1
 
-    options = db_ifc.getKeyGenParams(user_id = interaction.user.id)
-    dis_log.debug(f"Got Key Gen parameters: {options}.")
+    profiles = db_ifc.getWorkersInJob(job     = type.value + tier,
+                                      user_id = interaction.user.id)
+    dis_log.debug(f"Got profiles for Remove: {profiles}.")
 
-    profiles = db_ifc.getKeyGenProfiles(tier_data = options,
-                                        user_id   = interaction.user.id)
-    dis_log.debug(f"Got profiles for Remove Key Gen: {profiles}.")
+    options = db_ifc.getWorkerCountsInTier(user_id = interaction.user.id)
+    dis_log.debug(f"Got worker counts for Remove: {options}.")
 
-    if not profiles or 'total' not in options:
+    options |= db_ifc.getSummaryEconomy(user_id    = interaction.user.id)
+    dis_log.debug(f"Got Remove parameters: {options}.")
 
-        await interaction.response.send_message('You need a character first!  Use the /roll command to get one!', ephemeral=True, delete_after=9.0)
+    if db_ifc.getDropdown(user_id = interaction.user.id) :
 
-    elif int(options['current_tier']) < tier:
+        await interaction.response.send_message(f'Please close your existing dropdown menu or wait for it to time out.', ephemeral=True, delete_after=9.0)
 
-        await interaction.response.send_message(f"You don't have access to this tier yet!  Right now you can access tier {options['tier'] + 1}. Start some /research and /building to upgrade!", ephemeral=True, delete_after=9.0)
+    elif not profiles or not options:
 
-    elif int(options['workers'][f'tier_{tier}']['count']) == 0:
+        await interaction.response.send_message('You need to create or assign a character to this kind of work first!  Use the /roll command to get one, or /assign to add workerss!', ephemeral=True, delete_after=9.0)
 
-        await interaction.response.send_message(f"You have no workers assigned to tier {tier + 1}!  Use /assignkeygen to add workers!", ephemeral=True, delete_after=9.0)
+    elif int(options[type.value]['tier']) < tier:
+
+        await interaction.response.send_message(f"You don't have access to this tier yet!  Right now you can access tier {options[type.value]['current_tier'] + 1}. Start some research and building with /assign to upgrade!", ephemeral=True, delete_after=9.0)
 
     else:
 
-        if db_ifc.getDropdown(user_id = interaction.user.id) :
+        options['active_workers'] = options['counts'][type.value + tier]
+        options['tier']           = tier
 
-            await interaction.response.send_message(f'Please close your existing dropdown menu or wait for it to time out.', ephemeral=True, delete_after=9.0)
+        match type:
 
-        else :
+            case cj.AssignChoices.Dungeon_Keys:
 
-            options['tier'] = tier
-            dis_log.debug(f"Creating a REMOVE KEY GEN view for user {interaction.user.id}.")
+                dis_log.debug(f"Creating a REMOVE KEY GEN view for user {interaction.user.id}.")
 
-            view = ddf.DropdownView(ctx      = interaction,
-                                    type     = ddf.DropDownTypeEnum.REMOVE_KEY_GEN,
-                                    choices  = profiles,
-                                    metadata = metadata,
-                                    options  = options)
+                view = ddf.DropdownView(ctx      = interaction,
+                                        type     = ddf.DropDownTypeEnum.REMOVE_KEY_GEN,
+                                        choices  = profiles,
+                                        metadata = metadata,
+                                        options  = options)
 
-            await interaction.response.send_message(f'Select a profile to remove from keygen work for tier {tier + 1}:',view=view)
+                await interaction.response.send_message(f'Select a profile to remove from keygen work for tier {tier + 1}:',view=view)
+
+            case _:
+
+                await interaction.response.send_message("This interaction is not yet implemented!", ephemeral=True, delete_after=9.0)
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)

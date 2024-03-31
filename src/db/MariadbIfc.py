@@ -146,12 +146,13 @@ class MariadbIfc:
                    profile_ids - a (verified) list of IDs to assign to work.
                    tier - what level of work is being assigned.
                    user_id - The Discord user assocaited with the action.
-                   workers - a list of existing worker for this tier.
+                   workers - a list of existing workers for this tier.
 
             Output: N/A.
         """
         cmd        = ""
         cursor     = self.con.cursor(buffered=False)
+        ID         = 0
         work_tier  = cj.CharacterJobTypeEnum.KEY_GENERATION_t0.value + tier
         #This is a workaround to the cursor interpreting None as 'None'
         new_entry  = [work_tier, user_id, INDICATOR.NULL, INDICATOR.NULL, INDICATOR.NULL, INDICATOR.NULL, INDICATOR.NULL]
@@ -159,7 +160,7 @@ class MariadbIfc:
         for worker in range(0, count):
 
             #offset for the front-loaded spaces in new_entry
-            new_entry[worker + 2] = workers[worker]
+            new_entry[worker + 2] = workers[worker][ID]
 
         for slot in range(0, len(profile_ids)) :
 
@@ -171,7 +172,7 @@ class MariadbIfc:
         self.db_log.debug(f"Updating user's keygen work list for tier {tier}: {cmd}")
         cursor.execute(cmd)
 
-        cmd = (self.cmds['econ']['put_keygen_count']) % (count, user_id)
+        cmd = (self.cmds['econ']['put_keygen_count']) % (f'+ {count}', user_id)
         self.db_log.debug(f"Updating user's econ keygen count: {cmd}")
         cursor.execute(cmd)
 
@@ -607,12 +608,10 @@ class MariadbIfc:
         return results
 
     def getSummaryEconomy(self,
-                          categories : IntEnum,
                           user_id    : int) -> dict:
         """Returns the db-stored state of a user's economy.
 
             Input: self - Pointer to the current object instance.
-                   categories - how to sort the worker types.
                    user_id - user ID to interrogate for economy data.
 
             Output: dict - A dict of economy stats sorted by group, if any.
@@ -631,7 +630,7 @@ class MariadbIfc:
 
         if result:
 
-            for key in categories:
+            for key in cj.AssignChoices:
 
                 results[key.value] = {}
                 results[key.value]['count']  = result[count + 0]
@@ -737,7 +736,8 @@ class MariadbIfc:
 
         if result:
 
-            results['counts'] = {}
+            results['counts'] = cj.CharacterJobTypeEnum.getEmptyJobTypeList()
+            self.db_log.debug(f"counts: {results['counts']}")
 
             for row in result:
 
@@ -761,7 +761,6 @@ class MariadbIfc:
         """
 
         cursor  = self.con.cursor(buffered=False)
-        ID      = 0
         results = []
 
         self.db_log.info(f"Getting workers in job {job} for user {user_id}")
@@ -775,7 +774,7 @@ class MariadbIfc:
 
             for row in result:
 
-                results.append(row[ID])
+                results.append(row)
 
         self.db_log.debug(f"Got results: {results}")
 
@@ -856,7 +855,7 @@ class MariadbIfc:
         prof_opts['rarity']   = rc.RarityList(int(query[21]))
         prof_opts['stats']    = stats
         prof_opts['wins']     = query[22]
-        prof_opts['job']      = query[24]
+        prof_opts['job']      = cj.CharacterJobTypeEnum(int(query[29]))
         profile=pg.Profile(opts=prof_opts)
         self.db_log.debug(f"Profile map output was: {profile}")
         self.db_log.debug(f"Info was: {profile.info}")
@@ -883,50 +882,45 @@ class MariadbIfc:
         cursor.execute(cmd)
 
     def removeKeyGenWork(self,
-                         count       : int,
                          profile_ids : list,
                          tier        : int,
-                         tier_data   : dict,
-                         user_id     : int):
+                         user_id     : int,
+                         workers     : list):
         """Remvoes a given list of profile IDs to the 'KeyGen' work action,
            including updating the relevant profile and econ table entries.
 
-            Input: self - Pointer to the current object instance.
-                   count - the User's total worker count of this type of work.
+            Input: self - pointer to the current object instance.
                    profile_ids - a (verified) lsit of IDs to remove from work.
                    tier - what level of work is being removed from.
-                   tier_data - the worker data for this tier.
-                   user_id - The Discord user assocaited with the action.
+                   user_id - the Discord user assocaited with the action.
+                   workers - a list of existing workers for this tier.
 
             Output: N/A.
         """
         cmd        = ""
         cursor     = self.con.cursor(buffered=False)
-        key        = f'put_tier_{tier}'
-        new_entry  = tier_data['workers']
+        ID         = 0
+        new_entry  = [workers[x][ID] for x in range (0, len(workers))]
 
-        #This sorting is necessary to ensure only the lowest slots are filled.
-        for id in profile_ids:
+        for id in new_entry:
 
-            new_entry.remove(id)
+            if id not in profile_ids :
 
-        for null in range(0, len(profile_ids)) :
+                new_entry.remove(id)
+
+        for null in range(0, 5 - len(profile_ids)) :
 
             #This is a workaround to the cursor interpreting None as 'None'
             new_entry.append(INDICATOR.NULL)
 
-        new_entry.append(user_id)
+        new_entry.insert(0, user_id)
+        new_entry.insert(0, cj.CharacterJobTypeEnum.UNOCCUPIED.value)
 
-        data = tuple(new_entry)
-
-        cmd  = (self.cmds['prof']['put_workers']) % (work_tier, user_id, new_entry[0], new_entry[1], new_entry[2], new_entry[3], new_entry[4])
+        cmd  = (self.cmds['prof']['put_workers']) % (new_entry[0], new_entry[1], new_entry[2], new_entry[3], new_entry[4], new_entry[5], new_entry[6])
         self.db_log.debug(f"Updating user's keygen work list for tier {tier}: {cmd}")
-        #This must be done as implemented due to how the mariadb python cursor
-        #handles (or rather, doesn't handle) NULL entries. See
-        #https://mariadb-corporation.github.io/mariadb-connector-python/usage.html#using-indicators
-        cursor.execute(self.cmds['prof']['put_workers'], data)
+        cursor.execute(cmd)
 
-        cmd = (self.cmds['econ']['put_keygen_count']) % (count - len(profile_ids), user_id)
+        cmd = (self.cmds['econ']['put_keygen_count']) % (f'- {len(profile_ids)}', user_id)
         self.db_log.debug(f"Updating user's econ keygen count: {cmd}")
         cursor.execute(cmd)
 

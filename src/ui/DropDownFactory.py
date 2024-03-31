@@ -80,16 +80,14 @@ class KeyGenDropdown(DynamicDropdown):
            Output : None.
         """
 
-        self.db          = metadata['db_ifc']
-        self.interaction = ctx
-        self.metadata    = metadata
-        self.offset      = 0 if 'count' not in opts else int(opts['count'])
-        self.tier        = int(opts['tier']) if 'tier' in opts else 0
-        self.limit_key   = f'tier_t{self.tier}'
-        self.limit       = int(opts[self.limit_key])
-        self.tier_count  = opts['total']
-        self.tier_key    = f'tier_{self.tier}'
-        self.tier_data   = opts['workers'][self.tier_key]
+        self.db             = metadata['db_ifc']
+        self.interaction    = ctx
+        self.metadata       = metadata
+        self.offset         = 0 if 'count' not in opts else int(opts['count'])
+        self.tier           = int(opts['tier']) if 'tier' in opts else 0
+        self.limit          = int(opts['limit'])
+        self.active_workers = int(opts['active_workers'])
+        self.workers        = opts['workers']
 
         self.trimByGatingCriteria(choices=choices)
 
@@ -113,7 +111,7 @@ class KeyGenDropdown(DynamicDropdown):
         options.insert(0, dis.SelectOption(label='Back',   value=BACKWARD_NAV_VALUE))
         options.insert(0, dis.SelectOption(label='Cancel', value=CANCEL_NAV_VALUE))
 
-        select_limit = self.limit - self.tier_data['count']
+        select_limit = self.limit - self.active_workers
 
         super().__init__(placeholder=f'Select at most {select_limit} characters to assign to key generation work for tier {self.tier}.', min_values=1, max_values=select_limit, options=options)
 
@@ -138,10 +136,10 @@ class KeyGenDropdown(DynamicDropdown):
 
         elif str(FORWARD_NAV_VALUE) in self.values or str(BACKWARD_NAV_VALUE) in self.values:
 
-            opts          = {'total'        : self.tier_count,
-                             self.limit_key : self.limit,
-                             'tier'         : self.tier,
-                             'workers'      : {self.tier_key : self.tier_data}}
+            opts          = {'active_workers' : self.active_workers,
+                             'limit'          : self.limit,
+                             'tier'           : self.tier,
+                             'workers'        : self.workers}
             next          = self.offset + DROPDOWN_ITEM_LIMIT_WITH_NAV * int(self.values[0])
             opts['count'] = next if next >= 0 and next < len(self.choices) else self.offset
 
@@ -167,8 +165,8 @@ class KeyGenDropdown(DynamicDropdown):
             result = self.db.assignKeyGenWork(count       = self.tier_count,
                                               profile_ids = self.values,
                                               tier        = self.tier,
-                                              tier_data   = self.tier_data,
-                                              user_id     = self.interaction.user.id)
+                                              user_id     = self.interaction.user.id,
+                                              workers     = workers)
 
             await interaction.response.edit_message(content=f"Assigned the chosen characters: {names}to keygen work in tier {self.tier + 1}!",view=None)
 
@@ -181,7 +179,8 @@ class KeyGenDropdown(DynamicDropdown):
 
         for choice in choices:
 
-            if not choice.occupied and choice.stats.average >= sc.getRangeAverageList()[self.tier] and choice not in self.choices :
+            #all occupeid workers have been filtered out at the parent.
+            if choice.stats.average >= sc.getRangeAverageList()[self.tier] and choice not in self.choices :
 
                 self.choices.append(choice)
 

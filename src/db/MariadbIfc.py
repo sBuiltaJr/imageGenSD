@@ -159,10 +159,10 @@ class MariadbIfc:
 
         #The remove function ensures that any existing workers always occupy
         #the front slots (and that empty slots are at the end)
-        for worker in range(0, tier_data['count']):
+        for worker in range(0, len(tier_data['workers'])):
 
             #offset for the front-loaded spaces in new_entry
-            new_entry[worker + 2] = tier_data['workers'][worker]
+            new_entry[worker + 2] = tier_data[worker]
             worker_cnt += 1
 
         for slot in range(0, len(profile_ids)) :
@@ -732,7 +732,6 @@ class MariadbIfc:
             Output: dict - A dict of worker stats sorted by group, if any.
         """
 
-        count      = 1
         cursor     = self.con.cursor(buffered=False)
         JOB_ID     = 0
         JOB_COUNT  = 1
@@ -752,6 +751,40 @@ class MariadbIfc:
             for row in result:
 
                 results['counts'][row[JOB_ID]] = row[JOB_COUNT]
+
+        self.db_log.debug(f"Got results: {results}")
+
+        return results
+
+    def getWorkersInJob(self,
+                        job     : int,
+                        user_id : int) -> list:
+        """Returns the profile IDs of workers assigned to a given job  for a
+           given user.
+
+            Input: self - Pointer to the current object instance.
+                   job - Which job to query.
+                   user_id - user ID to interrogate for economy data.
+
+            Output: list - A lsit of worker stats sorted by group, if any.
+        """
+
+        cursor  = self.con.cursor(buffered=False)
+        ID      = 0
+        results = []
+
+        self.db_log.info(f"Getting workers in job {job} for user {user_id}")
+        cmd = (self.cmds['prof']['get_workers_job']) % (job, user_id)
+        self.db_log.debug(f"Executing command: {cmd}")
+        cursor.execute(cmd)
+
+        result = cursor.fetchall()
+
+        if result:
+
+            for row in result:
+
+                results.append(row[ID])
 
         self.db_log.debug(f"Got results: {results}")
 
@@ -804,7 +837,7 @@ class MariadbIfc:
         self.db_log.debug(f"Preparing to map query: {query}")
         stat_opts              = sc.getDefaultOptions()
         stat_opts['agility']   = query[5]
-        stat_opts['average']   = float(query[24])
+        stat_opts['average']   = float(query[23])
         stat_opts['defense']   = query[6]
         stat_opts['endurance'] = query[7]
         stat_opts['luck']      = query[8]
@@ -832,7 +865,7 @@ class MariadbIfc:
         prof_opts['rarity']   = rc.RarityList(int(query[21]))
         prof_opts['stats']    = stats
         prof_opts['wins']     = query[22]
-        prof_opts['occupied'] = query[23]
+        prof_opts['job']      = query[24]
         profile=pg.Profile(opts=prof_opts)
         self.db_log.debug(f"Profile map output was: {profile}")
         self.db_log.debug(f"Info was: {profile.info}")

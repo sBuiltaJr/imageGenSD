@@ -14,6 +14,7 @@ class CharacterJobTypeEnum(IntEnum):
 
     UNOCCUPIED        =    0
     #Order of this section is to match the ECON table.
+    #!!IMPORTANT!! update all existing profile jobs if the numbers are changed!
     BUILDER_t0        =    1
     BUILDER_t1        =    2
     BUILDER_t2        =    3

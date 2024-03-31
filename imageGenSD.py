@@ -169,7 +169,7 @@ async def about(interaction : dis.Interaction):
 @verify(UNIQUE)
 class AssignChoices(IntEnum):
     #lower case since it's user-facing
-    #The numbers aren't sequential to allow use as an index for the econ query.
+    #The names aren't alphabetical for indexing into the econ table.
     Building         = cj.CharacterJobTypeEnum.BUILDER_t0.value
     Crafting         = cj.CharacterJobTypeEnum.CRAFTER_t0.value
     Hospital_Staff   = cj.CharacterJobTypeEnum.HOSPITAL_t0.value
@@ -235,8 +235,11 @@ async def assign(interaction : dis.Interaction,
 
     else:
 
-        options['tier']   = tier
-        options['counts'] = options['counts'][type.value + tier]
+        options['active_workers'] = options['counts'][type.value + tier]
+        options['limit']          = options[type.value][f'tier_{tier}']
+        options['tier']           = tier
+        options['workers']        = db_ifc.getWorkersInJob(job     = type.value + tier,
+                                                           user_id = interaction.user.id)
 
         match type:
 

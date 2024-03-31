@@ -1,7 +1,7 @@
 USE IGSD;
 ALTER TABLE IGSDProfiles ADD COLUMN IF NOT EXISTS job INT DEFAULT 0;
 
-UPDATE IGSDProfiles SET job = 4 WHERE occupied = True;
+UPDATE IGSDProfiles SET job = 19 WHERE occupied = True;
 
 ALTER TABLE IGSDProfiles DROP COLUMN IF EXISTS occupied;
 

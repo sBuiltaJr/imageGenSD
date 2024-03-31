@@ -4,6 +4,7 @@
 #####  Imports  #####
 from enum import Enum
 import logging as log
+import src.characters.CharacterJobs as cj
 import src.characters.RarityClass as rc
 import src.characters.StatsClass as sc
 import src.utilities.NameRandomizer as nr
@@ -39,11 +40,11 @@ class Profile:
         self.id       = str(opts['id'])        if opts['id']       != None else DEFAULT_ID
         self.img_id   = str(opts['img_id'])    if opts['img_id']   != None else None #Separate to prevent laoded profiles from eating memory
         self.info     = opts['info']           if opts['info']     != None else None
+        self.job      = opts['job']            if opts['job']      != None else cj.CharacterJobTypeEnum.UNOCCUPIED
         self.level    = int(opts['level'])     if opts['level']    != None else 0
         self.losses   = int(opts['losses'])    if opts['losses']   != None else 0
         self.missions = int(opts['missions'])  if opts['missions'] != None else 0
         self.name     = nr.getRandomName()     if opts['name']     == None else opts['name']
-        self.occupied = bool(opts['occupied']) if opts['occupied'] != None else False
         self.owner    = int(opts['owner'])     if opts['owner']    != None else DEFAULT_OWNER
         self.rarity   = rc.Rarity.generateRarity(self) if opts['rarity'] == None else opts['rarity']
         self.wins     = int(opts['wins'])      if opts['wins']     != None else 0
@@ -139,11 +140,11 @@ def getDefaultOptions(creator : Optional[int] = None,
             'id'       : None,
             'img_id'   : None,
             'info'     : None,
+            'job'      : None,
             'level'    : None,
             'losses'   : None,
             'missions' : None,
             'name'     : None,
-            'occupied' : False,
             'owner'    : owner,
             'rarity'   : None,
             'stats'    : None,
@@ -172,11 +173,11 @@ def getMascotOptions() -> dict:
             'id'       : DEFAULT_ID,
             'img_id'   : DEFAULT_ID,
             'info'     : {"prompt": "detailed background, masterpiece, best quality, 1girl, white dress, dress, short sleeves, strapless dress, frills, thighhigh stockings, black thighhighs, boots, red hair, long hair, medium breasts, blush, slight smile, painting, paintbrush, eyebrows visible through hair, standing, easel, paint, blue eyes, brown shoes, bangs, canvas (object), holding paintbrush, braid, braided hair, painting (object), bow, yellow bow, hands up, hair ornament, indoors, cute,", "all_prompts": ["detailed background, masterpiece, best quality, 1girl, white dress, dress, short sleeves, strapless dress, frills, thighhigh stockings, black thighhighs, boots, red hair, long hair, medium breasts, blush, slight smile, painting, paintbrush, eyebrows visible through hair, standing, easel, paint, blue eyes, brown shoes, bangs, canvas (object), holding paintbrush, braid, braided hair, painting (object), bow, yellow bow, hands up, hair ornament, indoors, cute,"], "negative_prompt": "(low quality, worst quality:1.4), (bad anatomy), extra digit, fewer digits, (extra arms:1.2), bad hands, by (bad-artist:0.6), bad-image-v2-39000, NSFW, nipples, loli, child, children, shota, boy, male, men, man", "all_negative_prompts": ["(low quality, worst quality:1.4), (bad anatomy), extra digit, fewer digits, (extra arms:1.2), bad hands, by (bad-artist:0.6), bad-image-v2-39000, NSFW, nipples, loli, child, children, shota, boy, male, men, man"], "seed": 2920639719, "all_seeds": [2920639719], "subseed": 1148443769, "all_subseeds": [1148443769], "subseed_strength": 0.0, "width": 512, "height": 768, "sampler_name": "DPM++ 2M Karras", "cfg_scale": 22.0, "steps": 50, "batch_size": 1, "restore_faces": False, "face_restoration_model": None, "sd_model_name": "HoloKukiv2-fp16", "sd_model_hash": "1b43df1916", "sd_vae_name": "kl-f8-anime2.ckpt", "sd_vae_hash": "df3c506e51", "seed_resize_from_w": -1, "seed_resize_from_h": -1, "denoising_strength": 0.35, "extra_generation_params": {"Hires resize": "1024x1536", "Hires steps": 10, "Hires upscaler": "4x-AnimeSharp", "Dynamic thresholding enabled": True, "Mimic scale": 7.0, "Separate Feature Channels": True, "Scaling Startpoint": "MEAN", "Variability Measure": "AD", "Interpolate Phi": 1.0, "Threshold percentile": 96.0, "Sampler": "DPM++ 2M Karras", "Mimic mode": "Half Cosine Up", "Mimic scale minimum": 7.0, "CFG mode": "Half Cosine Up", "CFG scale minimum": 7.0, "Discard penultimate sigma": True}, "index_of_first_image": 0, "infotexts": ["detailed background, masterpiece, best quality, 1girl, white dress, dress, short sleeves, strapless dress, frills, thighhigh stockings, black thighhighs, boots, red hair, long hair, medium breasts, blush, slight smile, painting, paintbrush, eyebrows visible through hair, standing, easel, paint, blue eyes, brown shoes, bangs, canvas (object), holding paintbrush, braid, braided hair, painting (object), bow, yellow bow, hands up, hair ornament, indoors, cute, Negative prompt: (low quality, worst quality:1.4), (bad anatomy), extra digit, fewer digits, (extra arms:1.2), bad hands, by (bad-artist:0.6), bad-image-v2-39000, NSFW, nipples, loli, child, children, shota, boy, male, men, man Steps: 50, Sampler: DPM++ 2M Karras, CFG scale: 22.0, Seed: 2920639719, Size: 512x768, Model hash: 1b43df1916, Model: HoloKukiv2-fp16, VAE hash: df3c506e51, VAE: kl-f8-anime2.ckpt, Denoising strength: 0.35, Clip skip: 2, Hires resize: 1024x1536, Hires steps: 10, Hires upscaler: 4x-AnimeSharp, Dynamic thresholding enabled: True, Mimic scale: 7.0, Separate Feature Channels: True, Scaling Startpoint: MEAN, Variability Measure: AD, Interpolate Phi: 1.0, Threshold percentile: 96.0, Mimic mode: Half Cosine Up, Mimic scale minimum: 7.0, CFG mode: Half Cosine Up, CFG scale minimum: 7.0, Discard penultimate sigma: True, Version: v1.6.1"], "styles": ["string"], "job_timestamp": "20240109163830", "clip_skip": 2, "is_using_inpainting_conditioning": False},
+            'job'      : cj.CharacterJobTypeEnum.UNOCCUPIED,
             'level'    : None,
             'losses'   : None,
             'missions' : None,
             'name'     : "IGSD Mascot",
-            'occupied' : False,
             'owner'    : DEFAULT_OWNER,
             'rarity'   : rc.RarityList.CUSTOM,
             'stats'    : sc.Stats(rarity=rc.RarityList.CUSTOM,

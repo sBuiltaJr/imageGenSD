@@ -5,7 +5,7 @@
     "get_image"            : "SELECT picture FROM IGSDPictures WHERE pi_ID = %s;",
 	"get_worker_counts"    : "SELECT job, COUNT(job) FROM IGSDProfiles WHERE owner = %s GROUP BY job;",
     "get_workers"          : "SELECT pr_ID, job FROM IGSDProfiles WHERE (job >= %s AND job <= %s AND owner = %s);",
-    "get_workers_daily"    : "SELECT owner, job FROM IGSDProfiles WHERE (job >= %s AND job <= %s);",
+    "get_workers_daily"    : "SELECT owner, SUM(job = %s) AS t0, SUM(job = %s) AS t1, SUM(job = %s) as t2, SUM(job = %s) AS t3, SUM(job = %s) AS t4, SUM(job = %s) AS t5 FROM IGSDProfiles GROUP BY owner;",
     "get_workers_job"      : "SELECT pr_ID, name FROM IGSDProfiles WHERE (job = %s AND owner = %s);",
     "get_owned_profs"      : "SELECT * FROM IGSDProfiles WHERE (owner = %s) ORDER BY name;",
     "get_profile"          : "SELECT * FROM IGSDProfiles WHERE pr_ID = '%s';",

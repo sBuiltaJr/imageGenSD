@@ -213,7 +213,7 @@ async def assign(interaction : dis.Interaction,
 
     elif int(options[type.value]['tier']) < tier:
 
-        await interaction.response.send_message(f"You don't have access to this tier yet!  Right now you can access tier {options[type.value]['current_tier'] + 1}. Start some research and building with /assign to upgrade!", ephemeral=True, delete_after=9.0)
+        await interaction.response.send_message(f"You don't have access to this tier yet!  Right now you can access tier {options[type.value]['tier'] + 1}. Start some research and building with /assign to upgrade!", ephemeral=True, delete_after=9.0)
 
     elif int(options['counts'][type.value + tier]) >= int(options[type.value][f'tier_{tier}']):
 
@@ -527,11 +527,11 @@ async def remove(interaction : dis.Interaction,
 
     elif not profiles or not options:
 
-        await interaction.response.send_message('You need to create or assign a character to this kind of work first!  Use the /roll command to get one, or /assign to add workerss!', ephemeral=True, delete_after=9.0)
+        await interaction.response.send_message('You need to create or assign a character to this kind of work first!  Use the /roll command to get one, or /assign to add workers!', ephemeral=True, delete_after=9.0)
 
     elif int(options[type.value]['tier']) < tier:
 
-        await interaction.response.send_message(f"You don't have access to this tier yet!  Right now you can access tier {options[type.value]['current_tier'] + 1}. Start some research and building with /assign to upgrade!", ephemeral=True, delete_after=9.0)
+        await interaction.response.send_message(f"You don't have access to this tier yet!  Right now you can access tier {options[type.value]['tier'] + 1}. Start some research and building with /assign to upgrade!", ephemeral=True, delete_after=9.0)
 
     else:
 

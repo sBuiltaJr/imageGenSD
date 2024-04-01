@@ -463,7 +463,7 @@ class MariadbIfc:
 
         prof = {}
 
-        cmd = (self.cmds['prof']['get_workers']) % (cj.CharacterJobTypeEnum.KEY_GENERATION_t0.value, cj.CharacterJobTypeEnum.KEY_GENERATION_t5.value ,user_id)
+        cmd = (self.cmds['prof']['get_workers']) % (cj.CharacterJobTypeEnum.KEY_GENERATION_t0.value, cj.CharacterJobTypeEnum.KEY_GENERATION_t5.value, user_id)
         self.db_log.debug(f"Getting current user keygen worker allocation: {cmd}")
         cursor.execute(cmd)
         #This is returned as a tuple, so either way it has to be converted to a
@@ -1061,8 +1061,13 @@ class MariadbIfc:
         """
         cmd    = ""
         cursor = self.con.cursor(buffered=False)
-        JOB    = 1
         result = None
+        T0     = 1
+        T1     = 2
+        T2     = 3
+        T3     = 4
+        T4     = 5
+        T5     = 6
         USER   = 0
 
         self.db_log.warning(f"Preparing to update daily Key Gen counts.")
@@ -1072,42 +1077,21 @@ class MariadbIfc:
             #TODO: find the sordid single-line statement capable of doing this,
             #instead of by-user.  The current user list is small enough that
             #the waste is okay, but it should be corrected.
-            cmd = (self.cmds['prof']['get_workers_daily'])
+            cmd = (self.cmds['prof']['get_workers_daily']) % (cj.CharacterJobTypeEnum.KEY_GENERATION_t0.value, cj.CharacterJobTypeEnum.KEY_GENERATION_t1.value, cj.CharacterJobTypeEnum.KEY_GENERATION_t2.value, cj.CharacterJobTypeEnum.KEY_GENERATION_t3.value, cj.CharacterJobTypeEnum.KEY_GENERATION_t4.value, cj.CharacterJobTypeEnum.KEY_GENERATION_t5.value)
             self.db_log.debug(f"Executing update daily Key Gen counts command: {cmd}")
             cursor.execute(cmd)
 
             results = cursor.fetchall()
             self.db_log.debug(f"Found users to udpate: {results}")
 
-            user_id = result[0][USER]
-            counts  = {'t0' : 0,
-                       't1' : 0,
-                       't2' : 0,
-                       't3' : 0,
-                       't4' : 0,
-                       't5' : 0}
-
             #Reminder that the cursor returns all results as tuples.
             for row in results:
 
-                if row[USER] != user_id:
-
-                    cmd = (self.cmds['inv']['put_daily']) % (counts['t0'], counts['t1'], counts['t2'], counts['t3'], counts['t4'], counts['t5'], user_id)
-                    self.db_log.debug(f"Updating users keys with new values: {cmd}")
-                    cursor.execute(cmd)
-                    self.db_log.info(f"Updated user {usr[0]}'s keys")
-
-                    counts  = {'t0' : 0,
-                               't1' : 0,
-                               't2' : 0,
-                               't3' : 0,
-                               't4' : 0,
-                               't5' : 0}
-
-                else:
-
-                    tier = int(row[JOB]) - cj.CharacterJobTypeEnum.KEY_GENERATION_t0.value
-                    counts[f't{tier}'] += 1
+                #The query guarantees a value of 0 in any unassigned tiers.
+                cmd = (self.cmds['inv']['put_key_daily']) % (row[T0], row[T1], row[T2], row[T3], row[T4], row[T5], row[USER])
+                self.db_log.debug(f"Updating users keys with new values: {cmd}")
+                cursor.execute(cmd)
+                self.db_log.info(f"Updated user {row[USER]}'s keys")
 
         except Exception as err:
 

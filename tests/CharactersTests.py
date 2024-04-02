@@ -5,14 +5,38 @@
 #####  Imports  #####
 
 from . import MockClasses as mc
-from .utilities import ProfileGenerator as pg
-from .utilities import RarityClass as rc
-from .utilities import StatsClass as sc
 import json
+import src.characters.CharacterJobs as cj
+import src.characters.ProfileGenerator as pg
+import src.characters.RarityClass as rc
+import src.characters.StatsClass as sc
+import src.utilities.NameRandomizer as nr
 import statistics as stat
 import unittest
 from unittest import IsolatedAsyncioTestCase as iatc
 from unittest.mock import MagicMock
+
+
+#####  Character Jobs Class  #####
+
+class TestCharacterJobsClass(unittest.TestCase):
+
+    def testGetEmptyJobTypeList(self):
+        """Verifies that the getEmptyJobTypeList function returns a valid
+           values of empty job list type.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        empty = cj.CharacterJobTypeEnum.getEmptyJobTypeList()
+
+        self.assertEqual(len(empty), len(cj.CharacterJobTypeEnum))
+        
+        for key in cj.CharacterJobTypeEnum:
+            
+            self.assertEqual(0, empty[key])
 
 #####  Profile Generator Class  #####
 

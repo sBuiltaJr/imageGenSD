@@ -5,14 +5,15 @@
 #####  Imports  #####
 
 from . import MockClasses as mc
-from .utilities import JobFactory as jf
-from .utilities import NameRandomizer as nr
-from .utilities import TagRandomizer as tr
 import discord as dis
 import json
 import pathlib as pl
 import re
 import requests as req
+import src.characters.ProfileGenerator as pg
+import src.utilities.JobFactory as jf
+import src.utilities.NameRandomizer as nr
+import src.utilities.TagRandomizer as tr
 import statistics as stat
 from typing import Callable, Optional, Any
 import unittest

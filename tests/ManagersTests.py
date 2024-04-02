@@ -5,16 +5,16 @@
 #####  Imports  #####
 
 from . import MockClasses as mc
-from .db import MariadbIfc as mdb
-from .managers import DailyEventMgr as dem
-from .managers import QueueMgr as qm
-from .utilities import JobFactory as jf
-from .utilities import NameRandomizer as nr
 import discord as dis
 import json
 import multiprocessing as mp
 import pathlib as pl
 import queue
+import src.db.MariadbIfc as mdb
+import src.managers.DailyEventMgr as dem
+import src.managers.QueueMgr as qm
+import src.utilities.JobFactory as jf
+import src.utilities.NameRandomizer as nr
 import time
 from typing import Callable, Optional, Any
 import unittest

@@ -243,7 +243,7 @@ class MariadbIfc:
         return result
 
     def getAssignParams(self,
-                    user_id : int) -> dict:
+                        user_id : int) -> dict:
         """Returns the all worker parameters and current assigned workers for a
            given user (limit, count, worker ids, etc).
 

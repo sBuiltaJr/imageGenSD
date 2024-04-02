@@ -4,12 +4,13 @@
 #####  Imports  #####
 
 from . import MockClasses as mc
-from .ui import MenuPagination as mp
-from .ui import DropDownFactory as ddf
-from .utilities import ProfileGenerator as pg
-from .utilities import RarityClass as rc
-from .utilities import StatsClass as sc
 import discord as dis
+import src.characters.CharacterJobs as cj
+import src.characters.ProfileGenerator as pg
+import src.characters.RarityClass as rc
+import src.characters.StatsClass as sc
+import src.ui.MenuPagination as mp
+import src.ui.DropDownFactory as ddf
 from typing import Callable, Optional, Any
 import unittest
 from unittest import IsolatedAsyncioTestCase as iatc
@@ -37,12 +38,12 @@ def getMockNormalProfile(id     : Optional[int] = 10,
             'history'  : None,
             'id'       : id,
             'img_id'   : pg.DEFAULT_ID,
+            'job'      : cj.CharacterJobTypeEnum.UNOCCUPIED,
             'info'     : None,
             'level'    : None,
             'losses'   : None,
             'missions' : None,
             'name'     : "Mock",
-            'occupied' : False,
             'owner'    : pg.DEFAULT_OWNER,
             'rarity'   : rarity,
             'stats'    : sc.Stats(rarity=rarity,
@@ -74,17 +75,15 @@ class TestDropdownFactory(iatc):
         self.metadata = {'queue'  : MagicMock(),
                          'db_ifc' : mc.MockDbInterface()}
         self.metadata['queue'].add.return_value = "All OK"
-        self.opts = {'count'    : 5,
-                     'limit_t0' : 1,
-                     'total'    : 5,
-                     'workers'  : {'tier_0' : { 'count'   : 5,
-                                                'workers' : [mc.DEFAULT_UUID, mc.DEFAULT_UUID, mc.DEFAULT_UUID, mc.DEFAULT_UUID, mc.DEFAULT_UUID]}}}
+        self.opts = {'active_workers' : 5,
+                     'limit'          : 1,
+                     'tier'           : 0,
+                     'workers'        : [mc.DEFAULT_UUID, mc.DEFAULT_UUID, mc.DEFAULT_UUID, mc.DEFAULT_UUID, mc.DEFAULT_UUID]}
 
         self.uut_show = ddf.DropdownView(ctx      = self.interaction,
                                          type     = ddf.DropDownTypeEnum.SHOW,
                                          choices  = [pg.getDefaultProfile() for x in range(0,ddf.DROPDOWN_ITEM_LIMIT)],
-                                         metadata = self.metadata,
-                                         options  = self.opts)
+                                         metadata = self.metadata)
 
         self.uut_key_gen = ddf.DropdownView(ctx      = self.interaction,
                                             type     = ddf.DropDownTypeEnum.ASSIGN_KEY_GEN,
@@ -94,7 +93,7 @@ class TestDropdownFactory(iatc):
 
         self.uut_key_rem = ddf.DropdownView(ctx      = self.interaction,
                                             type     = ddf.DropDownTypeEnum.REMOVE_KEY_GEN,
-                                            choices  = [pg.getDefaultProfile() for x in range(0,ddf.DROPDOWN_ITEM_LIMIT)],
+                                            choices  = [(mc.DEFAULT_PROFILE_NAME, mc.DEFAULT_UUID) for x in range(0,5)],
                                             metadata = self.metadata,
                                             options  = self.opts)
 
@@ -118,7 +117,7 @@ class TestDropdownFactory(iatc):
                                     ctx=self.interaction,
                                     metadata=self.metadata)
 
-    async def testDropdownsHandlesSmallLists(self):
+    async def testDropdownsHandleSmallLists(self):
         """Verifies that a Dropdown opject will correctly generate limits for a
            single page if given less than a page's worth of options.
 
@@ -136,7 +135,7 @@ class TestDropdownFactory(iatc):
 
         view = ddf.DropdownView(ctx      = self.interaction,
                                 type     = ddf.DropDownTypeEnum.ASSIGN_KEY_GEN,
-                                choices  = [pg.getDefaultProfile() for x in range(0,ddf.DROPDOWN_ITEM_LIMIT_WITH_NAV)],
+                                choices  = [getMockNormalProfile() for x in range(0,ddf.DROPDOWN_ITEM_LIMIT_WITH_NAV)],
                                 metadata = self.metadata,
                                 options  = self.opts)
 
@@ -144,7 +143,7 @@ class TestDropdownFactory(iatc):
 
         view = ddf.DropdownView(ctx      = self.interaction,
                                 type     = ddf.DropDownTypeEnum.REMOVE_KEY_GEN,
-                                choices  = [pg.getDefaultProfile() for x in range(0, 5)],
+                                choices  = [(mc.DEFAULT_PROFILE_NAME, mc.DEFAULT_UUID) for x in range(0, 5)],
                                 metadata = self.metadata,
                                 options  = self.opts)
 
@@ -176,8 +175,8 @@ class TestDropdownFactory(iatc):
 
         self.opts['count'] = 500
         view = ddf.DropdownView(ctx      = self.interaction,
-                                type     = ddf.DropDownTypeEnum.ASSIGN_KEY_GEN,
-                                choices  = [getMockNormalProfile() for x in range(0, ddf.DROPDOWN_ITEM_LIMIT * 5)],
+                                type     = ddf.DropDownTypeEnum.REMOVE_KEY_GEN,
+                                choices  = [(mc.DEFAULT_PROFILE_NAME, mc.DEFAULT_UUID) for x in range(0, 5)],
                                 metadata = self.metadata,
                                 options  = self.opts)
 

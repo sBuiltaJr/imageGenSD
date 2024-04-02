@@ -101,15 +101,18 @@ Note: All command require a user to have at least slash command privileges.
 
 Displays some basic information about the bot, including an invite link.
 
-`assignkeygen {tier}`
+`assign {type} {tier}`
 
-- Assign at least one Character Profile to Key Generation work.
+- Assign at least one Character Profile to the given type of work.
 
-Allows a user to fill key generation work slots with as many character
-profiles as is allowed by their economy settings.  Multiple characters can be
-assigned in a single action.  Selections will not be preserved across
-drop-down pages if a user tries to both select a profile and navigate to a new
-page in the same action.
+Allows a user to fill a given work type with as many character profiles as is
+is allowed by their economy settings.  Multiple characters can be assigned in a
+single action.  Selections will not be preserved across drop-down pages if a
+user tries to both select a profile and navigate to a new page in the same
+action.
+
+`type` is a list of different actions that can be assigned workers.  Defaults
+to the Dungeon Exploration Team type.
 
 `tier` indicates which tier should be managed, with 1 as the lowest and 6 as
 the highest.  The command defaults to tier 1 if no selection is provided.
@@ -147,13 +150,16 @@ Not specifying `user` will cause the menu to show the author's profiles.
 
 Only the command author is allowed to use the navigation buttons.
 
-`removekeygen {tier}`
+`remove {type} {tier}`
 
-- Remove at least one Character Profile from Key Generation work.
+- Remove at least one Character Profile from a given type of work.
 
-Allows a user to free key generation work slots from as many character
+Allows a user to free work slots of the given type from as many character
 profiles as is allowed by their economy settings.  Multiple characters can be
 removed in a single action.
+
+`type` is a list of different actions that can be assigned workers.  Defaults
+to the Dungeon Exploration Team type.
 
 `tier` indicates which tier should be managed, with 1 as the lowest and 6 as
 the highest.  The command defaults to tier 1 if no selection is provided.

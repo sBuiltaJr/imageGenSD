@@ -481,3 +481,8 @@ class DropDownFactory:
 
             case _:
                 raise NotImplementedError
+
+#Need both add and remvoe of target and characters
+#Add a 'recommend' option to fill slots
+#Add an auto-assign for everything.
+#Just creating a DDF for each kind of team and work.

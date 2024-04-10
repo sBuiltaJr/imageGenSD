@@ -19,6 +19,7 @@ import requests as req
 import src.characters.CharacterJobs as cj
 import src.characters.ProfileGenerator as pg
 import src.db.MariadbIfc as mdb
+import src.economy.Logistics as logi
 import src.managers.DailyEventMgr as dem
 import src.managers.QueueMgr as qm
 import src.ui.DropDownFactory as ddf
@@ -44,7 +45,7 @@ daily_mgr      = None
 daily_mgr_th   = None
 db_ifc         = None
 dict_path      = ["","",""]
-IGSD_version   = '0.3.87'
+IGSD_version   = '0.3.9'
 job_queue      = None
 job_worker     = None
 show_queue     = None
@@ -889,3 +890,9 @@ if __name__ == '__main__':
 
 
 #/shop
+# Dropdown with tabs to select different work goals (25 limit)
+# Logistics to expand econ (replace workers)
+# Research to advance tiers
+# log expansion: 1 day min, 5 days max, average 2.5
+# Gradients based on average stats, 75% of average does work in 3.5 days, 100 for 2.5
+# Research is a big value tog et to the next tier

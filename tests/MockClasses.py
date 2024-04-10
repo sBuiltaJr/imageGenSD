@@ -1,9 +1,10 @@
 #Defines the shared mock interfaces used by unit tests.
 
-from .utilities import JobFactory as jf
-from .utilities import ProfileGenerator as pg
-from .utilities import RarityClass as rc
 import discord as dis
+import src.characters.CharacterJobs as cj
+import src.characters.ProfileGenerator as pg
+import src.characters.RarityClass as rc
+import src.utilities.JobFactory as jf
 from typing import Callable, Optional, Any
 import unittest
 from unittest.mock import MagicMock
@@ -11,6 +12,7 @@ from unittest.mock import MagicMock
 DEFAULT_DISPLAY_NAME = "UNIT TESTER 9000"
 DEFAULT_GUILD_ID     = 1111111111
 DEFAULT_PROFILE_ID   = 1234567890
+DEFAULT_PROFILE_NAME = "Super Cool Character"
 DEFAULT_USER_ID      = 999999999999999999
 DEFAULT_USER_NAME    = "DEFAULT_USER_NAME"
 DEFAULT_UUID         = "ffffffff-ffff-ffff-ffff-fffffffffffe"
@@ -112,20 +114,20 @@ class MockDbInterface():
                          count       : int,
                          profile_ids : list,
                          tier        : int,
-                         tier_data   : dict,
-                         user_id     : int):
+                         user_id     : int,
+                         workers     : list):
         """A bare minimum mock to ensure test compatability.
            Note: a quick of the current implementation requires throwing an
                  exception to exit the 'while True' loop in the function.
 
            Input: self - Pointer to the current object instance.
                   count - the User's total worker count of this type of work.
-                  profile_ids - a (verified) lsit of IDs to assign to work.
+                  profile_ids - a (verified) list of IDs to assign to work.
                   tier - what level of work is being assigned.
-                  tier_data - the worker data for this tier.
                   user_id - The Discord user assocaited with the action.
+                  workers - a list of existing workers for this tier.
 
-           Output: N/A
+            Output: N/A.
         """
         pass
 
@@ -256,8 +258,6 @@ class MockDbInterface():
 
            Output: N/A
         """
-
-        categories = ['builder', 'crafter', 'hospital', 'keygen', 'research', 'team', 'worker']
         results    = {}
 
         if user_id < 0:
@@ -265,18 +265,18 @@ class MockDbInterface():
             return None
 
         else :
+        
+            for key in cj.AssignChoices:
 
-            for key in categories:
-
-                results[key] = {}
-                results[key]['count']  = 1
-                results[key]['tier']   = 1
-                results[key]['tier_0'] = 1
-                results[key]['tier_1'] = 1
-                results[key]['tier_2'] = 1
-                results[key]['tier_3'] = 1
-                results[key]['tier_4'] = 1
-                results[key]['tier_5'] = 1
+                results[key.value] = {}
+                results[key.value]['count']  = 1
+                results[key.value]['tier']   = 1
+                results[key.value]['tier_0'] = 1
+                results[key.value]['tier_1'] = 1
+                results[key.value]['tier_2'] = 1
+                results[key.value]['tier_3'] = 1
+                results[key.value]['tier_4'] = 1
+                results[key.value]['tier_5'] = 1
 
         return results
 
@@ -345,23 +345,21 @@ class MockDbInterface():
         pass
 
     def removeKeyGenWork(self,
-                             count       : int,
-                             profile_ids : list,
-                             tier        : int,
-                             tier_data   : dict,
-                             user_id     : int):
+                         profile_ids : list,
+                         tier        : int,
+                         user_id     : int,
+                         workers     : list):
         """A bare minimum mock to ensure test compatability.
            Note: a quick of the current implementation requires throwing an
                  exception to exit the 'while True' loop in the function.
 
-           Input: self - Pointer to the current object instance.
-                  count - the User's total worker count of this type of work.
+           Input: self - pointer to the current object instance.
                   profile_ids - a (verified) lsit of IDs to remove from work.
                   tier - what level of work is being removed from.
-                  tier_data - the worker data for this tier.
-                  user_id - The Discord user assocaited with the action.
+                  user_id - the Discord user assocaited with the action.
+                  workers - a list of existing workers for this tier.
 
-           Output: N/A
+            Output: N/A.
         """
         pass
 
@@ -393,6 +391,7 @@ class MockInteraction():
         async def send(self,
                        content          : Optional[str]       = None,
                        embed            : Optional[dis.Embed] = None,
+                       embeds           : Optional[list]      = None,
                        allowed_mentions : Optional[Any]       = None,
                        file             : Optional[dis.File]  = None):
             """A bare minimum mock to ensure test compatability.
@@ -428,6 +427,7 @@ class MockInteraction():
                                content          : Optional[str]       = None,
                                delete_after     : Optional[float]     = None,
                                embed            : Optional[dis.Embed] = None,
+                               embeds           : Optional[list]      = None,
                                allowed_mentions : Optional[Any]       = None,
                                ephemeral        : Optional[bool]      = None,
                                view             : Optional[Any]       = None):
@@ -448,6 +448,7 @@ class MockInteraction():
         async def edit_message(self,
                                content : Optional[str]       = None,
                                embed   : Optional[dis.Embed] = None,
+                               embeds  : Optional[list]      = None,
                                view    : Optional[Any]       = None):
             """A bare minimum mock to ensure test compatability.
 
@@ -501,6 +502,7 @@ class MockInteraction():
     async def edit_original_response(self,
                                      content     : Optional[str]       = None,
                                      embed       : Optional[dis.Embed] = None,
+                                     embeds      : Optional[list]      = None,
                                      attachments : Optional[Any]       = None):
         """A bare minimum mock to ensure test compatability.
 

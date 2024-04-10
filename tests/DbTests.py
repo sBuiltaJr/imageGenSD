@@ -5,12 +5,12 @@
 #####  Imports  #####
 
 from . import MockClasses as mc
-from .db import MariadbIfc as mdb
-from .utilities import ProfileGenerator as pg
 import discord as dis
 import json
 import sys
 import pathlib as pl
+import src.characters.ProfileGenerator as pg
+import src.db.MariadbIfc as mdb
 from typing import Callable, Optional, Any
 import unittest
 from unittest.mock import patch

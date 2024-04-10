@@ -1,3 +1,57 @@
+# Version 0.3.87
+
+## Highlights
+
+- Modified all `/show` commands to provide a list of the profile's prompts.
+- Replaced the action-specific `/assignkeygen` and `/removekeygen` commands with generalized `/assign` and `/remove` commands.
+- Removed the `IGSDKeyGenWorkers` table and replaced it with a `job` tracking column on each profile.
+- Removed all relative imports and moved Unit Tests to a separate `tests` folder.
+- Re-ordered the `cancel`, `back` and `next` navigation options in Dropdowns to be at the top of the selection list.
+- Fixed a bug in the `removekeygen` function that wasn't decrementing worker counts when the command was used.
+
+### Specific Changes
+
+- Modified all `/show` commands to have a second embed listing all of a profile's prompts.
+	- Added a second embed that contains an alphabetized list of all prompts.
+		- Testing has shown that preserving prompt order is largely irrelevant for models.
+- Replaced all relative import paths in files with explicit paths from the root `imageGenSD.py` path.
+- Moved all character-related information to a new `src/characters` folder.
+	- `ProfileGenerator.py`, `RarityClass.py`, and `StatsClass.py` were moved into the folder.
+	- Moved all relaetd Unit Tests to the `CharacterTests.py` class.
+- Created `CharacterJobs.py` to provide job information for all kinds of character work.
+	- Created Unit Tests for this class.
+- Added the `/assign` and `/remove` commands to accept multiple kinds of work.
+	- Each command accepts a kind of work specified in `CharacterJobs.py`.
+	- Each command will provide error messages if a user selects kinds of work not implemented yet.
+	- Updated the `/remove` error message to clarify that a user must either have a character or assign one to work before they can use the command.
+- Updated `DropDownFactory.py` to handle the new `/assign` and `/remove` commands.
+- Added a `job` column to the `IGSDProfiles`.
+	- Removed the `occupied` field since it is now redundant with `job`.
+	- Ported all existing keygen jobs to the equivalent job Enum in `upgrade_scripts/3.87`.
+	- Defined all expected job types as a single int Enum to better integration with the database.
+	- Re-wrote all functions interfacign with jobs/keygen to handle the new format.
+	- Deleted the table `IGSDKeyGenWorkers`.
+	- Deleted all DB queries for the  `IGSDKeyGenWorkers` table (`keygen_queries.json`).
+	- Modified the response to `/remove` requests to not require entire profiles to be generated since they're not required.
+	- Modified all DB queries to reflect the new `job` format.
+	- Added other columns to the `IGSDProfiles` for future updates.
+- Updated `ProfileGenerator.py` to handle `job` being tracked as part of a profile instead of a separate table.
+	- Removed the `occupied` field since it is now redundant with `job`.
+- Re-ordered the `cancel`, `back` and `next` navigation options in Dropdowns to be at the top of the selection list.
+	- Placed `cancel` as the first option to aid users trying to close dropdown commands before they time-out.
+- Added a safeguard to JSON imports in `def _getEmbedBaseForProfiles`
+	- Any improperly escaped characters in a prompt will be replaced with whitespace.
+	- Removed any newline characters in profile prompts.
+- Updated all unit tests to reflect code changes.
+	- Updated the mock discord class to handle multiple embeds.
+- Fixed various typos.
+
+### Notes
+
+- You must run the DB update script in `upgrade_scripts/3.85/` to upgrade an existing 3.85 DB
+- The script in `upgrade_scripts/3.87` will only run correctly the first time.
+	- Handling the error in subsequent runs was ignored due to low likelihood of significant use.
+
 # Version 0.3.85
 
 ## Highlights

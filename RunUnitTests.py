@@ -15,10 +15,11 @@ import unittest as unt
 #https://coverage.readthedocs.io/en/7.4.3/faq.html#q-why-do-the-bodies-of-functions-show-as-executed-but-the-def-lines-do-not
 cov = coverage.Coverage()
 cov.start()
-from src import DbTests as dt
-from src import ManagersTests as mt
-from src import UiTests as uit
-from src import UtilitiesTests as ut
+import tests.CharactersTests as ct
+import tests.DbTests as dt
+import tests.ManagersTests as mt
+import tests.UiTests as uit
+import tests.UtilitiesTests as ut
 
 #####  Test Class  #####
 
@@ -44,11 +45,13 @@ def testUtilities():
 
     suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=mt.TestDailyEventManager))
     suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=mt.TestQueueManager))
+    
+    suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ct.TestCharacterJobsClass))
+    suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ct.TestProfileGenerator))
+    suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ct.TestRarityClass))
+    suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ct.TestStatsClass))
 
     suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ut.TestJobFactory))
-    suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ut.TestProfileGenerator))
-    suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ut.TestRarityClass))
-    suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ut.TestStatsClass))
     suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=ut.TestTagRandomizer))
 
     suite.addTest(unt.defaultTestLoader.loadTestsFromTestCase(testCaseClass=uit.TestMenuPagination))

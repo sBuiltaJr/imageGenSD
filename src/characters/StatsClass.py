@@ -4,7 +4,7 @@
 #####  Imports  #####
 import logging as log
 import random as rand
-import src.utilities.RarityClass as rc
+import src.characters.RarityClass as rc
 import statistics as stat
 from typing import Literal, Optional
 

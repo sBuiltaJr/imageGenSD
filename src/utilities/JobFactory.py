@@ -12,8 +12,9 @@ import io
 import json
 import requests as req
 import src.db.MariadbIfc as mdb
-import src.utilities.ProfileGenerator as pg
-import src.utilities.RarityClass as rc
+import src.characters.CharacterJobs as cj
+import src.characters.ProfileGenerator as pg
+import src.characters.RarityClass as rc
 from typing import Optional
 from urllib.parse import urljoin
 
@@ -124,13 +125,13 @@ class Job(ABC):
         """
 
         embed = dis.Embed()
-        embed.add_field(name='Building', value=f"Assigned Characters\n`{self.summary['builder']['count']:12d}\n`Max Tier\n`{1 + self.summary['builder']['tier']:12d}`")
-        embed.add_field(name='Crafting', value=f"Assigned Characters\n`{self.summary['crafter']['count']:12d}\n`Max Tier\n`{1 + self.summary['crafter']['tier']:12d}`")
-        embed.add_field(name='Hospitals', value=f"Assigned Characters\n`{self.summary['hospital']['count']:12d}\n`Max Tier\n`{1  + self.summary['hospital']['tier']:12d}`")
-        embed.add_field(name='Key Generation', value=f"Assigned Characters\n`{self.summary['keygen']['count']:12d}\n`Max Tier\n`{1 + self.summary['keygen']['tier']:12d}`")
-        embed.add_field(name='Research', value=f"Assigned Characters\n`{self.summary['research']['count']:12d}\n`Max Tier\n`{1 + self.summary['research']['tier']:12d}`")
-        embed.add_field(name='Dungeon Teams', value=f"Assigned Characters\n`{self.summary['team']['count']:12d}\n`Max Tier\n`{1 + self.summary['team']['tier']:12d}`")
-        embed.add_field(name='Workers', value=f"Assigned Characters\n`{self.summary['worker']['count']:12d}\n`Max Tier\n`{1 + self.summary['worker']['tier']:12d}`")
+        embed.add_field(name='Building', value=f"Assigned Characters\n`{self.summary[cj.AssignChoices.Building.value]['count']:12d}\n`Max Tier\n`{1 + self.summary[cj.AssignChoices.Building.value]['tier']:12d}`")
+        embed.add_field(name='Crafting', value=f"Assigned Characters\n`{self.summary[cj.AssignChoices.Crafting.value]['count']:12d}\n`Max Tier\n`{1 + self.summary[cj.AssignChoices.Crafting.value]['tier']:12d}`")
+        embed.add_field(name='Hospitals', value=f"Assigned Characters\n`{self.summary[cj.AssignChoices.Hospital_Staff.value]['count']:12d}\n`Max Tier\n`{1  + self.summary[cj.AssignChoices.Hospital_Staff.value]['tier']:12d}`")
+        embed.add_field(name='Key Generation', value=f"Assigned Characters\n`{self.summary[cj.AssignChoices.Dungeon_Keys.value]['count']:12d}\n`Max Tier\n`{1 + self.summary[cj.AssignChoices.Dungeon_Keys.value]['tier']:12d}`")
+        embed.add_field(name='Research', value=f"Assigned Characters\n`{self.summary[cj.AssignChoices.Research.value]['count']:12d}\n`Max Tier\n`{1 + self.summary[cj.AssignChoices.Research.value]['tier']:12d}`")
+        embed.add_field(name='Dungeon Teams', value=f"Assigned Characters\n`{self.summary[cj.AssignChoices.Exploration_Team.value]['count']:12d}\n`Max Tier\n`{1 + self.summary[cj.AssignChoices.Exploration_Team.value]['tier']:12d}`")
+        embed.add_field(name='Workers', value=f"Assigned Characters\n`{self.summary[cj.AssignChoices.Workers.value]['count']:12d}\n`Max Tier\n`{1 + self.summary[cj.AssignChoices.Workers.value]['tier']:12d}`")
 
         return embed
 
@@ -167,26 +168,58 @@ class Job(ABC):
            Output: embed - A formatted Embed object.
         """
 
-        embed = dis.Embed()
+        count = 0
+        dict_str = None
+        #Displaying multiple embds requires providing them in list format to
+        #the send message command.
+        embeds = [dis.Embed(), dis.Embed()]
+        formatted_str = ""
 
         favorite = f"<@{self.profile.favorite}>" if self.profile.favorite != 0 else "None. You could be here!"
 
-        embed.add_field(name='Creator', value=f"<@{self.profile.creator}>")
-        embed.add_field(name='Owner', value=f"<@{self.profile.owner}>")
-        embed.add_field(name='Name', value=self.profile.name)
-        embed.add_field(name='Rarity', value=self.profile.rarity.name)
-        embed.add_field(name='Occupied', value=self.profile.occupied)
-        embed.add_field(name='Stats Average', value=f"{self.profile.stats.average:.2f}")
-        embed.add_field(name='Agility', value=self.profile.stats.agility)
-        embed.add_field(name='Defense', value=self.profile.stats.defense)
-        embed.add_field(name='Endurance', value=self.profile.stats.endurance)
-        embed.add_field(name='Luck', value=self.profile.stats.luck)
-        embed.add_field(name='Strength', value=self.profile.stats.strength)
-        embed.add_field(name='Description', value=self.profile.desc)
-        embed.add_field(name='Favorite', value=f"{favorite}")
-        embed.add_field(name='Profile ID', value=self.profile.id)
+        #Enbeds are always shown in list order.
+        embeds[0].add_field(name='Creator', value=f"<@{self.profile.creator}>")
+        embeds[0].add_field(name='Owner', value=f"<@{self.profile.owner}>")
+        embeds[0].add_field(name='Name', value=self.profile.name)
+        embeds[0].add_field(name='Rarity', value=self.profile.rarity.name)
+        embeds[0].add_field(name='Job', value=self.profile.job.name)
+        embeds[0].add_field(name='Stats Average', value=f"{self.profile.stats.average:.2f}")
+        embeds[0].add_field(name='Agility', value=self.profile.stats.agility)
+        embeds[0].add_field(name='Defense', value=self.profile.stats.defense)
+        embeds[0].add_field(name='Endurance', value=self.profile.stats.endurance)
+        embeds[0].add_field(name='Luck', value=self.profile.stats.luck)
+        embeds[0].add_field(name='Strength', value=self.profile.stats.strength)
+        embeds[0].add_field(name='Description', value=self.profile.desc)
+        embeds[0].add_field(name='Favorite', value=f"{favorite}")
+        embeds[0].add_field(name='Profile ID', value=self.profile.id)
 
-        return embed
+        #Apparently the JSON format returned by SD isn't quite compliant with
+        #JSON's formatter, requiring some replacements.
+        if isinstance(self.profile.info, str):
+            self.profile.info = self.profile.info.replace('\\', ' ')
+            dict_str          = self.profile.info[:self.profile.info.find("all_prompts")-3] + '}'
+            
+        info_dict = json.loads(dict_str) if dict_str != None else self.profile.info
+        prompts   = info_dict['prompt'].split(',')
+        #This is because all prompts, other than the first, have a space
+        prompts[0] = " " + prompts[0]
+        #Strings compare in lexical order.
+        prompts.sort(key=str.lower)
+
+        for tag in prompts:
+
+            formatted_str += f"{tag}" + ","
+            count += 1
+
+            if count % 5 == 0 :
+
+                formatted_str += '\n'
+
+        #Prompt tokens are dispalyed in a separate embed so Discord doesn't
+        #auto-format them into weird vertical columns.
+        embeds[1].add_field(name="Prompt Words", value=f"{formatted_str}")
+
+        return embeds
 
     def _getMentions(self,
                      ids : list) -> dis.AllowedMentions:
@@ -394,7 +427,7 @@ class RollJob(Job):
                                         img=json_result['images'][0],
                                         info=info_dict,
                                         profile=self.profile)
-            embed = self._getEmbedBaseForProfiles()
+            embeds = self._getEmbedBaseForProfiles()
 
             for i in json_result['images']:
                 image = io.BytesIO(b64.b64decode(i.split(",", 1)[0]))
@@ -403,7 +436,7 @@ class RollJob(Job):
                                                allowed_mentions=self._getMentions(ids=[self.user_id]),
                                                file=dis.File(fp=image,
                                                              filename='image.png'),
-                                               embed=embed)
+                                               embeds=embeds)
 
     def doRandomize(self,
                     tag_src):
@@ -609,7 +642,7 @@ class ShowProfileJob(Job):
             await metadata['ctx'].channel.send(content=f"<@{self.user_id}>", embed=embed)
 
         else:
-            embed       = self._getEmbedBaseForProfiles()
+            embeds      = self._getEmbedBaseForProfiles()
             self.db_img = metadata['db_ifc'].getImage(profile_id=self.id)
 
             image = io.BytesIO(b64.b64decode(self.db_img))
@@ -617,7 +650,7 @@ class ShowProfileJob(Job):
             await metadata['ctx'].edit_original_response(content=f"<@{self.user_id}>",
                                                          attachments=[dis.File(fp=image,
                                                                                filename='image.png')],
-                                                         embed=embed)
+                                                         embeds=embeds)
 
     def doRandomize(self,
                     tag_src):
@@ -691,7 +724,7 @@ class TestPostJob(Job):
                    metadata : dict):
 
         json_result             = self.result.json()
-        info_dict               = json.loads(json_result['info'])
+        info_dict               = json.loads(json_result['info'].replace('\n', ' '))
         info_dict['random']     = False
         info_dict['tags_added'] = ""
         embed                   = self._getEmbedBaseForGenerate(info=info_dict)
@@ -738,7 +771,7 @@ class TestRollJob(Job):
     async def post(self,
                    metadata : dict):
 
-        embed       = self._getEmbedBaseForProfiles()
+        embeds      = self._getEmbedBaseForProfiles()
         json_result = self.result.json()
 
         for i in json_result['images']:
@@ -748,7 +781,7 @@ class TestRollJob(Job):
                                            allowed_mentions=self._getMentions(ids=[self.user_id]),
                                            file=dis.File(fp=image,
                                                          filename='image.png'),
-                                           embed=embed)
+                                           embeds=embeds)
 
     def doRandomize(self,
                     tag_src):
@@ -785,7 +818,7 @@ class TestShowJob(Job):
 
         self.profile = metadata['db_ifc'].getProfile()
         self.db_img  = metadata['db_ifc'].getImage()
-        embed        = self._getEmbedBaseForProfiles()
+        embeds       = self._getEmbedBaseForProfiles()
 
         image = io.BytesIO(b64.b64decode(self.db_img))
 
@@ -793,7 +826,7 @@ class TestShowJob(Job):
                                            allowed_mentions=self._getMentions(ids=[self.user_id]),
                                            file=dis.File(fp=image,
                                                          filename='image.png'),
-                                           embed=embed)
+                                           embeds=embeds)
 
     def doRandomize(self,
                     tag_src):

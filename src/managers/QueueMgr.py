@@ -7,13 +7,13 @@
 
 #####  Imports  #####
 
-from ..utilities import JobFactory as jf
 import logging as log
 import logging.handlers as lh
 import multiprocessing as mp
 import pathlib as pl
 import queue
 import requests as req
+import src.utilities.JobFactory as jf
 import time
 
 #####  Queue Class  #####

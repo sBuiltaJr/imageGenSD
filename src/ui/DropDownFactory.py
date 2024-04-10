@@ -2,14 +2,14 @@
 
 
 #####  Imports  #####
-from ..db import MariadbIfc as mdb
 from abc import ABC, abstractmethod
 import base64 as b64
 import discord as dis
 from enum import IntEnum, verify, UNIQUE
 import io
+import src.characters.StatsClass as sc
 import src.utilities.JobFactory as jf
-import src.utilities.StatsClass as sc
+import src.db.MariadbIfc as mdb
 from typing import Callable, Optional
 import traceback
 
@@ -80,16 +80,14 @@ class KeyGenDropdown(DynamicDropdown):
            Output : None.
         """
 
-        self.db          = metadata['db_ifc']
-        self.interaction = ctx
-        self.metadata    = metadata
-        self.offset      = 0 if 'count' not in opts else int(opts['count'])
-        self.tier        = int(opts['tier']) if 'tier' in opts else 0
-        self.limit_key   = f'limit_t{self.tier}'
-        self.limit       = int(opts[self.limit_key])
-        self.tier_count  = opts['total']
-        self.tier_key    = f'tier_{self.tier}'
-        self.tier_data   = opts['workers'][self.tier_key]
+        self.db             = metadata['db_ifc']
+        self.interaction    = ctx
+        self.metadata       = metadata
+        self.offset         = 0 if 'count' not in opts else int(opts['count'])
+        self.tier           = int(opts['tier']) if 'tier' in opts else 0
+        self.limit          = int(opts['limit'])
+        self.active_workers = int(opts['active_workers'])
+        self.workers        = opts['workers']
 
         self.trimByGatingCriteria(choices=choices)
 
@@ -109,11 +107,11 @@ class KeyGenDropdown(DynamicDropdown):
             slice = range(0, len(self.choices) - self.offset)
 
         options = [dis.SelectOption(label=self.choices[self.offset + x].name,value=self.choices[self.offset + x].id) for x in slice]
-        options.append(dis.SelectOption(label='Next',   value=FORWARD_NAV_VALUE))
-        options.append(dis.SelectOption(label='Back',   value=BACKWARD_NAV_VALUE))
-        options.append(dis.SelectOption(label='Cancel', value=CANCEL_NAV_VALUE))
+        options.insert(0, dis.SelectOption(label='Next',   value=FORWARD_NAV_VALUE))
+        options.insert(0, dis.SelectOption(label='Back',   value=BACKWARD_NAV_VALUE))
+        options.insert(0, dis.SelectOption(label='Cancel', value=CANCEL_NAV_VALUE))
 
-        select_limit = self.limit - self.tier_data['count']
+        select_limit = self.limit - self.active_workers
 
         super().__init__(placeholder=f'Select at most {select_limit} characters to assign to key generation work for tier {self.tier}.', min_values=1, max_values=select_limit, options=options)
 
@@ -138,10 +136,10 @@ class KeyGenDropdown(DynamicDropdown):
 
         elif str(FORWARD_NAV_VALUE) in self.values or str(BACKWARD_NAV_VALUE) in self.values:
 
-            opts          = {'total'        : self.tier_count,
-                             self.limit_key : self.limit,
-                             'tier'         : self.tier,
-                             'workers'      : {self.tier_key : self.tier_data}}
+            opts          = {'active_workers' : self.active_workers,
+                             'limit'          : self.limit,
+                             'tier'           : self.tier,
+                             'workers'        : self.workers}
             next          = self.offset + DROPDOWN_ITEM_LIMIT_WITH_NAV * int(self.values[0])
             opts['count'] = next if next >= 0 and next < len(self.choices) else self.offset
 
@@ -164,13 +162,16 @@ class KeyGenDropdown(DynamicDropdown):
 
                     names += choice.name + ", "
 
-            result = self.db.assignKeyGenWork(count       = self.tier_count,
+            result = self.db.assignKeyGenWork(count       = self.active_workers,
                                               profile_ids = self.values,
                                               tier        = self.tier,
-                                              tier_data   = self.tier_data,
-                                              user_id     = self.interaction.user.id)
+                                              user_id     = self.interaction.user.id,
+                                              workers     = self.workers)
 
-            await interaction.response.edit_message(content=f"Assigned the chosen characters: {names}to keygen work in tier {self.tier + 1}!",view=None)
+            self.db.putDropdown(state   = False,
+                                user_id = self.interaction.user.id)
+
+            await interaction.response.edit_message(content=f"Assigned the chosen characters: {names}to keygen work in tier {self.tier + 1}!", view=None)
 
     #Note: this view gates by occupied == True and stats_avg >= range average
     def trimByGatingCriteria(self,
@@ -181,7 +182,8 @@ class KeyGenDropdown(DynamicDropdown):
 
         for choice in choices:
 
-            if not choice.occupied and choice.stats.average >= sc.getRangeAverageList()[self.tier] and choice not in self.choices :
+            #all occupeid workers have been filtered out at the parent.
+            if choice.stats.average >= sc.getRangeAverageList()[self.tier] and choice not in self.choices :
 
                 self.choices.append(choice)
 
@@ -208,17 +210,14 @@ class RemoveKeyGenDropdown(DynamicDropdown):
 
         self.choices     = choices
         self.db          = metadata['db_ifc']
+        self.ID          = 0
         self.interaction = ctx
         self.metadata    = metadata
+        self.NAME        = 1
         self.tier        = int(opts['tier']) if 'tier' in opts else 0
-        self.limit_key   = f'limit_t{self.tier}'
-        self.limit       = int(opts[self.limit_key])
-        self.tier_count  = opts['total']
-        self.tier_key    = f'tier_{self.tier}'
-        self.tier_data   = opts['workers'][self.tier_key]
-        self.count       = int(self.tier_data['count']) #There can only ever be, at most, 5.
+        self.count       = opts['active_workers'] #There can only ever be, at most, 5.
 
-        options = [dis.SelectOption(label=self.choices[x].name,value=self.choices[x].id) for x in range (0, self.count)]
+        options = [dis.SelectOption(label=self.choices[x][self.NAME],value=self.choices[x][self.ID]) for x in range (0, self.count)]
         options.append(dis.SelectOption(label='Cancel', value=CANCEL_NAV_VALUE))
 
         super().__init__(placeholder=f'Select at most {self.count} characters to remove.', min_values=1, max_values=self.count, options=options)
@@ -249,15 +248,17 @@ class RemoveKeyGenDropdown(DynamicDropdown):
             for choice in self.choices :
 
                 #If only the select object also tracked choice labels.
-                if choice.id in self.values :
+                if choice[self.ID] in self.values :
 
-                    names += choice.name + ", "
+                    names += choice[self.NAME] + ", "
 
-            result = self.db.removeKeyGenWork(count       = self.tier_count,
-                                              profile_ids = self.values,
+            result = self.db.removeKeyGenWork(profile_ids = self.values,
                                               tier        = self.tier,
-                                              tier_data   = self.tier_data,
-                                              user_id     = self.interaction.user.id)
+                                              user_id     = self.interaction.user.id,
+                                              workers     = self.choices)
+
+            self.db.putDropdown(state   = False,
+                                user_id = self.interaction.user.id)
 
             await interaction.response.edit_message(content=f"Removed the chosen characters: {names}from keygen work in tier {self.tier + 1}!",view=None)
 
@@ -309,9 +310,9 @@ class ShowDropdown(DynamicDropdown):
             slice = range(0, len(self.choices) - self.offset)
 
         options = [dis.SelectOption(label=self.choices[self.offset + x].name,value=self.choices[self.offset + x].id) for x in slice]
-        options.append(dis.SelectOption(label='Next',   value=FORWARD_NAV_VALUE))
-        options.append(dis.SelectOption(label='Back',   value=BACKWARD_NAV_VALUE))
-        options.append(dis.SelectOption(label='Cancel', value=CANCEL_NAV_VALUE))
+        options.insert(0, dis.SelectOption(label='Next',   value=FORWARD_NAV_VALUE))
+        options.insert(0, dis.SelectOption(label='Back',   value=BACKWARD_NAV_VALUE))
+        options.insert(0, dis.SelectOption(label='Cancel', value=CANCEL_NAV_VALUE))
 
         super().__init__(placeholder='Select a character to display.', min_values=1, max_values=1, options=options)
 

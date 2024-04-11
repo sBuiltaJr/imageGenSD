@@ -29,7 +29,7 @@
 	- Removed the `occupied` field since it is now redundant with `job`.
 	- Ported all existing keygen jobs to the equivalent job Enum in `upgrade_scripts/3.87`.
 	- Defined all expected job types as a single int Enum to better integration with the database.
-	- Re-wrote all functions interfacign with jobs/keygen to handle the new format.
+	- Re-wrote all functions interfacing with jobs/keygen to handle the new format.
 	- Deleted the table `IGSDKeyGenWorkers`.
 	- Deleted all DB queries for the  `IGSDKeyGenWorkers` table (`keygen_queries.json`).
 	- Modified the response to `/remove` requests to not require entire profiles to be generated since they're not required.

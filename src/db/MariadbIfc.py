@@ -317,7 +317,6 @@ class MariadbIfc:
 
         return result
 
-
     def getImage(self,
                  picture_id : Optional[str] = None,
                  profile_id : Optional[str] = "ffffffff-ffff-ffff-ffff-fffffffffffe") -> str:
@@ -400,14 +399,14 @@ class MariadbIfc:
 
         return profile
 
-    def getProfiles(self,
+    def getAllProfiles(self,
                     user_id : int) -> list:
         """Returns all profiles for a given user.
 
             Input: self - Pointer to the current object instance.
                    user_id - user ID to interrogate for profiles.
 
-            Output: list - A list of all profiles found, if any.  None if not.
+            Output: list - A list of all profiles found, if any.  An empty list if not.
         """
         cmd     = ""
         cursor  = self.con.cursor(buffered=False)
@@ -415,6 +414,34 @@ class MariadbIfc:
 
         self.db_log.info(f"Getting profiles for user {user_id}")
         cmd = (self.cmds['prof']['get_owned_profs']) % (user_id)
+        self.db_log.debug(f"Executing command: {cmd}")
+        cursor.execute(cmd)
+
+        for x in cursor:
+
+            self.db_log.debug(f"Adding result: {x}")
+            results.append(self.mapQueryToProfile(query=x))
+
+        self.db_log.debug(f"Got results: {results}")
+
+        return results
+
+    def getProfiles(self,
+                    user_id : int,
+                    name : str) -> list:
+        """Returns profiles matching a given name filter for a given user.
+
+            Input: self - Pointer to the current object instance.
+                   user_id - user ID to interrogate for profiles.
+
+            Output: list - A list of all profiles found, if any.  An empty list if not.
+        """
+        cmd     = ""
+        cursor  = self.con.cursor(buffered=False)
+        results = []
+
+        self.db_log.info(f"Getting profiles for user {user_id}")
+        cmd = (self.cmds['prof']['get_owned_profs_byname']) % (user_id, f"%{name}%")
         self.db_log.debug(f"Executing command: {cmd}")
         cursor.execute(cmd)
 

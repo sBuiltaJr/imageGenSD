@@ -356,11 +356,15 @@ async def hello(interaction: dis.Interaction):
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
 @dac.describe(user="The Discord user owning the profiles lsited by the command.  If none, it defaults to you.")
+@dac.describe(name="A name, or fragment of, used to filter the profile list")
 async def listprofiles(interaction : dis.Interaction,
-                       user        : Optional[dis.User] = None):
+                       user        : Optional[dis.User] = None,
+                       name        : Optional[dac.Range[str, 0, 36]] = None):
     """Returns a pagenated list of profile names and IDs owned by the caller.
 
         Input  : interaction - the interaction context from Discord.
+                 user - optional, the discord user whose profiles to list
+                 name - optional, a name or fragment thereof to filter the profile list
 
         Output : N/A.
     """
@@ -369,13 +373,21 @@ async def listprofiles(interaction : dis.Interaction,
     #This has to be in the function body because an arg can't be used to assign
     #another arg in the function call.
     user_id = interaction.user.id if user == None else user.id
-    profiles = db_ifc.getProfiles(user_id)
+    user_dis = interaction.user if user == None else user
+    error_desc = ""
+    profiles = []
+    if name == None:
+        profiles = db_ifc.getAllProfiles(user_id)
+        error_desc = f"User <@{user_id}> does not own any characters!"
+    else:
+        profiles = db_ifc.getProfiles(user_id, name)
+        error_desc = f"Found no characters owned by user <@{user_id}> that have a name similar to {name}"
     dis_log.debug(f"Got profiles for list profile: {profiles}.")
 
     if not profiles:
-
+        
         embed = dis.Embed(title       = "Owned characters",
-                          description = f"User <@{user_id}> does not own any characters!",
+                          description = error_desc,
                           color       = 0xec1802)
         await interaction.response.send_message(content=f"<@{interaction.user.id}>", embed=embed)
 
@@ -385,7 +397,7 @@ async def listprofiles(interaction : dis.Interaction,
 
         await mp.MenuPagination(interaction = interaction,
                                 profiles    = short_profiles,
-                                user        = user).navigate()
+                                user        = user_dis).navigate()
 
 @IGSD_client.event
 async def on_ready():
@@ -597,16 +609,19 @@ async def roll(interaction: dis.Interaction):
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
-@dac.describe(profile_id="The profile ID of the character you'd like to view.  Use /listprofiles to see the name and ID for profiles!")
-@dac.describe(user="The Discord user owning the profiles listed by the command.  If none, it defaults to you.")
+@dac.describe(profile_id="The profile ID of the character.  Use /listprofiles to find the ID.")
+@dac.describe(user="The Discord user owning the profiles.  If none, it defaults to you.")
+@dac.describe(name="A name of the profile to view. Will find all similar names.")
 async def showprofile(interaction : dis.Interaction,
                       profile_id  : Optional[dac.Range[str, 0, 36]] = None,  #The length of a UUID
-                      user        : Optional[dis.User] = None):
-    """Displays the profile associated with the provided ID.
+                      user        : Optional[dis.User] = None,
+                      name        : Optional[dac.Range[str, 0, 36]] = None):
+    """Displays a profile or a dropdown of matching profiles.
 
         Input  : interaction - the interaction context from Discord.
                  profile_id - the profile ID to retrieve.
                  user - which user's profiles to show; defaults to the author.
+                 name - A name that will be used to search the profiles
 
         Output : N/A.
     """
@@ -620,8 +635,10 @@ async def showprofile(interaction : dis.Interaction,
                }
 
 
+    user_id  = interaction.user.id if user == None else user.id
 
-    if profile_id == None:
+    if profile_id == None and name == None:
+        #no name nor id was provided, so display all of the user's profiles in a dropdown
 
         if db_ifc.getDropdown(user_id = interaction.user.id) :
 
@@ -630,17 +647,17 @@ async def showprofile(interaction : dis.Interaction,
         else:
 
             dis_log.debug(f"Creating a SHOW PROFILE view for user {interaction.user.id}.")
-            user_id  = interaction.user.id if user == None else user.id
-            profiles = db_ifc.getProfiles(user_id)
+            profiles = db_ifc.getAllProfiles(user_id)
             dis_log.debug(f"User {user_id} returned profile list {profiles}.")
             view = ddf.DropdownView(ctx      = interaction,
                                     type     = ddf.DropDownTypeEnum.SHOW,
                                     choices  = profiles,
                                     metadata = metadata)
 
-            await interaction.response.send_message('Select a profile to view:',view=view)
+            await interaction.response.send_message('Select a profile to view:', view=view)
 
-    else:
+    elif name == None:
+        #The profile id was provided, prioritize that over name
 
         opts = {'id' : profile_id}
 
@@ -652,8 +669,51 @@ async def showprofile(interaction : dis.Interaction,
         result = show_queue.add(metadata = metadata,
                                 job      = job)
 
-        await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
+        await interaction.response.send_message(f'{result}')
+    else:
+        #A name was provided
 
+        dis_log.debug(f"Looking for profiles of name {name}.")
+        profiles = db_ifc.getProfiles(user_id, name)
+        if len(profiles) == 0:
+
+            dis_log.debug(f"--Found no {name}")
+            embed = dis.Embed(title="Error",
+                            description=f'A character matching the name "{name}" wasn\'t found!',
+                            color=0xec1802)
+            await interaction.response.send_message(content=f"<@{interaction.user.id}>", embed=embed)
+
+        elif len(profiles) == 1:
+            dis_log.debug(f"--Found one {name} {profiles[0].id}")
+            opts = {'id' : profiles[0].id}
+
+            dis_log.debug(f"Creating a job with metadata {metadata} and options {opts}.")
+            job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_PROFILE,
+                                       ctx     = interaction,
+                                       options = opts)
+            dis_log.debug(f"Posting SHOW job {job} to the queue.")
+            result = show_queue.add(metadata = metadata,
+                                    job      = job)
+
+            await interaction.response.send_message(f'{result}')
+
+            
+        else:
+            
+            dis_log.debug(f"--Found many {len(profiles)}")
+            if db_ifc.getDropdown(user_id = interaction.user.id) :
+
+                await interaction.response.send_message(f'Please close your existing dropdown menu or wait for it to time out.', ephemeral=True, delete_after=9.0)
+            else:
+
+                dis_log.debug(f"Creating a SHOW PROFILE view for user {interaction.user.id}.")
+                dis_log.debug(f"User {user_id} returned profile list {profiles}.")
+                view = ddf.DropdownView(ctx      = interaction,
+                                        type     = ddf.DropDownTypeEnum.SHOW,
+                                        choices  = profiles,
+                                        metadata = metadata)
+
+                await interaction.response.send_message(f'Select a profile with name like "{name}" to view:',view=view)
 
 @verify(UNIQUE)
 class SummaryChoices(Enum):

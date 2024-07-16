@@ -399,7 +399,7 @@ class MariadbIfc:
 
         return profile
 
-    def getAllProfiles(self,
+    def getUsersProfiles(self,
                     user_id : int) -> list:
         """Returns all profiles for a given user.
 

@@ -44,7 +44,7 @@ daily_mgr      = None
 daily_mgr_th   = None
 db_ifc         = None
 dict_path      = ["","",""]
-IGSD_version   = '0.3.87'
+IGSD_version   = '0.3.88'
 job_queue      = None
 job_worker     = None
 show_queue     = None
@@ -637,27 +637,8 @@ async def showprofile(interaction : dis.Interaction,
 
     user_id  = interaction.user.id if user == None else user.id
 
-    if profile_id == None and name == None:
-        #no name nor id was provided, so display all of the user's profiles in a dropdown
-
-        if db_ifc.getDropdown(user_id = interaction.user.id) :
-
-            await interaction.response.send_message(f'Please close your existing dropdown menu or wait for it to time out.', ephemeral=True, delete_after=9.0)
-
-        else:
-
-            dis_log.debug(f"Creating a SHOW PROFILE view for user {interaction.user.id}.")
-            profiles = db_ifc.getAllProfiles(user_id)
-            dis_log.debug(f"User {user_id} returned profile list {profiles}.")
-            view = ddf.DropdownView(ctx      = interaction,
-                                    type     = ddf.DropDownTypeEnum.SHOW,
-                                    choices  = profiles,
-                                    metadata = metadata)
-
-            await interaction.response.send_message('Select a profile to view:', view=view)
-
-    elif name == None:
-        #The profile id was provided, prioritize that over name
+    if profile_id != None:
+        #The profile id was provided, prioritize that over everything else
 
         opts = {'id' : profile_id}
 
@@ -671,49 +652,63 @@ async def showprofile(interaction : dis.Interaction,
 
         await interaction.response.send_message(f'{result}')
     else:
-        #A name was provided
+        #get profiles from the database using user and name
 
-        dis_log.debug(f"Looking for profiles of name {name}.")
-        profiles = db_ifc.getProfiles(user_id, name)
-        if len(profiles) == 0:
+        if db_ifc.getDropdown(user_id = interaction.user.id) :
 
-            dis_log.debug(f"--Found no {name}")
-            embed = dis.Embed(title="Error",
-                            description=f'A character matching the name "{name}" wasn\'t found!',
-                            color=0xec1802)
-            await interaction.response.send_message(content=f"<@{interaction.user.id}>", embed=embed)
+            await interaction.response.send_message(f'Please close your existing dropdown menu or wait for it to time out.', ephemeral=True, delete_after=9.0)
 
-        elif len(profiles) == 1:
-            dis_log.debug(f"--Found one {name} {profiles[0].id}")
-            opts = {'id' : profiles[0].id}
-
-            dis_log.debug(f"Creating a job with metadata {metadata} and options {opts}.")
-            job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_PROFILE,
-                                       ctx     = interaction,
-                                       options = opts)
-            dis_log.debug(f"Posting SHOW job {job} to the queue.")
-            result = show_queue.add(metadata = metadata,
-                                    job      = job)
-
-            await interaction.response.send_message(f'{result}')
-
-            
         else:
-            
-            dis_log.debug(f"--Found many {len(profiles)}")
-            if db_ifc.getDropdown(user_id = interaction.user.id) :
 
-                await interaction.response.send_message(f'Please close your existing dropdown menu or wait for it to time out.', ephemeral=True, delete_after=9.0)
+            dis_log.debug(f"Creating a SHOW PROFILE view for user {interaction.user.id}.")
+            empty_error = "";
+            many_message = "";
+
+            if name == None:
+
+                profiles = db_ifc.getUsersProfiles(user_id)
+                empty_error = f"{user_id} does't own any profiles"
+                many_message = f'Select a profile to view:'
+
             else:
 
-                dis_log.debug(f"Creating a SHOW PROFILE view for user {interaction.user.id}.")
-                dis_log.debug(f"User {user_id} returned profile list {profiles}.")
+                dis_log.debug(f"Looking for profiles of name {name}.")
+                profiles = db_ifc.getProfiles(user_id, name)
+                empty_error = f'A character matching the name "{name}" wasn\'t found!'
+                many_message = f'Select a profile with name like "{name}" to view:'
+
+            if len(profiles) == 0:
+
+                dis_log.debug(f"--Found none {name}")
+                embed = dis.Embed(title="Error",
+                                description=empty_error,
+                                color=0xec1802)
+                await interaction.response.send_message(content=f"<@{interaction.user.id}>", embed=embed)
+
+            elif len(profiles) == 1:
+
+                dis_log.debug(f"--Found one {name} {profiles[0].id}")
+                opts = {'id' : profiles[0].id}
+
+                dis_log.debug(f"Creating a job with metadata {metadata} and options {opts}.")
+                job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_PROFILE,
+                                        ctx     = interaction,
+                                        options = opts)
+                dis_log.debug(f"Posting SHOW job {job} to the queue.")
+                result = show_queue.add(metadata = metadata,
+                                        job      = job)
+
+                await interaction.response.send_message(f'{result}')
+
+            else:
+
+                dis_log.debug(f"--Found many {len(profiles)}")
                 view = ddf.DropdownView(ctx      = interaction,
                                         type     = ddf.DropDownTypeEnum.SHOW,
                                         choices  = profiles,
                                         metadata = metadata)
 
-                await interaction.response.send_message(f'Select a profile with name like "{name}" to view:',view=view)
+                await interaction.response.send_message(many_message,view=view)
 
 @verify(UNIQUE)
 class SummaryChoices(Enum):

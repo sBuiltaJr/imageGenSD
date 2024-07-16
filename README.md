@@ -135,7 +135,7 @@ can be combined with a user-supplied prompt.
 
 Confirms the bot has the bare minimum capability for interacting in the Guild.
 
-`/listprofiles {user}`
+`/listprofiles {user} {name}`
 
 - Show all profiles associated with a specific Discord account.
 
@@ -147,6 +147,9 @@ Pages can be navigated with the provided buttons and will be eventually
 disabled after a timeout.
 
 Not specifying `user` will cause the menu to show the author's profiles.
+
+If `name` is specified, the resulting paginated menu will only contain
+profiles whose name at least partially matches the specified name
 
 Only the command author is allowed to use the navigation buttons.
 
@@ -172,25 +175,32 @@ Generates a brand-new character and profile once daily.  Daily reset occurs at
 midnight UTC.  The character and profile are saved to the user profile that
 initiated the command and will appear in the `/listprofiles` command.
 
-`/showprofile {user} {profile_id}`
+`/showprofile {profile_id} {user} {name}`
 
-- Display either a given profile linked by ID or a selectable list of profiles
+- Display either a given profile or a selectable list of profiles
 
-If `profile_id` is specified, the command displays the request profile, if
+If `profile_id` is specified, the command displays the requested profile, if
 it exists.  The can include profiles linked to other users if the author knows
-the profile ID.
+the profile ID. Specifying `profile_id` will ignore all other parameters. The
+`/listprofiles` command can be used to find profile IDs.
 
-Profile Names cannot be used, only the unique identifier for a profile (ID)
-like provided by `/listprofiles`.
+If `user` is specified, the command will only look for profiles that user owns.
+If `user` is not specified, the command will look for profiles that the user
+that initiated the command owns.
 
-If `user` is specified, the command displays a dropdown list of profiles that
-user owns, if any.  Selecting a specific profile will cause it to be posted to
-the channel underneath the dropdown menu.
+If `name` is specified, the command will look for profiles with names that at
+least partially match the specified name. If `name` is not specified, all
+profiles belonging to the determined user will be displayed.
 
-The dropdown contains `next` and `back` options to allow viewing lists greater
-than 25 characters.  The `cancel` command deletes the dropdown.
+If the user only owns one profile or if the specified `name` is specific enough
+the single profile will be shown. Otherwise, a dropdown list of profiles will
+be displayed. Selecting a specific profile will cause it to be posted to
+the channel and the dropdown re-posted.
 
-The dropdown will deactivate after 100 seconds of inactivity.
+The dropdown also has `next`, `back`, and `cancel` options. The dropdown will
+deactivate after 100 seconds of inactivity or if the `cancel` option is chosen.
+The `next` and `back` options viewing more than one page of profiles, as
+Discord only allows dropdowns of 25 entries.
 
 `/showsummary {type}`
 

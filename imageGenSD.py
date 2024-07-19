@@ -356,7 +356,7 @@ async def hello(interaction: dis.Interaction):
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
 @dac.describe(user="The Discord user owning the profiles lsited by the command.  If none, it defaults to you.")
-@dac.describe(name="A name, or fragment of, used to filter the profile list")
+@dac.describe(name="A name, or fragment of, used to filter the profile list (case insensitive).")
 async def listprofiles(interaction : dis.Interaction,
                        user        : Optional[dis.User] = None,
                        name        : Optional[dac.Range[str, 0, 36]] = None):
@@ -376,17 +376,20 @@ async def listprofiles(interaction : dis.Interaction,
     user_dis = interaction.user if user == None else user
     error_desc = ""
     profiles = []
+    message_title = ""
     if name == None:
-        profiles = db_ifc.getAllProfiles(user_id)
+        profiles = db_ifc.getUsersProfiles(user_id)
         error_desc = f"User <@{user_id}> does not own any characters!"
+        message_title = "Owned characters"
     else:
         profiles = db_ifc.getProfiles(user_id, name)
         error_desc = f"Found no characters owned by user <@{user_id}> that have a name similar to {name}"
+        message_title = f"Owned characters with name like {name}"
     dis_log.debug(f"Got profiles for list profile: {profiles}.")
 
     if not profiles:
         
-        embed = dis.Embed(title       = "Owned characters",
+        embed = dis.Embed(title       = message_title,
                           description = error_desc,
                           color       = 0xec1802)
         await interaction.response.send_message(content=f"<@{interaction.user.id}>", embed=embed)
@@ -611,7 +614,7 @@ async def roll(interaction: dis.Interaction):
 @dac.checks.has_permissions(use_application_commands=True)
 @dac.describe(profile_id="The profile ID of the character.  Use /listprofiles to find the ID.")
 @dac.describe(user="The Discord user owning the profiles.  If none, it defaults to you.")
-@dac.describe(name="A name of the profile to view. Will find all similar names.")
+@dac.describe(name="A name of the profile to view. Will find all similar names (case insensitive).")
 async def showprofile(interaction : dis.Interaction,
                       profile_id  : Optional[dac.Range[str, 0, 36]] = None,  #The length of a UUID
                       user        : Optional[dis.User] = None,
@@ -667,33 +670,33 @@ async def showprofile(interaction : dis.Interaction,
             if name == None:
 
                 profiles = db_ifc.getUsersProfiles(user_id)
-                empty_error = f"{user_id} does't own any profiles"
+                empty_error = f"<@{user_id}> does't own any profiles"
                 many_message = f'Select a profile to view:'
 
             else:
 
                 dis_log.debug(f"Looking for profiles of name {name}.")
                 profiles = db_ifc.getProfiles(user_id, name)
-                empty_error = f'A character matching the name "{name}" wasn\'t found!'
+                empty_error = f'Found no characters owned by <@{user_id}> that have a name similar to {name}'
                 many_message = f'Select a profile with name like "{name}" to view:'
 
             if len(profiles) == 0:
 
-                dis_log.debug(f"--Found none {name}")
+                dis_log.debug(f"Looking for name, Found none {name}")
                 embed = dis.Embed(title="Error",
-                                description=empty_error,
-                                color=0xec1802)
+                                  description=empty_error,
+                                  color=0xec1802)
                 await interaction.response.send_message(content=f"<@{interaction.user.id}>", embed=embed)
 
             elif len(profiles) == 1:
 
-                dis_log.debug(f"--Found one {name} {profiles[0].id}")
+                dis_log.debug(f"Looking for name, Found one {name} {profiles[0].id}")
                 opts = {'id' : profiles[0].id}
 
                 dis_log.debug(f"Creating a job with metadata {metadata} and options {opts}.")
                 job = jf.JobFactory.getJob(type    = jf.JobTypeEnum.SHOW_PROFILE,
-                                        ctx     = interaction,
-                                        options = opts)
+                                           ctx     = interaction,
+                                           options = opts)
                 dis_log.debug(f"Posting SHOW job {job} to the queue.")
                 result = show_queue.add(metadata = metadata,
                                         job      = job)
@@ -702,7 +705,7 @@ async def showprofile(interaction : dis.Interaction,
 
             else:
 
-                dis_log.debug(f"--Found many {len(profiles)}")
+                dis_log.debug(f"Looking for name, Found many {len(profiles)}")
                 view = ddf.DropdownView(ctx      = interaction,
                                         type     = ddf.DropDownTypeEnum.SHOW,
                                         choices  = profiles,

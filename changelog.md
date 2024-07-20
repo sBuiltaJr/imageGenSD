@@ -1,3 +1,14 @@
+# Version 0.3.88
+
+## Highlights
+
+- Updated `/showprofile` and `/listprofiles` to allow searching for profiles by name
+
+### Specific Changes
+
+- Renamed db command `getProfiles` to `getUsersProfiles` so that a new `getProfiles` could take its place
+- `getProfiles` takes a user and name to find the profiles of the user with a name `LIKE %name%`
+
 # Version 0.3.87
 
 ## Highlights

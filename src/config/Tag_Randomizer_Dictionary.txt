@@ -344,7 +344,6 @@ frilled shirt collar
 facing viewer
 crossed arms
 striped
-white outline
 blue kimono
 double bun
 cable
@@ -475,7 +474,6 @@ abyssal ship
 short sleeves
 breast pocket
 happy new year
-white border
 white ribbon
 dress
 pumpkin
@@ -560,7 +558,6 @@ own hands together
 crescent
 road
 doll
-card \(medium\)
 looking up
 collared dress
 lamp
@@ -755,7 +752,6 @@ purple background
 mole
 brown eyes
 teeth
-card
 full-face blush
 black legwear
 pendant
@@ -924,7 +920,6 @@ clenched teeth
 slit pupils
 tiara
 black shirt
-ahoge
 salute
 grey legwear
 dog tail
@@ -1012,7 +1007,6 @@ red necktie
 wet clothes
 animal ears
 cardigan
-outline
 torn clothes
 lolita fashion
 licking
@@ -1075,7 +1069,6 @@ pink dress
 side ponytail
 feet
 looking down
-black border
 hug
 hakama short skirt
 black belt

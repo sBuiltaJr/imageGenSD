@@ -18,6 +18,7 @@ import pathlib as pl
 import requests as req
 import src.characters.CharacterJobs as cj
 import src.characters.ProfileGenerator as pg
+import src.characters.RarityClass as rc
 import src.db.MariadbIfc as mdb
 import src.managers.DailyEventMgr as dem
 import src.managers.QueueMgr as qm
@@ -355,35 +356,45 @@ async def hello(interaction: dis.Interaction):
 
 @IGSD_client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
-@dac.describe(user="The Discord user owning the profiles lsited by the command.  If none, it defaults to you.")
 @dac.describe(name="A name, or fragment of, used to filter the profile list (case insensitive).")
+@dac.describe(rarity="Which rarity to search.  If none, if defaults to showing all rarities.")
+@dac.describe(user="The Discord user owning the profiles lsited by the command.  If none, it defaults to you.")
 async def listprofiles(interaction : dis.Interaction,
-                       user        : Optional[dis.User] = None,
-                       name        : Optional[dac.Range[str, 0, 36]] = None):
+                       name        : Optional[dac.Range[str, 0, 36]] = None,
+                       rarity      : Optional[rc.RarityList]         = None,
+                       user        : Optional[dis.User]              = None,):
     """Returns a pagenated list of profile names and IDs owned by the caller.
 
         Input  : interaction - the interaction context from Discord.
                  user - optional, the discord user whose profiles to list
+                 rarity - optional, a rarity to filter results on
                  name - optional, a name or fragment thereof to filter the profile list
 
         Output : N/A.
     """
 
-    dis_log  = log.getLogger('discord')
+    dis_log       = log.getLogger('discord')
+    error_desc    = ""
+    message_title = ""
+    profiles      = []
+    rarity_values = None if rarity == None else rarity.value
     #This has to be in the function body because an arg can't be used to assign
     #another arg in the function call.
-    user_id = interaction.user.id if user == None else user.id
-    user_dis = interaction.user if user == None else user
-    error_desc = ""
-    profiles = []
-    message_title = ""
+    user_id       = interaction.user.id if user == None else user.id
+    user_dis      = interaction.user if user == None else user
+
+    if rarity == None :
+
+        rarities      = [str(x.value) for x in rc.RarityList]
+        rarity_values = ','.join(rarities)
+
     if name == None:
-        profiles = db_ifc.getUsersProfiles(user_id)
-        error_desc = f"User <@{user_id}> does not own any characters!"
+        profiles      = db_ifc.getUsersProfiles(rarity_values, user_id)
+        error_desc    = f"User <@{user_id}> does not own any characters!"
         message_title = "Owned characters"
     else:
-        profiles = db_ifc.getProfiles(user_id, name)
-        error_desc = f"Found no characters owned by user <@{user_id}> that have a name similar to {name}"
+        profiles      = db_ifc.getProfiles(name, rarity_values, user_id)
+        error_desc    = f"Found no characters owned by user <@{user_id}> that have a name similar to {name}"
         message_title = f"Owned characters with name like {name}"
     dis_log.debug(f"Got profiles for list profile: {profiles}.")
 
@@ -533,7 +544,7 @@ async def remove(interaction : dis.Interaction,
     options = db_ifc.getWorkerCountsInTier(user_id = interaction.user.id)
     dis_log.debug(f"Got worker counts for Remove: {options}.")
 
-    options |= db_ifc.getSummaryEconomy(user_id    = interaction.user.id)
+    options |= db_ifc.getSummaryEconomy(user_id = interaction.user.id)
     dis_log.debug(f"Got Remove parameters: {options}.")
 
     if db_ifc.getDropdown(user_id = interaction.user.id) :
@@ -664,20 +675,20 @@ async def showprofile(interaction : dis.Interaction,
         else:
 
             dis_log.debug(f"Creating a SHOW PROFILE view for user {interaction.user.id}.")
-            empty_error = "";
+            empty_error  = "";
             many_message = "";
 
             if name == None:
 
-                profiles = db_ifc.getUsersProfiles(user_id)
-                empty_error = f"<@{user_id}> does't own any profiles"
+                profiles     = db_ifc.getUsersProfiles(user_id)
+                empty_error  = f"<@{user_id}> does't own any profiles"
                 many_message = f'Select a profile to view:'
 
             else:
 
                 dis_log.debug(f"Looking for profiles of name {name}.")
-                profiles = db_ifc.getProfiles(user_id, name)
-                empty_error = f'Found no characters owned by <@{user_id}> that have a name similar to {name}'
+                profiles     = db_ifc.getProfiles(user_id, name)
+                empty_error  = f'Found no characters owned by <@{user_id}> that have a name similar to {name}'
                 many_message = f'Select a profile with name like "{name}" to view:'
 
             if len(profiles) == 0:

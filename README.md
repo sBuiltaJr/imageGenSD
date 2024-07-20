@@ -135,7 +135,7 @@ can be combined with a user-supplied prompt.
 
 Confirms the bot has the bare minimum capability for interacting in the Guild.
 
-`/listprofiles {user} {name}`
+`/listprofiles {user} {name} {rarity}`
 
 - Show all profiles associated with a specific Discord account.
 
@@ -150,6 +150,9 @@ Not specifying `user` will cause the menu to show the author's profiles.
 
 If `name` is specified, the resulting paginated menu will only contain
 profiles whose name at least partially matches the specified name
+
+If `rarity` is specified, the resulting paginated menu will only contain
+profiles that are of the matching rarity.
 
 Only the command author is allowed to use the navigation buttons.
 

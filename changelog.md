@@ -1,3 +1,17 @@
+# Version 0.3.89
+
+## Highlights
+
+- Updated  `/listprofiles` to allow searching for profiles by rarity
+
+### Specific Changes
+
+- Added a `rarity` option to the `/listprofiles` command for searching profiles by rarity.
+	- The `rarity` option can be combined with all other arguments.
+	- Excluding the option will result in pre-change behavior (loading all rarities in the search results).
+- Fixed the `higest` typo in the Stats class.
+- Removed several tags featuring `border` and `frame`-like words from the tag dictionary to reduce the odds of seeing card-like profiles.
+
 # Version 0.3.88
 
 ## Highlights

@@ -728,7 +728,7 @@ class MariadbIfc:
         cursor  = self.con.cursor(buffered=False)
         results = []
 
-        self.db_log.info(f"Getting profiles for user {user_id}")
+        self.db_log.info(f"Getting profiles for user {user_id} with rarity {rarity}")
         cmd = (self.cmds['prof']['get_owned_profs']) % (user_id, rarity)
         self.db_log.debug(f"Executing command: {cmd}")
         cursor.execute(cmd)

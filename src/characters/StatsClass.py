@@ -72,10 +72,10 @@ def getDescription(rarity : rc.RarityList = rc.RarityList.COMMON) -> str:
             return "The second-highest tier of character!  So close!"
 
         case rc.RarityList.SUPER_RARE:
-            return "The thrid-higest tier of character!  Able to trounce their lessers."
+            return "The thrid-highest tier of character!  Able to trounce their lessers."
 
         case rc.RarityList.RARE:
-            return "The fourth-higest tier of character!  What a rare find!"
+            return "The fourth-highest tier of character!  What a rare find!"
 
         case rc.RarityList.UNCOMMON:
             return "The fifth-highest tier of character!  Better than the lowest, but not by much."

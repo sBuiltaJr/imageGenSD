@@ -101,7 +101,7 @@ Note: All command require a user to have at least slash command privileges.
 
 Displays some basic information about the bot, including an invite link.
 
-`assign {type} {tier}`
+`assign {tier} {type}`
 
 - Assign at least one Character Profile to the given type of work.
 
@@ -117,7 +117,7 @@ to the Dungeon Exploration Team type.
 `tier` indicates which tier should be managed, with 1 as the lowest and 6 as
 the highest.  The command defaults to tier 1 if no selection is provided.
 
-`/generate {randomize} {tag_cnt} {prompt} {negative_prompt} {height} {width} {steps} {seed} {cfg_scale} {sampler}`
+`/generate {cfg_scale} {height} {negative_prompt} {prompt} {randomize} {sampler} {seed} {steps} {tag_cnt} {width}`
 
 - Generate an image
 
@@ -135,7 +135,7 @@ can be combined with a user-supplied prompt.
 
 Confirms the bot has the bare minimum capability for interacting in the Guild.
 
-`/listprofiles {user} {name}`
+`/listprofiles {name} {rarity} {user}`
 
 - Show all profiles associated with a specific Discord account.
 
@@ -146,10 +146,13 @@ create a profile with an appropriate command.
 Pages can be navigated with the provided buttons and will be eventually
 disabled after a timeout.
 
-Not specifying `user` will cause the menu to show the author's profiles.
-
 If `name` is specified, the resulting paginated menu will only contain
 profiles whose name at least partially matches the specified name
+
+If `rarity` is specified, the resulting paginated menu will only contain
+profiles that are of the matching rarity.
+
+Not specifying `user` will cause the menu to show the author's profiles.
 
 Only the command author is allowed to use the navigation buttons.
 
@@ -175,7 +178,7 @@ Generates a brand-new character and profile once daily.  Daily reset occurs at
 midnight UTC.  The character and profile are saved to the user profile that
 initiated the command and will appear in the `/listprofiles` command.
 
-`/showprofile {profile_id} {user} {name}`
+`/showprofile {name} {profile_id} {rarity} {user} `
 
 - Display either a given profile or a selectable list of profiles
 
@@ -183,10 +186,6 @@ If `profile_id` is specified, the command displays the requested profile, if
 it exists.  The can include profiles linked to other users if the author knows
 the profile ID. Specifying `profile_id` will ignore all other parameters. The
 `/listprofiles` command can be used to find profile IDs.
-
-If `user` is specified, the command will only look for profiles that user owns.
-If `user` is not specified, the command will look for profiles that the user
-that initiated the command owns.
 
 If `name` is specified, the command will look for profiles with names that at
 least partially match the specified name. If `name` is not specified, all
@@ -196,6 +195,13 @@ If the user only owns one profile or if the specified `name` is specific enough
 the single profile will be shown. Otherwise, a dropdown list of profiles will
 be displayed. Selecting a specific profile will cause it to be posted to
 the channel and the dropdown re-posted.
+
+If `rarity` is specified, the command will filter the results provided by the
+selected rarity.
+
+If `user` is specified, the command will only look for profiles that user owns.
+If `user` is not specified, the command will look for profiles that the user
+that initiated the command owns.
 
 The dropdown also has `next`, `back`, and `cancel` options. The dropdown will
 deactivate after 100 seconds of inactivity or if the `cancel` option is chosen.

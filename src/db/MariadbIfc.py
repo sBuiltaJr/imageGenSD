@@ -400,13 +400,15 @@ class MariadbIfc:
         return profile
 
     def getProfiles(self,
-                    user_id : int,
-                    name : str) -> list:
+                    name    : str,
+                    rarity  : list,
+                    user_id : int) -> list:
         """Returns profiles matching a given name filter for a given user.
 
             Input: self - Pointer to the current object instance.
                    user_id - user ID to interrogate for profiles.
                    name - string to match like the profile name.
+                   rarity - An optional rarity to search for.
 
             Output: list - A list of all profiles found, if any.  An empty list if not.
         """
@@ -414,8 +416,8 @@ class MariadbIfc:
         cursor  = self.con.cursor(buffered=False)
         results = []
 
-        self.db_log.info(f"Getting profiles matching {name} for user {user_id}")
-        cmd = (self.cmds['prof']['get_owned_profs_byname']) % (user_id, f"%{name}%")
+        self.db_log.info(f"Getting profiles matching {name} for user {user_id} with rarities {rarity}")
+        cmd = (self.cmds['prof']['get_owned_profs_byname']) % (user_id, f"%{name}%", rarity)
         self.db_log.debug(f"Executing command: {cmd}")
         cursor.execute(cmd)
 
@@ -713,6 +715,7 @@ class MariadbIfc:
         return results
 
     def getUsersProfiles(self,
+                         rarity  : list,
                          user_id : int) -> list:
         """Returns all profiles for a given user.
 
@@ -725,8 +728,8 @@ class MariadbIfc:
         cursor  = self.con.cursor(buffered=False)
         results = []
 
-        self.db_log.info(f"Getting profiles for user {user_id}")
-        cmd = (self.cmds['prof']['get_owned_profs']) % (user_id)
+        self.db_log.info(f"Getting profiles for user {user_id} with rarity {rarity}")
+        cmd = (self.cmds['prof']['get_owned_profs']) % (user_id, rarity)
         self.db_log.debug(f"Executing command: {cmd}")
         cursor.execute(cmd)
 

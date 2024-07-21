@@ -17,18 +17,20 @@ class MenuPagination(dis.ui.View):
     def __init__(self,
                  interaction : dis.Interaction,
                  profiles    : list,
+                 title       : str,
                  user        : dis.user):
 
         self.index                      = 1
         self.interaction                = interaction
         self.profiles                   = profiles
+        self.title                      = title
         self.total_pages: Optional[int] = None
         self.user                       = user
 
         super().__init__(timeout=100)
 
     async def getPage(self,
-                      page: int):
+                      page : int):
         """Creates an embed object with profile descriptions for a given set of
            profiles.
 
@@ -40,7 +42,7 @@ class MenuPagination(dis.ui.View):
         """
 
         page_size = 10
-        embed     = dis.Embed(title="Owned characters", description="")
+        embed     = dis.Embed(title=self.title, description="")
         offset    = (page-1) * page_size
         pages     = self.getTotalPages(len(self.profiles), page_size)
 

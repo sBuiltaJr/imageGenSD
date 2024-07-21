@@ -343,6 +343,7 @@ class TestMenuPagination(iatc):
 
             self.uut = mp.MenuPagination(interaction = self.interaction,
                                          profiles    = [(profile.name, profile.id) for x in range(0,25)],
+                                         title       = "Test UI",
                                          user        = user)
 
     async def testInteractionCheckPasses(self):

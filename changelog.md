@@ -2,12 +2,16 @@
 
 ## Highlights
 
-- Updated  `/listprofiles` to allow searching for profiles by rarity
+- Updated `/listprofiles` to allow searching for profiles by rarity.
+- Updated `/showprofiles` to allow filtering results by rarity.
 
 ### Specific Changes
 
 - Added a `rarity` option to the `/listprofiles` command for searching profiles by rarity.
 	- The `rarity` option can be combined with all other arguments.
+	- Excluding the option will result in pre-change behavior (loading all rarities in the search results).
+- Added a `rarity` option to the `/showprofiles` command for filtering results by rarity.
+	- The filter cannot be dynamically changed in the current version.
 	- Excluding the option will result in pre-change behavior (loading all rarities in the search results).
 - Fixed the `higest` typo in the Stats class.
 - Removed several tags featuring `border` and `frame`-like words from the tag dictionary to reduce the odds of seeing card-like profiles.

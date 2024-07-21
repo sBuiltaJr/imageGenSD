@@ -695,7 +695,7 @@ async def showprofile(interaction : dis.Interaction,
 
                 profiles     = db_ifc.getUsersProfiles(rarity  = rarity_values,
                                                        user_id = user_id)
-                empty_error  = f"<@{user_id}> does't own any profiles" + f" in tier {rarity.name}!" if isinstance(rarity_values, int) else "!"
+                empty_error  = f"<@{user_id}> does't own any profiles" + f" in tier {rarity.name}!" if isinstance(rarity_values, int) else + "!"
                 many_message = f'Select a profile to view:'
 
             else:
@@ -704,7 +704,7 @@ async def showprofile(interaction : dis.Interaction,
                 profiles     = db_ifc.getProfiles(name    = name.strip(string.punctuation), 
                                                   rarity  = rarity_values,
                                                   user_id = user_id)
-                empty_error  = f"Found no characters owned by <@{user_id}> that have a name similar to {name}" + f" in tier {rarity.name}!" if isinstance(rarity_values, int) else "!"
+                empty_error  = f"Found no characters owned by <@{user_id}> that have a name similar to {name}" + f" in tier {rarity.name}!" if isinstance(rarity_values, int) else + "!"
                 many_message = f"Select a profile with name like '{name}' to view:"
 
             if len(profiles) == 0:

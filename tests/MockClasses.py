@@ -1,6 +1,7 @@
 #Defines the shared mock interfaces used by unit tests.
 
 import discord as dis
+from functools import wraps
 import src.characters.CharacterJobs as cj
 import src.characters.ProfileGenerator as pg
 import src.characters.RarityClass as rc
@@ -107,6 +108,22 @@ class MockDb():
         """
 
         return self.MockConnection()
+
+#####  Mock Decorator Class  #####
+
+def MockDecorator(*args, **kwargs):
+    """A bare minimum mock to ensure test compatability.
+
+       Input: func - Pointer to the current object instance.
+
+       Output: function - an unmodified version of the function passed in.
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
 class MockDbInterface():
 
@@ -381,6 +398,8 @@ class MockDbInterface():
 
         pass
 
+class MockIgsdClient():
+    pass
 
 #####  Mock Interaction Class  #####
 

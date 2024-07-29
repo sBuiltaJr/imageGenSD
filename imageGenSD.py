@@ -5,7 +5,6 @@
 
 #####  Imports  #####
 
-import asyncio as asy
 import discord as dis
 from discord import app_commands as dac
 from enum import Enum, IntEnum, verify, UNIQUE
@@ -20,6 +19,7 @@ import src.characters.CharacterJobs as cj
 import src.characters.ProfileGenerator as pg
 import src.characters.RarityClass as rc
 import src.db.MariadbIfc as mdb
+import src.discord.IgsdClient as igsdc
 import src.managers.DailyEventMgr as dem
 import src.managers.QueueMgr as qm
 import src.ui.DropDownFactory as ddf
@@ -104,56 +104,9 @@ except IndexError as err:
     print(f"The tag dictionary is {params['tag_rng_opts']['dict_size']} lines long, shorter than the tag randomizer max size of {params['tag_rng_opts']['max_rand_tag_cnt']} OR Max tags {params['tag_rng_opts']['max_rand_tag_cnt']} is less than min tags {params['tag_rng_opts']['min_rand_tag_cnt']}!")
     exit(-5)
 
-#####  Package Classes  #####
-
-class IGSDClient(dis.Client):
-    def __init__(self, *, intents: dis.Intents):
-        """This command copies the global command set to a given Guild instance.
-
-            Input  : self - a reference to the current object.
-                     intents - what Discord intents are required to run the bot.
-
-            Output : None
-        """
-
-        self.dis_log = log.getLogger('discord')
-        self.dis_log.debug(f"Intents are: {intents}")
-
-        super().__init__(intents=intents)
-        self.tree = dac.CommandTree(self)
-
-    async def setup_hook(self):
-        """Copies the global command set to a given Guild instance.
-
-            Input  : self - a reference to the current object.
-
-            Output : None
-        """
-
-        #Replies should be managed in a separate task to allow the main UI to
-        #always be responsive, and allow the backend to process work independent
-        #of message posting.  It's more efficent and better separated.
-        self.loop = asy.get_running_loop()
-
-        self.dis_log.debug(f"Syncing Guild Tree to Global.")
-        await self.tree.sync()
-
-    def getLoop(self):
-        """Returns a reference to this client's asyncio event loop.
-
-            Input  : self - a reference to the current object.
-
-            Output : loop - the client's event loop.
-        """
-
-        return self.loop;
-
-intents = dis.Intents.default()
-IGSD_client = IGSDClient(intents=intents)
-
 #####  Package Functions  #####
 
-@IGSD_client.tree.command()
+@igsdc.client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
 async def about(interaction : dis.Interaction):
     """Displays the bot version and invite link.
@@ -167,7 +120,7 @@ async def about(interaction : dis.Interaction):
 
     await interaction.response.send_message(f"This is bot version {IGSD_version}!  Invite me to your server with [this link](https://discord.com/api/oauth2/authorize?client_id=1084600126913388564&permissions=534723816512&scope=bot)!  Code found [on GitHub](https://github.com/sBuiltaJr/imageGenSD).", ephemeral=True, delete_after=30.0)
 
-@IGSD_client.tree.command()
+@igsdc.client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
 @dac.describe(tier="Which tier to manage character assignments in.  1 means 'Base', 6 means 'Master'.") #TODO: cycle through the tiers?
 @dac.describe(type="Where to assign work.  Defaults to Exploration_Team.")
@@ -189,7 +142,7 @@ async def assign(interaction : dis.Interaction,
     dis_log  = log.getLogger('discord')
     metadata = {'ctx'     : interaction,
                 'db_ifc'  : db_ifc,
-                'loop'    : IGSD_client.getLoop(),
+                'loop'    : igsdc.client.getLoop(),
                 'post_fn' : post,
                 'queue'   : job_queue
                }
@@ -267,7 +220,7 @@ def bannedWordsFound(prompt: str, banned_words: str) -> bool:
 
     return result
 
-@IGSD_client.tree.command()
+@igsdc.client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
 @dac.describe(random=f"A flag to add between {params['tag_rng_opts']['min_rand_tag_cnt']} and {params['tag_rng_opts']['max_rand_tag_cnt']} random tags to the user prompt.  Does not count towards the maximum prompt length.",
               tag_cnt=f"If 'random' is enabled, an exact number of tags to add to the prompt, up to params['tag_rng_opts']['max_rand_tag_cnt']",
@@ -318,7 +271,7 @@ async def generate(interaction: dis.Interaction,
 
         metadata = {'ctx'     : interaction,
                     'db_ifc'  : db_ifc,
-                    'loop'    : IGSD_client.getLoop(),
+                    'loop'    : igsdc.client.getLoop(),
                     'post_fn' : post,
                     'tag_rng' : tag_randomizer
                    }
@@ -343,7 +296,7 @@ async def generate(interaction: dis.Interaction,
 
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
-@IGSD_client.tree.command()
+@igsdc.client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
 async def hello(interaction: dis.Interaction):
     """A test echo command to verify basic discord functionality.
@@ -355,7 +308,7 @@ async def hello(interaction: dis.Interaction):
 
     await interaction.response.send_message(f'Hi, {interaction.user.mention}', ephemeral=True, delete_after=9.0)
 
-@IGSD_client.tree.command()
+@igsdc.client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
 @dac.describe(name="A name, or fragment of, used to filter the profile list (case insensitive).")
 @dac.describe(rarity="Which rarity to search.  If none, if defaults to showing all rarities.")
@@ -417,7 +370,7 @@ async def listprofiles(interaction : dis.Interaction,
                                 title       = title,
                                 user        = user_dis).navigate()
 
-@IGSD_client.event
+@igsdc.client.event
 async def on_ready():
     """Performs post-login setup for the bot.
 
@@ -453,7 +406,7 @@ async def on_ready():
     #TODO: get propagate to properly disable.
     #dis_log.propagate=False
 
-    dis_log.info(f'Logged in as {IGSD_client.user} (ID: {IGSD_client.user.id})')
+    dis_log.info(f'Logged in as {igsdc.client.user} (ID: {igsdc.client.user.id})')
 
     dis_log.debug(f"Instantiating the Tag Randomizer.")
     tag_randomizer = tr.TagRandomizer(opts=params['tag_rng_opts'])
@@ -515,7 +468,7 @@ async def post(job      : jf.Job,
 
         await job.post(metadata)
 
-@IGSD_client.tree.command()
+@igsdc.client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
 @dac.describe(tier="Which tier to manage character assignments in.  1 means 'Base', 6 means 'Master'.") #TODO: cycle through the tiers?
 @dac.describe(type="Where to assign work.  Defaults to Exploration_Team.")
@@ -533,7 +486,7 @@ async def remove(interaction : dis.Interaction,
     dis_log  = log.getLogger('discord')
     metadata = {'ctx'     : interaction,
                 'db_ifc'  : db_ifc,
-                'loop'    : IGSD_client.getLoop(),
+                'loop'    : igsdc.client.getLoop(),
                 'post_fn' : post,
                 'queue'   : job_queue
                }
@@ -586,7 +539,7 @@ async def remove(interaction : dis.Interaction,
 
                 await interaction.response.send_message("This interaction is not yet implemented!", ephemeral=True, delete_after=9.0)
 
-@IGSD_client.tree.command()
+@igsdc.client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
 async def roll(interaction: dis.Interaction):
     """Generates a new character and saves them to the caller's character list.
@@ -607,7 +560,7 @@ async def roll(interaction: dis.Interaction):
     else :
         metadata = {'ctx'     : interaction,
                     'db_ifc'  : db_ifc,
-                    'loop'    : IGSD_client.getLoop(),
+                    'loop'    : igsdc.client.getLoop(),
                     'post_fn' : post,
                     'tag_rng' : tag_randomizer
                    }
@@ -625,7 +578,7 @@ async def roll(interaction: dis.Interaction):
 
         await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
-@IGSD_client.tree.command()
+@igsdc.client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
 @dac.describe(name="A name of the profile to view. Will find all similar names (case insensitive).")
 @dac.describe(profile_id="The profile ID of the character.  Use /listprofiles to find the ID.")
@@ -650,7 +603,7 @@ async def showprofile(interaction : dis.Interaction,
     dis_log       = log.getLogger('discord')
     metadata      = {'ctx'     : interaction,
                      'db_ifc'  : db_ifc,
-                     'loop'    : IGSD_client.getLoop(),
+                     'loop'    : igsdc.client.getLoop(),
                      'post_fn' : post,
                      'queue'   : show_queue
                     }
@@ -747,7 +700,7 @@ class SummaryChoices(Enum):
     Economy    = 1
     Inventory  = 2
 
-@IGSD_client.tree.command()
+@igsdc.client.tree.command()
 @dac.checks.has_permissions(use_application_commands=True)
 @dac.describe(user="The Discord user owning the profiles listed by the command.  If none, it defaults to you.")
 @dac.describe(type="What kind of summary to show (characters, economy, or inventory).  Defaults to inventory.")
@@ -767,7 +720,7 @@ async def showsummary(interaction : dis.Interaction,
     dis_log  = log.getLogger('discord')
     metadata = {'ctx'     : interaction,
                 'db_ifc'  : db_ifc,
-                'loop'    : IGSD_client.getLoop(),
+                'loop'    : igsdc.client.getLoop(),
                 'post_fn' : post,
                 'queue'   : show_queue
                }
@@ -823,7 +776,7 @@ async def showsummary(interaction : dis.Interaction,
 
         await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
-@IGSD_client.tree.command()
+@igsdc.client.tree.command()
 @dac.checks.has_permissions(manage_guild=True) #The closest to 'be a mod' Discord has.
 async def testget(interaction: dis.Interaction):
     """A test HTTP GET command to verify basic connection to the webui page.
@@ -836,7 +789,7 @@ async def testget(interaction: dis.Interaction):
 
     dis_log  = log.getLogger('discord')
     metadata = {'ctx'     : interaction,
-                'loop'    : IGSD_client.getLoop(),
+                'loop'    : igsdc.client.getLoop(),
                 'post_fn' : post
                }
     dis_log.debug(f"Creating a job with metadata {metadata}.")
@@ -850,7 +803,7 @@ async def testget(interaction: dis.Interaction):
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
 
-@IGSD_client.tree.command()
+@igsdc.client.tree.command()
 @dac.checks.has_permissions(manage_guild=True) #The closest to 'be a mod' Discord has.
 async def testpost(interaction: dis.Interaction):
     """A test HTTP PUT command to verify basic connection to the webui page.
@@ -864,7 +817,7 @@ async def testpost(interaction: dis.Interaction):
 
     dis_log  = log.getLogger('discord')
     metadata = {'ctx'     : interaction,
-                'loop'    : IGSD_client.getLoop(),
+                'loop'    : igsdc.client.getLoop(),
                 'post_fn' : post
                }
     dis_log.debug(f"Creating a job with metadata {metadata}.")
@@ -876,7 +829,7 @@ async def testpost(interaction: dis.Interaction):
 
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
-@IGSD_client.tree.command()
+@igsdc.client.tree.command()
 @dac.checks.has_permissions(manage_guild=True) #The closest to 'be a mod' Discord has.
 async def testroll(interaction: dis.Interaction):
     """Verifies a profile can be added to a test image.
@@ -890,7 +843,7 @@ async def testroll(interaction: dis.Interaction):
 
     dis_log  = log.getLogger('discord')
     metadata = {'ctx'     : interaction,
-                'loop'    : IGSD_client.getLoop(),
+                'loop'    : igsdc.client.getLoop(),
                 'post_fn' : post
                }
     dis_log.debug(f"Creating a job with metadata {metadata}.")
@@ -902,7 +855,7 @@ async def testroll(interaction: dis.Interaction):
 
     await interaction.response.send_message(f'{result}', ephemeral=True, delete_after=9.0)
 
-@IGSD_client.tree.command()
+@igsdc.client.tree.command()
 @dac.checks.has_permissions(manage_guild=True) #The closest to 'be a mod' Discord has.
 async def testshowprofile(interaction: dis.Interaction):
     """Verifies a profile can be retrieved and shown to the user.
@@ -917,7 +870,7 @@ async def testshowprofile(interaction: dis.Interaction):
     dis_log  = log.getLogger('discord')
     metadata = {'ctx'     : interaction,
                 'db_ifc'  : db_ifc,
-                'loop'    : IGSD_client.getLoop(),
+                'loop'    : igsdc.client.getLoop(),
                 'post_fn' : post
                }
     dis_log.debug(f"Creating a job with metadata {metadata}.")
@@ -964,13 +917,10 @@ def Startup():
 
     #Start manager tasks
     try:
-        IGSD_client.run(creds['bot_token'])
+        igsdc.client.run(creds['bot_token'])
     except Exception as err:
         print(f"Caught exception {err} when trying to run IGSD client!")
 
 
 if __name__ == '__main__':
     Startup()
-
-
-#/shop

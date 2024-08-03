@@ -20,7 +20,7 @@ from typing import Callable, Optional, Any
 import unittest
 from unittest.mock import patch
 from unittest.mock import MagicMock
-
+from unittest.mock import PropertyMock
 
 #####  Daily Event Manager Class  #####
 
@@ -213,7 +213,7 @@ class TestQueueManager(unittest.TestCase):
 
         self.assertEqual(result, "You already have a job on the queue, please wait until it's finished.")
 
-    #def testAddThrowsExceptionWhenFull(self):
+    def testAddFailsWhenFull(self):
         """Verifies that the add function rejects adding jobs if it is already
            alraedy full.
 
@@ -222,23 +222,32 @@ class TestQueueManager(unittest.TestCase):
            Output: none.
         """
 
+        with patch.object(self.uut.queue, 'put') as put_patch:
+            put_patch.side_effect = queue.Full
 
-        #self.uut.queue = mp.Queue(1)
+            result = self.uut.add(metadata=self.metadata,
+                                  job=self.job)
 
-        #result = self.uut.add(metadata=self.metadata,
-        #                      job=self.job)
+        self.assertEqual(result, "The work queue is currently full, please wait a bit before making another job.")
 
-        #self.assertEqual(result, "Your job was added to the queue.  Please wait for it to finish before posting another.")
+    def testAddFailsWhenGenericError(self):
+        """Verifies that the add function rejects adding jobs if it is already
+           alraedy full.
 
-        #with self.assertRaises(queue.Full):
+           Input: self - Pointer to the current object instance.
 
-        #    self.job.user_id = 1
+           Output: none.
+        """
 
-        #    result = self.uut.add(metadata=self.metadata,
-        #                          job=self.job)
-        #qm.jobs = {}
+        with patch.object(self.uut.queue, 'put') as put_patch:
+            put_patch.side_effect = Exception
 
-    #def testPutJobMainPathWorks(self):
+            result = self.uut.add(metadata=self.metadata,
+                                  job=self.job)
+
+        self.assertEqual(result, "Unable to add your job to the queue.  Are you sending more than text and numbers?")
+
+    def testPutJobMainPathWorks(self):
         """Verifies that the putJob function runs correctly with valid input.
 
            Input: self - Pointer to the current object instance.
@@ -246,20 +255,47 @@ class TestQueueManager(unittest.TestCase):
            Output: none.
         """
 
-        #self.uut.flush_queue         = True
-        #self.uut.job_cooldown        = 0.01
-        #qm.jobs[mc.DEFAULT_GUILD_ID] = {}
-        #qm.jobs[mc.DEFAULT_GUILD_ID][mc.DEFAULT_PROFILE_ID] = self.metadata
-        #self.uut.queue.put(self.job)
+        self.uut.flush_queue         = True
+        self.uut.job_cooldown        = 0.01
+        self.uut.jobs[mc.DEFAULT_GUILD_ID] = {}
+        self.uut.jobs[mc.DEFAULT_GUILD_ID][mc.DEFAULT_PROFILE_ID] = self.metadata
 
-        #mp.Queue = MagicMock(spec=mc.MockQueue)
-        #result = self.uut.add(metadata=self.metadata,
-        #                      job=self.job)
+        with patch.object(self.uut.queue, 'get') as get_patch:
+            # the first job will be run normally (but throw on job.doWork),
+            # after the second job, self.jobs will be seen as empty
+            #   so the guild will be removed from the list
+            # third, we throw an AssertionError to get putJob to stop
+            # this third option could also be done by patching keep_going
+            #   but it couldn't be done gracefully
+            get_patch.side_effect = [self.job, self.job, AssertionError]
 
-        #self.assertEqual(result, "Your job was added to the queue.  Please wait for it to finish before posting another.")
+            with self.assertRaises(AssertionError):
+                self.uut.putJob()
 
-        #with patch('multiprocessing.Queue') as mc.MockQueue :
-        #self.uut.putJob()
-        #qm.jobs = {}
+        self.assertTrue(self.uut.flush)
 
-        #self.assertTrue(self.uut.flush)
+    def testPutJobCanBeStopped(self):
+        """Verifies that the putJob function will halt if told to.
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        self.uut.keep_going = False
+
+        self.uut.putJob()
+
+        self.assertTrue(True)
+
+    def testRunWorks(self):
+        """A simple verification that the Queue Manager class will run
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        # run is currently a stub method, so this test is too
+        self.uut.run()
+        self.assertTrue(True)

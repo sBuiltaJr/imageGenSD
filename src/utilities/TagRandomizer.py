@@ -114,7 +114,7 @@ class TagRandomizer:
         #Note: Embedded fields (like how tags are displayed in the Discord post)
         #only allow up to self.post_limit characters, meaning we must truncate
         #the list to avoid exceptions in post-processing.
-        if len(tag_list) > self.post_limit:
+        if len(tag_list) > (self.post_limit - 1):
             #Find the last instance of a comma before the limit, and remove
             #everything following.
             index = tag_list.rfind(',', 0, self.post_limit)
@@ -131,5 +131,6 @@ class TagRandomizer:
                 self.rng_log.warning(f"Tag_list exceeded allowed tag size limit of {self.post_limit}, truncated to {len(tag_list)}.  This may still fail to post!")
 
         self.rng_log.info(f"Used {tag_count} tags to get prompt input: {tag_list} of len {len(tag_list)}")
+        tag_list = ', ' + tag_list
 
         return tag_list, tag_count

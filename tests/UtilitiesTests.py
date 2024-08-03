@@ -637,6 +637,6 @@ class TestTagRandomizer(unittest.TestCase):
 
             random_tags, tag_cnt = self.uut.getRandomTags(exact=2)
 
-            self.assertEqual(random_tags, "apple, banana")
+            self.assertEqual(random_tags, ", apple, banana")
             self.assertEqual(tag_cnt, 2)
 

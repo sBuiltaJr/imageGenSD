@@ -350,8 +350,10 @@ class MariadbIfc:
                 self.db_log.warn(f"Could not find the profile {profile_id} in the DB!")
                 return ""
 
+            picture_id = profile[int(self.cmds['prof']['pic_id_index'])]
+
         self.db_log.info(f"Getting picture.")
-        cmd = (self.cmds['pic']['get_image']) % (picture_id if picture_id != None else profile[int(self.cmds['prof']['pic_id_index'])])
+        cmd = (self.cmds['pic']['get_image']) % picture_id
         self.db_log.debug(f"Executing get picture command {cmd}")
         cursor.execute(cmd)
         #The cursor object doesn't appear to actually provide a better way
@@ -360,7 +362,7 @@ class MariadbIfc:
 
         if (img == None):
 
-            self.db_log.warning(f"Picture ID {profile[int(self.cmds['prof']['pic_id_index'])]} not found!")
+            self.db_log.warning(f"Picture ID {picture_id} not found!")
             return ""
 
         else:
@@ -983,7 +985,7 @@ class MariadbIfc:
                  id      : Optional[str] = "x'fffffffffffffffffffffffffffffffe'",
                  img     : Optional[str] = None,
                  info    : dict          = None,
-                 profile : str           = None):
+                 profile : pg.Profile    = None):
         """Created a UUID for the given profile.  Assumes daily limits have
            already been verified before calling.
 

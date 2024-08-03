@@ -207,6 +207,7 @@ class Manager:
 
                 self.queue_log.debug(f"Removing empty Guild {job.getGuild()} from the list.")
                 del self.jobs[job.getGuild()]
+                continue
 
             metadata = (self.jobs[job.getGuild()]).pop(job.getUserId())
             self.queue_log.debug(f"Posting job result to Discord from metadata: {metadata}")

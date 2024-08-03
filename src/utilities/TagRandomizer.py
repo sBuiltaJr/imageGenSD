@@ -52,7 +52,8 @@ class TagRandomizer:
         self.dict_size     = opts['dict_size']
         self.max_tags      = int(opts['max_rand_tag_cnt'])
         self.min_tags      = int(opts['min_rand_tag_cnt'])
-        self.post_limit    = 1023
+        #Discord's limit for the tag generation, minus the length of a prefix
+        self.post_limit    = 1023 - 2
         self.rand_retries  = int(opts['tag_retry_limit'])
 
         try:
@@ -80,6 +81,7 @@ class TagRandomizer:
         """
         tag_count = 0
         tag_list  = ""
+        infix     = ""
 
         #Users trying to be cute will get the default result.
         if exact > 0:
@@ -107,7 +109,8 @@ class TagRandomizer:
                 self.rng_log.debug(f"Exiting de-dupe loop with tag {tag}.")
 
             #The getline function includes getting the separator.
-            tag_list += (', ' + tag.rstrip(os.linesep))
+            tag_list += (infix + tag.rstrip(os.linesep))
+            infix     = ', '
 
         #Note: Embedded fields (like how tags are displayed in the Discord post)
         #only allow up to self.post_limit characters, meaning we must truncate
@@ -129,5 +132,6 @@ class TagRandomizer:
                 self.rng_log.warning(f"Tag_list exceeded allowed tag size limit of {self.post_limit}, truncated to {len(tag_list)}.  This may still fail to post!")
 
         self.rng_log.info(f"Used {tag_count} tags to get prompt input: {tag_list} of len {len(tag_list)}")
+        tag_list = ', ' + tag_list
 
         return tag_list, tag_count

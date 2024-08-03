@@ -19,6 +19,7 @@ from typing import Callable, Optional, Any
 import unittest
 from unittest import IsolatedAsyncioTestCase as iatc
 from unittest.mock import MagicMock
+from unittest.mock import patch
 
 #####  Job Factory Class  #####
 
@@ -318,23 +319,24 @@ class TestJobFactory(iatc):
            Output: none.
         """
 
-        nr.getRandomName              = MagicMock()
-        nr.getRandomName.return_value = "Default Sally"
+        with unittest.mock.patch('requests.get') as get_patch:
+            nr.getRandomName              = MagicMock()
+            nr.getRandomName.return_value = "Default Sally"
 
-        job = jf.JobFactory.getJob(type=jf.JobTypeEnum.TEST_GET,
-                                   ctx=self.interaction)
-        self.assertNotEqual(job, None)
+            job = jf.JobFactory.getJob(type=jf.JobTypeEnum.TEST_GET,
+                                    ctx=self.interaction)
+            self.assertNotEqual(job, None)
 
-        req.post              = MagicMock()
-        req.post.return_value = mc.MockResult()
+            req.post              = MagicMock()
+            req.post.return_value = mc.MockResult()
 
-        job.doWork(web_url=self.web_url)
-        self.assertNotEqual(job.result, None)
+            job.doWork(web_url=self.web_url)
+            self.assertNotEqual(job.result, None)
 
-        metadata    = {'ctx'    : self.interaction}
+            metadata    = {'ctx'    : self.interaction}
 
-        await job.post(metadata=metadata)
-        self.assertTrue(True)
+            await job.post(metadata=metadata)
+            self.assertTrue(True)
 
     async def testRunTestPostJobFlow(self):
         """Verifies that the TestPostJob object returned from the Job Factory
@@ -533,6 +535,21 @@ class TestTagRandomizer(unittest.TestCase):
 
         self.assertNotEqual(self.uut, None)
 
+    def testTagRandomizerHandlesNotBuilding(self):
+        """A simple verification that the Tag Randomizer class will not freak
+           out if an exception happens
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+        with patch('random.seed') as random_patch:
+            random_patch.side_effect = Exception
+
+            self.uut = tr.TagRandomizer(opts=self.options)
+
+            self.assertNotEqual(self.uut, None)
+
     def testGetRandomTags(self):
         """Verifies that the getRandomTags function returns valid values of the
            correct type.
@@ -571,3 +588,55 @@ class TestTagRandomizer(unittest.TestCase):
 
             self.assertTrue(re.findall(r'\w+', tag, re.UNICODE) != None)
             self.assertTrue(isinstance(tag, str))
+
+    def testGetRandomTagsOverflow(self):
+        """Verifies that the getRandomTags function returns valid values of the
+           correct type and overflows the discord post
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        random_tags, tag_cnt = self.uut.getRandomTags(exact=100)
+
+        self.assertEqual(tag_cnt, 100)
+
+        for tag in random_tags:
+
+            self.assertTrue(re.findall(r'\w+', tag, re.UNICODE) != None)
+            self.assertTrue(isinstance(tag, str))
+
+    def testGetRandomTagTooLong(self):
+        """Verifies that the getRandomTags function returns valid values of the
+           correct type and overflows the discord post
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        with patch('linecache.getline') as line_patch:
+            line_patch.return_value = "a" * (self.uut.post_limit + 10)
+
+            random_tags, tag_cnt = self.uut.getRandomTags(exact=1)
+
+            self.assertEqual(tag_cnt, 1)
+
+    def testGetRandomTagRepeats(self):
+        """Verifies that the getRandomTags function returns valid values of the
+           correct type even if the same tag occurs twice
+
+           Input: self - Pointer to the current object instance.
+
+           Output: none.
+        """
+
+        with patch('linecache.getline') as line_patch:
+            line_patch.side_effect = ["apple", "apple", "banana"]
+
+            random_tags, tag_cnt = self.uut.getRandomTags(exact=2)
+
+            self.assertEqual(random_tags, ", apple, banana")
+            self.assertEqual(tag_cnt, 2)
+

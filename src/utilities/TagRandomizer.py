@@ -52,7 +52,8 @@ class TagRandomizer:
         self.dict_size     = opts['dict_size']
         self.max_tags      = int(opts['max_rand_tag_cnt'])
         self.min_tags      = int(opts['min_rand_tag_cnt'])
-        self.post_limit    = 1023
+        #Discord's limit for the tag generation, minus the length of a prefix
+        self.post_limit    = 1023 - 2
         self.rand_retries  = int(opts['tag_retry_limit'])
 
         try:
@@ -114,7 +115,7 @@ class TagRandomizer:
         #Note: Embedded fields (like how tags are displayed in the Discord post)
         #only allow up to self.post_limit characters, meaning we must truncate
         #the list to avoid exceptions in post-processing.
-        if len(tag_list) > (self.post_limit - 1):
+        if len(tag_list) > self.post_limit:
             #Find the last instance of a comma before the limit, and remove
             #everything following.
             index = tag_list.rfind(',', 0, self.post_limit)

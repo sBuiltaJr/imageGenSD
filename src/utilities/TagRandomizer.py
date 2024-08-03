@@ -80,6 +80,7 @@ class TagRandomizer:
         """
         tag_count = 0
         tag_list  = ""
+        infix     = ""
 
         #Users trying to be cute will get the default result.
         if exact > 0:
@@ -107,7 +108,8 @@ class TagRandomizer:
                 self.rng_log.debug(f"Exiting de-dupe loop with tag {tag}.")
 
             #The getline function includes getting the separator.
-            tag_list += (', ' + tag.rstrip(os.linesep))
+            tag_list += (infix + tag.rstrip(os.linesep))
+            infix     = ', '
 
         #Note: Embedded fields (like how tags are displayed in the Discord post)
         #only allow up to self.post_limit characters, meaning we must truncate
